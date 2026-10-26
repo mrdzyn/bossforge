@@ -21,7 +21,9 @@ or Twitch authentication.
 
 **P3-A offline readiness is authorized.** Implement an official-shaped, fixture-only EventSub chat message normalizer and deterministic WebSocket session/reconnect test harness, without making real Twitch requests or changing the mock-only forge. See [P3 readiness and gates](P3-TWITCH-INTEGRATION-READINESS.md).
 
-**P3-B live integration remains gated** on Twitch developer account registration/2FA recovery and a separate owner approval. Then implement server-side OAuth and a minimum-scope user-token EventSub WebSocket subscription, verify genuine chat delivery and revocation/reconnect, and explicitly migrate the current mock-only state/event contracts. Never represent synthetic events as live Twitch.
+**P3-A completed and squash-merged** via PR #4; offline EventSub fixtures/harness are available.
+
+**P3-B AUTHORIZED for local development:** The owner has registered a Twitch app and approved implementation of real server-side OAuth and least-privilege user-token EventSub WebSocket chat. Implement with strict localhost-only controls, volatile token storage, validated broadcaster/reader identities, real chat vote provenance, disconnect/revocation handling and honest mock/live labels. See [active P3-B spec](P3B-LIVE-TWITCH-INTEGRATION.md). Live QA requires owner consent and local secret configuration. This authorization does not allow merge/deploy/release.
 
 ## Phase 4 — Streamer UX and OBS Integration
 
