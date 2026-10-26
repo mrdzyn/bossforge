@@ -1,24 +1,26 @@
 # Project status
 
-- **Active milestone:** P3-A — offline Twitch EventSub fixture normalization and injected lifecycle harness. This slice does not connect to Twitch, use credentials, or enable live voting.
-- **Phase 0:** Completed and squash-merged via [PR #1](https://github.com/mrdzyn/bossforge/pull/1).
-- **Phase 1:** Completed, independently source-reviewed through C6 and squash-merged via [PR #2](https://github.com/mrdzyn/bossforge/pull/2) to `main` at `2ca5c1ebcd0fe4f51b153faf36a8a765d66fec45`.
-- **Phase 2:** Completed, independently source-reviewed through C2 ([P2-C2 PASS](https://github.com/mrdzyn/bossforge/pull/3#issuecomment-6419685792)), and squash-merged via [PR #3](https://github.com/mrdzyn/bossforge/pull/3) to `main` at `7aa90c96133bfbc44f1809f5e89bb5c75fb892ce`. Final Codex-reported P2 suite: 62 tests (23 shared, 39 server); independent reviewer did not rerun commands.
-- **P3-A authorization:** Owner requested offline readiness on the existing `feat/phase3-twitch-readiness` branch and Draft PR #4. Bounded C2 remediation addresses C1 chat-reader condition validation, per-transport welcome gating, and correct keepalive timing. Codex validation is complete; independent exact-head C2 review is pending. The live mock-only ForgeSession remains unchanged.
-- **P3-B NOT authorized:** Genuine OAuth, credential acquisition, EventSub subscription, and Twitch-connected forge integration remain blocked by Twitch developer registration requiring 2FA; explicit separate owner approval is required after account recovery.
-- **Active spec:** [P3 Twitch Integration Readiness](P3-TWITCH-INTEGRATION-READINESS.md). Preferred future transport is server-side EventSub WebSocket with user access token and minimum read-only chat scope, subject to current official Twitch requirements.
-- **Security/UX:** Current forge remains 100% local simulation; `ForgeSession` still accepts mock events only and the forge schema explicitly says `simulated: true`, `connectedToTwitch: false`. P3-A may not weaken those checks or claim real Twitch integration.
-- **Merge/deployment:** No P3 merge, production deployment, release or publishing is authorized. Require independent exact-head review and explicit owner merge decision.
+- **Active milestone:** Phase 3-B — locally hosted authenticated Twitch OAuth, EventSub and genuine chat-to-boss voting. **Owner authorized implementation; this kickoff contains documentation only.** Real Twitch connectivity has **not yet been tested**.
+- **Main baseline:** `5adbd71f5378666e17b805617f37c3bb000505b8`, Phase 3-A approved and squash-merged via [PR #4](https://github.com/mrdzyn/bossforge/pull/4).
+- **Phases 0–2:** Completed and independently reviewed, squash-merged via PRs #1, #2 and #3. P2 delivered local Phaser boss battle with four specials and playable rematch.
+- **Phase 3-A:** Official-shaped offline `channel.chat.message` normalizer and injected EventSub session lifecycle; independent C2 PASS [review #6421367210](https://github.com/mrdzyn/bossforge/pull/4#issuecomment-6421367210). Codex-reported baseline: **92 tests** (23 shared, 69 server). Both are offline, not yet wired into the application.
+- **Phase 3-B authorization:** Owner confirmed Twitch developer app registration is available, supplied a Client ID privately, and explicitly approved starting real integration on a **new Draft PR** with **no merge or deployment**.
+- **Active P3-B spec:** [P3B-LIVE-TWITCH-INTEGRATION.md](P3B-LIVE-TWITCH-INTEGRATION.md). Base branch `feat/phase3b-live-twitch-integration`, branch starts at merged P3-A main.
+- **Registered/intended OAuth callback:** `http://localhost:3001/auth/twitch/callback`. Confirm exact value in Twitch console and local listener before trying to authorize. Keep Client ID environment-configurable and Client Secret/private tokens out of code, PRs and chat.
+- **Planned sequence:** B1 secure local OAuth; B2 verified user-token EventSub WebSocket subscription; B3 explicit mock/Twitch provider contract migration and real voting; B4 test with owner-authorized real Twitch channel and end-to-end gameplay.
+- **Current truthful behavior:** Existing runtime remains local simulation only (`simulated:true`, `connectedToTwitch:false`, mock `ForgeSession`). **No real OAuth, subscriptions, Twitch ballots or live browser QA performed by this docs-only kickoff.**
+- **Review/merge gates:** Keep the P3-B PR Draft and unmerged. Require independent exact-head review, manual secure local OAuth consent, and separate owner approval before merge. No public binding, deployment, release or Phase 4.
 
-## Current milestone acceptance
+## Acceptance target
 
-A testable offline EventSub chat normalizer and connection lifecycle harness that fail closed on malformed/duplicate/wrong-channel events, keep tokens out of the project, make **zero real Twitch network calls**, preserve all Phase 0–2 behavior, and supply a separately gated live OAuth/EventSub activation plan. Run frozen install, build, typecheck, lint, format, full tests, mock simulation and diff check after Codex implementation. Real Twitch connectivity remains **NOT TESTED**, never PASS.
+A verified local Twitch broadcaster logs in securely; server-side EventSub receives genuine `!vote` chat commands; four timed categories assemble the same boss; the streamer fights it in Phaser; dashboard and OBS accurately distinguish real Twitch versus synthetic mode; revocation, disconnect and authorization failure fail closed. Preserve all 92 existing tests, local-only security and synthetic demo.
 
-## Canonical references
+## Canonical documents
 
-- [P3-A spec and future P3-B gates](P3-TWITCH-INTEGRATION-READINESS.md)
-- [Project roadmap](ROADMAP.md)
-- [Security boundaries](SECURITY.md)
+- [P3-B active specification](P3B-LIVE-TWITCH-INTEGRATION.md)
+- [P3-A implementation background](P3-TWITCH-INTEGRATION-READINESS.md)
+- [Security](SECURITY.md)
 - [Architecture](ARCHITECTURE.md)
-- [Acceptance history](ACCEPTANCE.md)
+- [Roadmap](ROADMAP.md)
+- [Acceptance evidence](ACCEPTANCE.md)
 - [Handoffs](HANDOFFS.md)
