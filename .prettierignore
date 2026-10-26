@@ -1,0 +1,7 @@
+# Package manager lockfiles are generated from package metadata.
+pnpm-lock.yaml
+
+# Generated output
+node_modules/
+**/dist/
+**/coverage/

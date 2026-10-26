@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="forge" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#bd82ff" />
+      <stop offset="1" stop-color="#7443dc" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#forge)" />
+  <path d="M21 12h15c9 0 14 4 14 11 0 5-3 8-7 10 6 1 9 5 9 11 0 8-6 12-16 12H21V12Zm9 7v11h6c4 0 6-2 6-6 0-3-2-5-6-5h-6Zm0 18v12h7c4 0 7-2 7-6s-2-6-7-6h-7Z" fill="#100d18" />
+</svg>
