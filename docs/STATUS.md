@@ -1,23 +1,24 @@
 # Project status
 
-- **Active milestone:** P1 — Audience Voting and Modular Boss Assembly.
-- **Phase 0:** Completed, C4 source audit passed, and squash-merged via [PR #1](https://github.com/mrdzyn/bossforge/pull/1) to `main` at `1fc0d8b8f8d3665266a4a5092f6da240bbddf7b1`. Phase 0 automated results were Codex-reported (36 passing tests), not independently rerun.
-- **P1 branch:** `feat/phase1-voting-boss-assembly`, forked from the merged Phase 0 commit. Owner authorized starting Phase 1.
-- **P1 work status:** C5 independently passed on `1c836d9b7726a69ab559d342a4a3c283bdf2eb2a` ([review](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6417063491)). The bounded C6 revealed-stat spacing fix is implemented in `a0236e78e2d28e839d9e7ab49e05030e79f6518d`; Chromium viewport checks and required project checks passed. C6 exact-head review is pending on the existing Draft PR #2.
-- **Twitch registration blocker:** Owner's 2FA/mobile verification problem remains unresolved. Genuine Twitch OAuth/EventSub is deferred, and simulated events must remain labeled mock.
-- **Merge / deployment:** No Phase 1 merge, production deployment, or release authorized.
+- **Active milestone:** P2 — Playable Boss Battle (**implementation complete on the feature branch; exact-head independent review pending**).
+- **Phase 0:** Completed and squash-merged through [PR #1](https://github.com/mrdzyn/bossforge/pull/1) at `1fc0d8b8f8d3665266a4a5092f6da240bbddf7b1`.
+- **Phase 1:** Completed, independently source-reviewed through C6 ([C6 PASS](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6417403432)), and squash-merged via [PR #2](https://github.com/mrdzyn/bossforge/pull/2) into `main` at `2ca5c1ebcd0fe4f51b153faf36a8a765d66fec45`. The prior 49-test validation was Codex-reported.
+- **P2 authorization:** Owner explicitly authorized Phase 2 implementation. Work remains on `feat/phase2-playable-boss-battle`, based on the Phase 1 squash merge.
+- **P2 implementation:** Phaser 3.90.0 is pinned; `/arena` is lazy-loaded, accepts only a current validated reveal, and runs deterministic local combat with all four special attacks, movement, aiming, dodge, weakness ammunition, health, victory/defeat, and same-boss rematch. C2 remediation now covers stationary-spawn threat/evasion for every special, truthful hit feedback, and active-backend-restart cleanup. No server combat endpoint or persistence was added.
+- **P2 review state:** Independent C1 identified three bounded findings; remediation and new validation are recorded in [P2-C2 acceptance](ACCEPTANCE.md). Request independent exact-head C2 review on existing Draft PR #3; keep it unmerged.
+- **P2 active specification:** [Playable Boss Battle](P2-PLAYABLE-BOSS-BATTLE.md). Implementation HEAD, exact validation commands, screenshots, and independent review handoff are recorded in [HANDOFFS](HANDOFFS.md) and [ACCEPTANCE](ACCEPTANCE.md).
+- **Twitch registration blocker:** The owner's account 2FA/mobile verification remains unresolved; actual Twitch OAuth/EventSub is postponed. Simulation must be plainly labeled.
+- **Merge/deployment:** No Phase 2 merge, deployment, release or publishing is authorized. Require independent exact-head review and explicit owner merge decision.
 
-## P1 acceptance target
+## Acceptance target
 
-One complete, deterministic, development-only four-category audience voting cycle, fed by validated mock chat events, yields a modular boss with meaningful visual differences per trait. Dashboard and OBS preview show server-authoritative counts, timer, results, and consistent snapshots. Backend restart recovery and response ordering are covered by the C5 remediation, which passed independent review. The C6 UI polish review is pending. Local mutation and WebSocket security requirements from Phase 0 remain required. P1 is not merged.
+Complete local demo: simulated four-category forge -> boss reveal -> user starts Phaser arena -> playable boss battle with health and differentiated attack patterns -> streamer/community result -> rematch. Preserve the prior 49-test Phase 1 suite and its local-only boundaries while adding Phase 2 coverage. Do not claim remote multiplayer, authenticated combat, or genuine Twitch voting.
 
-## Documentation and review
+## Source of truth
 
-- Active spec: [P1 Audience Voting and Boss Assembly](P1-AUDIENCE-VOTING-AND-BOSS-ASSEMBLY.md).
-- Original architecture: [ARCHITECTURE.md](ARCHITECTURE.md); update as implementation changes.
-- Original Phase 0 acceptance evidence remains in [ACCEPTANCE.md](ACCEPTANCE.md); append P1 outcomes without relabeling old tests.
-- PR stays Draft until exact-head independent review, followed by an explicit owner merge decision.
-
-## Deferred work
-
-Real Twitch integration, Phaser combat, persistence, production authorization, deployment, publishing, and payment features are not within P1.
+- [P2 specification](P2-PLAYABLE-BOSS-BATTLE.md)
+- [Architecture](ARCHITECTURE.md)
+- [Security controls](SECURITY.md)
+- [Acceptance history](ACCEPTANCE.md)
+- [Execution handoffs](HANDOFFS.md)
+- [Roadmap](ROADMAP.md)

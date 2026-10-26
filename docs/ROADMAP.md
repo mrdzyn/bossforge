@@ -4,8 +4,7 @@
 
 Establish the workspace, server/web/shared boundaries, validated contracts,
 local mock chat path, dashboard and overlay shell, and implementation
-documentation. This is the only authorized implementation phase in the current
-handoff.
+documentation. Phase 0 is complete and was squash-merged via PR #1.
 
 ## Phase 1 — Audience Voting and Boss Assembly
 
@@ -16,8 +15,7 @@ or Twitch authentication.
 
 ## Phase 2 — Playable Boss Battle
 
-After authorization, implement a compact Phaser arena with streamer movement,
-boss attack patterns, health, and a complete victory/defeat cycle.
+**Authorized kickoff on the Phase 1 merged baseline.** Implement a compact Phaser 3 arena with streamer movement, telegraphed boss attack patterns, health, meaningful weakness mechanics, and a complete victory/defeat/rematch cycle. See [the active P2 specification](P2-PLAYABLE-BOSS-BATTLE.md). Local mock-only combat; no Twitch authentication, production deployment, or remote multiplayer.
 
 ## Phase 3 — Real Twitch Integration
 

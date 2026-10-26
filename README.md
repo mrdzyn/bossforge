@@ -4,8 +4,8 @@
 
 BossForge Live is an interactive browser game concept for Twitch streams. The
 audience will shape a monster through chat and the streamer will fight it in an
-arcade arena. Phase 1 adds server-authoritative local voting and a
-broadcast-oriented OBS overlay.
+arcade arena. Phase 1 established server-authoritative local voting and a
+broadcast-oriented OBS overlay. Phase 2 develops the playable local boss battle.
 
 ## Current status
 
@@ -14,9 +14,15 @@ vote per mock viewer/category, deterministic ties and fallbacks, in-memory
 session state, modular boss traits and bounded statistics, streamer controls,
 a read-only live OBS overlay, and repeatable synthetic simulation.
 
-**Deferred:** Playable combat and official Twitch OAuth/EventSub integration.
-The mock adapter uses synthetic data and is not a Twitch connection. P1 remains
-development-only and has not been independently audited or merged.
+**Phase 1:** Independently source-reviewed and squash-merged to `main` via PR #2.
+**Phase 2:** A local Phaser 3 playable battle is implemented on the existing
+feature branch and awaits independent exact-HEAD review. Run `pnpm simulate`,
+open the dashboard, and choose **Enter Arena** after the reveal. Controls:
+WASD/arrows move, click or Space fires toward the pointer, Shift dodges, and
+1–4 selects water/light/earth/wind ammunition. Matching the revealed weakness
+deals 75% bonus damage. Combat is a local browser simulation and battle results
+are not persisted. Official Twitch OAuth/EventSub remains deferred; mock events
+are synthetic and are not a Twitch connection.
 
 See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 [roadmap](docs/ROADMAP.md).
@@ -26,7 +32,7 @@ See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 - Node.js 22.13 or newer in the Node 22 LTS line, or Node.js 24 LTS.
 - pnpm 11.25.0 (Corepack can select the version pinned in `package.json`).
 
-No Twitch credentials, database, Docker, or external API is needed for Phase 1.
+No Twitch credentials, database, Docker, or external API is needed for local forge and arena demos.
 
 ## Install and run
 
@@ -50,7 +56,7 @@ corepack pnpm simulate
 
 The dashboard's **Generate event** button also advances the local mock sequence
 one event at a time. The developer simulation routes are only
-registered outside production mode. Both local services bind to loopback by
+registered in explicit development mode. Both local services bind to loopback by
 default.
 
 ## OBS overlay preview

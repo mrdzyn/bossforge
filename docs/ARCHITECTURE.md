@@ -91,3 +91,21 @@ future implementation. Twitch formats must not leak into game services.
 
 No database, external service, container, paid API, or production deployment is
 introduced. SQLite may be considered only if a later milestone needs persistence.
+
+## Phase 2 local arena
+
+- The dashboard and OBS continue to consume the single `useLiveEvents` hook and
+  its shared `ForgeStateReconciler`. The arena route is lazy-loaded so Phaser is
+  absent from the main dashboard chunk.
+- `/arena` parses the current snapshot with `RevealedForgeStateSchema`. Its game
+  identity is bound to server instance, forge cycle, and boss ID. A reset,
+  replacement instance, or failed authoritative snapshot tears down the game
+  and returns to the unavailable/forge path; stale responses remain subject to
+  the same reconciler as the dashboard.
+- `packages/shared/src/combat.ts` owns a deterministic fixed-step reducer.
+  Phaser supplies movement, pointer/key input, scene rendering, and scene
+  lifecycle; boss health/damage/cadence come from the exact forged `Boss`.
+  Victory/defeat are local browser state and are not sent to Fastify or persisted.
+- `ArenaGame` uses procedural shapes, closes by destroying the Phaser game on
+  unmount or identity change, and pauses when the tab is hidden. No combat
+  endpoint, networked player input, Twitch credential, or new service was added.

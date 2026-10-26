@@ -224,3 +224,79 @@ reported no failed requests or page errors. Before the fix, measured stats
 dashboard viewports. The mobile stats line wraps within the card width without
 clipping. Existing C5 wall-clock epoch ordering remains a disclosed,
 non-production limitation; this presentation-only change does not affect it.
+
+## Phase 2 — local playable boss battle
+
+The following checks were run against the Phase 2 working tree. They are
+Codex-reported engineering and browser evidence, not independent approval.
+
+| Criterion                                 | Verification                                                                                      | Result                                                                                                                                                                                                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phaser version and lazy route             | `apps/web/package.json`, production Vite build                                                    | PASS — exact `phaser@3.90.0`; `/arena` is a separate lazy chunk; dashboard chunk remains 297.55 KB raw (87.99 KB gzip), arena chunk 1,220.68 KB raw (336.90 KB gzip)                                                                                  |
+| Validated forge reveal and lifecycle      | Revealed snapshot schema; Chromium local reset smoke; existing C5 epoch reconciler tests          | PASS — only revealed states with a complete boss validate; browser reset returned HTTP 200, removed the Phaser canvas, and showed the unavailable path; C5 tests accept new-process idle revision 0 and reject stale prior-process responses          |
+| Combat behavior                           | Shared deterministic reducer and snapshot schema tests                                            | PASS — exact forged starting health/stats, 12 vs 21 damage for normal vs matching weakness ammo, all four telegraphs/patterns, dodge cooldown/invulnerability, damage, victory/defeat, terminal-state immutability, and invalid arena-state rejection |
+| Full four-category workflow               | `pnpm simulate`                                                                                   | PASS — synthetic votes submitted for body, element, special, weakness; deterministic result was Thunder Tempest, Drake / Storm / Thunder-Dash / Light, 250 HP, 24 damage, 1600 ms cadence                                                             |
+| Chromium interactive victory              | Chromium 154.0.8037.57, actual keyboard/mouse input at 1440×900                                   | PASS — selected Light weakness ammo, aimed and fired at the boss, boss health reached 0, streamer victory shown                                                                                                                                       |
+| Rematch and defeat                        | Same browser session; rematch button, movement into dash path, then no attacks                    | PASS — health reset to 250/250 and 100/100 for the same boss; second battle ended in community victory with streamer health 0                                                                                                                         |
+| Dashboard/OBS responsive regressions      | Chromium 154.0.8037.57                                                                            | PASS — dashboard 1440×900 and 390×844; OBS 1920×1080 and 1280×720; no horizontal overflow; idle/voting/revealed dashboard paths retained                                                                                                              |
+| Browser errors                            | Chromium console, page exceptions, HTTP responses                                                 | PASS — no page errors, console errors, or HTTP error responses observed                                                                                                                                                                               |
+| Frozen install                            | `pnpm install --frozen-lockfile --store-dir /workspace/.pnpm-store`                               | PASS — lockfile verified, all workspace projects up to date                                                                                                                                                                                           |
+| Build / typecheck / lint / format / tests | `pnpm build`; `pnpm typecheck`; `pnpm lint`; `pnpm format:check`; `pnpm test`; `git diff --check` | PASS — all commands passed; 56 tests total (17 shared, 39 server), retaining the 49-test Phase 1 baseline                                                                                                                                             |
+
+Real Chromium screenshots are in [visual-qa/p2](visual-qa/p2/):
+[dashboard 1440×900](visual-qa/p2/p2-dashboard-1440x900.png),
+[dashboard 390×844](visual-qa/p2/p2-dashboard-390x844.png),
+[OBS 1920×1080](visual-qa/p2/p2-overlay-1920x1080.png),
+[OBS 1280×720](visual-qa/p2/p2-overlay-1280x720.png),
+[battle in progress](visual-qa/p2/p2-arena-in-progress-1440x900.png),
+[victory](visual-qa/p2/p2-arena-victory-1440x900.png),
+[same-boss rematch](visual-qa/p2/p2-arena-rematch-1440x900.png), and
+[defeat](visual-qa/p2/p2-arena-defeat-1440x900.png). Screenshots were captured
+from actual Chromium sessions and were not generated or edited.
+
+Remaining limitations: combat is local client-side simulation; battle results
+are not persisted or shared with OBS, and touch combat controls are not
+implemented. The Phaser arena chunk triggers Vite's >500 KB advisory (about
+1.22 MB raw / 337 KB gzip), although it is not downloaded by dashboard/OBS
+routes. Twitch auth/EventSub, multiplayer, production authorization, and Phase 3
+remain out of scope. Independent Phase 2 review is pending at the exact pushed
+HEAD; Codex-run checks do not constitute approval.
+
+## P2-C2 bounded remediation — C1 fairness, feedback, and lifecycle findings
+
+This is Codex-run validation for the C2 remediation, not independent approval.
+The original C1 review was a source/screenshot audit; the checks below include
+fresh reducer tests and live Chromium interaction.
+
+| Criterion                                                    | Verification                                                                          | Result                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stationary default-spawn danger and evasion for each special | `packages/shared/test/combat.test.ts`; Chromium 154.0.8037.57                         | PASS — ember-burst, frost-chain, thunder-dash and shadow-pulse each reduced stationary player health from 100 to 76; telegraph-time lateral/dodge evasion kept health at 100 for each                                                                                      |
+| Ember safe gap                                               | Reducer and Chromium                                                                  | PASS — gap is offset from the default player's bearing and shown by the dark sector; a lateral dash reaches the gap                                                                                                                                                        |
+| Frost-chain target behavior                                  | Reducer and Chromium                                                                  | PASS — staggered bolts follow the position shown during telegraph rather than retargeting a moving player; lateral movement evaded the volley                                                                                                                              |
+| Thunder-dash reach                                           | Reducer and Chromium                                                                  | PASS — 700-unit/s dash crosses the default-spawn collision radius; lateral dodge during the line telegraph avoids damage                                                                                                                                                   |
+| Shadow-pulse reach                                           | Reducer and Chromium                                                                  | PASS — expanding ring reaches a 430-unit radius and crosses the default spawn; timed lateral dodge during the active ring avoids damage                                                                                                                                    |
+| Damage feedback correctness                                  | Reducer tests; real browser attacks                                                   | PASS — nonmatching ammo records/shows neutral `HIT`; matching ammo records/shows `WEAKNESS HIT · BONUS DAMAGE`; banner remains absent until a projectile collision                                                                                                         |
+| StrictMode and canvas lifecycle                              | React root source and Chromium 154                                                    | PASS — React `StrictMode` is active; each active arena had exactly one canvas; dashboard/arena transitions removed and recreated the canvas without duplicates                                                                                                             |
+| Rematch and terminal cleanup                                 | Chromium actual keyboard/mouse combat                                                 | PASS — three consecutive same-boss rematches restored full boss health and one canvas; terminal results stayed frozen; a no-attack rematch reached defeat; reset removed the canvas                                                                                        |
+| Input handler cleanup                                        | Phaser scene shutdown/terminal cleanup and repeated browser rematches                 | PASS — ammo key handler and pointer handler are removed at terminal state and scene shutdown; no duplicate canvas or repeated combat state was observed                                                                                                                    |
+| Hidden/visible lifecycle                                     | Chromium headless DOM visibility-event emulation                                      | PASS — dispatching hidden paused combat health for 3.2 seconds; dispatching visible resumed it and the next dash hit registered. Headless Chromium did not expose an OS-level hidden tab, so the `document.hidden` property was emulated before dispatching the real event |
+| Backend process restart while arena active                   | Isolated local Fastify process kill/restart with Chromium page open                   | PASS — active arena canvas removed during outage; replacement process returned a new server instance at idle with no old boss/canvas; a fresh `pnpm simulate` cycle mounted the new revealed boss on that instance                                                         |
+| Frozen install / full workspace checks                       | Frozen pnpm install, build, typecheck, lint, Prettier, full tests, `git diff --check` | PASS — full suite has 62 tests (23 shared, 39 server), retaining all 56 tests from the C1 candidate                                                                                                                                                                        |
+
+Actual Chromium evidence is in [visual-qa/p2/c2](visual-qa/p2/c2/): stationary
+and evasion telegraphs for
+[ember-burst](visual-qa/p2/c2/ember-burst-stationary-telegraph.png),
+[frost-chain](visual-qa/p2/c2/frost-chain-stationary-telegraph.png),
+[thunder-dash](visual-qa/p2/c2/thunder-dash-stationary-telegraph.png), and
+[shadow-pulse](visual-qa/p2/c2/shadow-pulse-stationary-telegraph.png); neutral
+and weakness feedback ([HIT](visual-qa/p2/c2/neutral-hit-feedback.png),
+[bonus](visual-qa/p2/c2/weakness-hit-feedback.png));
+[active battle before process restart](visual-qa/p2/c2/active-before-backend-restart.png),
+[new idle epoch](visual-qa/p2/c2/idle-after-backend-restart.png),
+[fresh arena recovery](visual-qa/p2/c2/fresh-arena-after-backend-restart.png),
+[victory](visual-qa/p2/c2/victory.png), [rematch](visual-qa/p2/c2/rematch-victory.png),
+and [defeat](visual-qa/p2/c2/defeat.png). Images are real Chromium captures.
+
+Remaining limits are unchanged: local client-side combat only, no persisted or
+OBS-shared battle result, no touch controls, and no real Twitch connectivity.
+Independent C2 exact-head review is pending.
