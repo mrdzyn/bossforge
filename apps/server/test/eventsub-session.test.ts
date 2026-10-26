@@ -14,7 +14,12 @@ type FakeSocket = {
   pongs: number;
 };
 
-function harness(options: { maxRetries?: number } = {}) {
+function harness(
+  options: {
+    maxRetries?: number;
+    acceptNotification?: (message: unknown) => boolean;
+  } = {},
+) {
   const timers: Array<{ callback: () => void; delayMs: number; cancelled: boolean }> = [];
   const sockets: FakeSocket[] = [];
   const notifications: unknown[] = [];
@@ -42,7 +47,11 @@ function harness(options: { maxRetries?: number } = {}) {
         },
       };
     },
-    onNotification: (message) => notifications.push(message),
+    onNotification: (message) => {
+      const accepted = options.acceptNotification?.(message) ?? true;
+      if (accepted) notifications.push(message);
+      return accepted;
+    },
     onSubscriptionPlan: (sessionId, plan) => plans.push({ sessionId, plan }),
     scheduler,
     maxRetries: options.maxRetries ?? 2,
@@ -58,14 +67,22 @@ function harness(options: { maxRetries?: number } = {}) {
     socket.handlers.message(JSON.stringify(message));
   const welcome = (socket: FakeSocket, id: string, sessionId = "session-1") =>
     send(socket, {
-      metadata: { message_id: id, message_type: "session_welcome" },
+      metadata: {
+        message_id: id,
+        message_type: "session_welcome",
+        message_timestamp: "2026-10-26T12:00:00.000Z",
+      },
       payload: { session: { id: sessionId, keepalive_timeout_seconds: 30 } },
     });
   return { session, timers, sockets, notifications, plans, fireNextTimer, send, welcome };
 }
 
 const message = (id: string, type: string, payload: unknown = {}) => ({
-  metadata: { message_id: id, message_type: type },
+  metadata: {
+    message_id: id,
+    message_type: type,
+    message_timestamp: "2026-10-26T12:00:00.000Z",
+  },
   payload,
 });
 
@@ -95,12 +112,18 @@ describe("offline injected EventSub lifecycle", () => {
     h.session.start();
     expect(h.session.status).toBe("connecting");
     const socket = h.sockets[0]!;
+    h.send(socket, message("early-notification", "notification", { event: { text: "early" } }));
+    expect(h.notifications).toHaveLength(0);
+    expect(h.session.status).toBe("connecting");
     h.welcome(socket, "welcome-1");
     expect(h.session.status).toBe("connected");
     expect(h.plans).toEqual([{ sessionId: "session-1", plan: "initial" }]);
 
     const notification = message("notification-1", "notification", { event: { text: "hello" } });
+    const deadlineBeforeNotification = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
     h.send(socket, notification);
+    expect(deadlineBeforeNotification.cancelled).toBe(true);
+    expect(h.timers.filter((timer) => !timer.cancelled)).toHaveLength(1);
     h.send(socket, notification);
     expect(h.notifications).toEqual([notification]);
     h.send(socket, message("keepalive-1", "session_keepalive"));
@@ -122,6 +145,16 @@ describe("offline injected EventSub lifecycle", () => {
     expect(h.session.status).toBe("reconnecting");
     expect(h.sockets[1]?.url).toBe(reconnectUrl);
     expect(oldSocket.closed).toBe(false);
+    h.send(
+      h.sockets[1]!,
+      message("pending-notification", "notification", { event: { text: "too early" } }),
+    );
+    expect(h.notifications).toHaveLength(0);
+    h.send(
+      oldSocket,
+      message("old-active-notification", "notification", { event: { text: "current" } }),
+    );
+    expect(h.notifications).toHaveLength(1);
     h.welcome(h.sockets[1]!, "welcome-new", "new-session");
     expect(oldSocket.closed).toBe(true);
     expect(h.session.status).toBe("connected");
@@ -129,7 +162,7 @@ describe("offline injected EventSub lifecycle", () => {
     oldSocket.handlers.message(
       JSON.stringify(message("late-old-socket", "notification", { event: { text: "stale" } })),
     );
-    expect(h.notifications).toHaveLength(0);
+    expect(h.notifications).toHaveLength(1);
   });
 
   it("does not schedule a competing retry if the old socket drops during reconnect", () => {
@@ -149,6 +182,8 @@ describe("offline injected EventSub lifecycle", () => {
     h.welcome(h.sockets[1]!, "welcome-new", "new-session");
     expect(h.session.status).toBe("connected");
     expect(h.plans).toHaveLength(1);
+    h.sockets[1]!.handlers.disconnect();
+    expect(h.session.status).toBe("retry-wait");
   });
 
   it("rejects malformed and unsafe reconnect instructions", () => {
@@ -188,12 +223,28 @@ describe("offline injected EventSub lifecycle", () => {
     const h = harness();
     h.session.start();
     h.welcome(h.sockets[0]!, "welcome-1");
-    h.sockets[0]!.handlers.disconnect();
+    const disconnectedSocket = h.sockets[0]!;
+    disconnectedSocket.handlers.disconnect();
+    h.send(
+      disconnectedSocket,
+      message("closed-socket-notification", "notification", { event: { text: "closed" } }),
+    );
+    expect(h.notifications).toHaveLength(0);
     expect(h.session.status).toBe("retry-wait");
     expect(h.timers.find((timer) => !timer.cancelled)?.delayMs).toBe(10);
     h.fireNextTimer();
     expect(h.sockets).toHaveLength(2);
+    h.send(
+      h.sockets[1]!,
+      message("retry-early-notification", "notification", { event: { text: "before welcome" } }),
+    );
+    expect(h.notifications).toHaveLength(0);
     h.welcome(h.sockets[1]!, "welcome-2", "session-2");
+    h.send(
+      h.sockets[1]!,
+      message("retry-valid-notification", "notification", { event: { text: "after welcome" } }),
+    );
+    expect(h.notifications).toHaveLength(1);
     expect(h.plans).toEqual([
       { sessionId: "session-1", plan: "initial" },
       { sessionId: "session-2", plan: "resubscribe" },
@@ -221,6 +272,74 @@ describe("offline injected EventSub lifecycle", () => {
     expect(h.session.status).toBe("retry-wait");
   });
 
+  it("answers sustained control pings without extending the keepalive deadline", () => {
+    const connecting = harness();
+    connecting.session.start();
+    const connectionDeadline = connecting.timers.find((timer) => !timer.cancelled)!;
+    for (let index = 0; index < 50; index += 1) connecting.sockets[0]!.handlers.ping();
+    expect(connecting.sockets[0]?.pongs).toBe(50);
+    expect(connectionDeadline.cancelled).toBe(false);
+    connectionDeadline.callback();
+    expect(connecting.session.status).toBe("retry-wait");
+
+    const h = harness();
+    h.session.start();
+    const socket = h.sockets[0]!;
+    h.welcome(socket, "welcome-1");
+    const deadline = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    for (let index = 0; index < 50; index += 1) socket.handlers.ping();
+    expect(socket.pongs).toBe(50);
+    expect(deadline.cancelled).toBe(false);
+    expect(h.timers.filter((timer) => !timer.cancelled)).toHaveLength(1);
+    deadline.callback();
+    expect(h.session.status).toBe("retry-wait");
+  });
+
+  it("does not extend deadlines for malformed frames or rejected notifications", () => {
+    const h = harness({ acceptNotification: () => false });
+    h.session.start();
+    const socket = h.sockets[0]!;
+    h.welcome(socket, "welcome-1");
+    const deadline = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    socket.handlers.message("{");
+    socket.handlers.message("x".repeat(65 * 1024));
+    h.send(socket, {
+      ...message("invalid-timestamp", "session_keepalive"),
+      metadata: {
+        message_id: "invalid-timestamp",
+        message_type: "session_keepalive",
+        message_timestamp: "not-a-timestamp",
+      },
+    });
+    h.send(socket, message("bad-keepalive", "session_keepalive", { unexpected: true }));
+    h.send(socket, message("rejected-notification", "notification", { event: null }));
+    expect(deadline.cancelled).toBe(false);
+    expect(h.timers.filter((timer) => !timer.cancelled)).toHaveLength(1);
+    expect(h.notifications).toHaveLength(0);
+    deadline.callback();
+    expect(h.session.status).toBe("retry-wait");
+  });
+
+  it("does not establish a handshake from a malformed welcome", () => {
+    const h = harness();
+    h.session.start();
+    const socket = h.sockets[0]!;
+    const deadline = h.timers.find((timer) => !timer.cancelled)!;
+    h.send(socket, {
+      ...message("malformed-welcome", "session_welcome", {
+        session: { id: "not-established", keepalive_timeout_seconds: 30 },
+      }),
+      metadata: {
+        message_id: "malformed-welcome",
+        message_type: "session_welcome",
+        message_timestamp: "bad-time",
+      },
+    });
+    expect(h.session.status).toBe("connecting");
+    expect(deadline.cancelled).toBe(false);
+    expect(h.plans).toHaveLength(0);
+  });
+
   it("bounds a connection attempt that never receives a welcome", () => {
     const h = harness({ maxRetries: 1 });
     h.session.start();
@@ -244,6 +363,8 @@ describe("offline injected EventSub lifecycle", () => {
     );
     expect(revoked.session.status).toBe("revoked");
     expect(socket.closed).toBe(true);
+    socket.handlers.message(JSON.stringify(message("after-revocation", "notification")));
+    expect(revoked.notifications).toHaveLength(0);
 
     const stopped = harness();
     stopped.session.start();
@@ -253,6 +374,8 @@ describe("offline injected EventSub lifecycle", () => {
     expect(stopped.session.status).toBe("stopped");
     expect(stoppedSocket.closed).toBe(true);
     expect(stopped.timers.every((timer) => timer.cancelled)).toBe(true);
+    stoppedSocket.handlers.message(JSON.stringify(message("after-shutdown", "notification")));
+    expect(stopped.notifications).toHaveLength(0);
     stoppedSocket.handlers.disconnect();
     expect(stopped.sockets).toHaveLength(1);
   });

@@ -9,13 +9,21 @@ const SessionWelcomeSchema = z.object({
 const SessionReconnectSchema = z.object({
   session: z.object({ reconnect_url: z.string().min(1).max(2048) }),
 });
+const SessionKeepaliveSchema = z.object({}).strict();
 const RevocationSchema = z.object({
   subscription: z.object({ status: z.string().min(1).max(100) }),
 });
+const RFC3339_TIMESTAMP =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/u;
+const EventSubTimestampSchema = z
+  .string()
+  .regex(RFC3339_TIMESTAMP)
+  .refine((timestamp) => Number.isFinite(Date.parse(timestamp)));
 const MessageHeaderSchema = z.object({
   metadata: z.object({
     message_id: z.string().min(1).max(100),
     message_type: z.string().min(1).max(50),
+    message_timestamp: EventSubTimestampSchema,
   }),
   payload: z.unknown(),
 });
@@ -51,7 +59,8 @@ export interface EventSubSessionOptions {
   /** Supplied by the caller. Production Twitch transport is intentionally absent. */
   initialUrl: string;
   createTransport(url: string, handlers: EventSubTransportHandlers): EventSubTransport;
-  onNotification(message: unknown): void;
+  /** Return true only after the notification has passed its application schema. */
+  onNotification(message: unknown): boolean;
   onSubscriptionPlan?(sessionId: string, plan: SubscriptionPlan): void;
   scheduler?: EventSubScheduler;
   maxRetries?: number;
@@ -82,6 +91,7 @@ export class EventSubSession {
   private activeTransportId: number | null = null;
   private pendingReconnectId: number | null = null;
   private readonly transports = new Map<number, EventSubTransport>();
+  private readonly welcomedTransports = new Set<number>();
   private readonly keepaliveTimers = new Map<number, { cancel: () => void; timeoutMs: number }>();
   private cancelRetry: (() => void) | undefined;
   private retries = 0;
@@ -139,20 +149,21 @@ export class EventSubSession {
     const parsed = MessageHeaderSchema.safeParse(decoded);
     if (!parsed.success) return;
     if (transportId !== this.activeTransportId && transportId !== this.pendingReconnectId) return;
-    this.resetKeepalive(transportId);
     const { metadata, payload } = parsed.data;
     if (this.seenIds.has(metadata.message_id)) return;
-    this.remember(metadata.message_id);
 
     if (metadata.message_type === "session_welcome") {
       const welcome = SessionWelcomeSchema.safeParse(payload);
-      if (!welcome.success) return;
+      if (!welcome.success || this.welcomedTransports.has(transportId)) return;
+      this.remember(metadata.message_id);
       const wasReconnect = transportId === this.pendingReconnectId;
-      if (wasReconnect && this.activeTransportId !== null) {
-        this.closeTransport(this.activeTransportId);
+      if (wasReconnect) {
+        if (this.activeTransportId !== null && this.activeTransportId !== transportId)
+          this.closeTransport(this.activeTransportId);
         this.pendingReconnectId = null;
       }
       this.activeTransportId = transportId;
+      this.welcomedTransports.add(transportId);
       this.statusValue = "connected";
       this.retries = 0;
       this.resetKeepalive(transportId, welcome.data.session.keepalive_timeout_seconds);
@@ -167,13 +178,28 @@ export class EventSubSession {
     }
 
     if (transportId !== this.activeTransportId) return;
+    if (!this.welcomedTransports.has(transportId)) return;
 
     switch (metadata.message_type) {
-      case "session_keepalive":
+      case "session_keepalive": {
+        if (!SessionKeepaliveSchema.safeParse(payload).success) return;
+        this.remember(metadata.message_id);
+        this.resetKeepalive(transportId);
         return;
-      case "notification":
-        this.options.onNotification(decoded);
+      }
+      case "notification": {
+        const accepted = (() => {
+          try {
+            return this.options.onNotification(decoded);
+          } catch {
+            return false;
+          }
+        })();
+        if (!accepted) return;
+        this.remember(metadata.message_id);
+        this.resetKeepalive(transportId);
         return;
+      }
       case "session_reconnect": {
         const reconnect = SessionReconnectSchema.safeParse(payload);
         if (!reconnect.success) return;
@@ -190,12 +216,14 @@ export class EventSubSession {
           url.host.toLowerCase() !== this.initialHost
         )
           return;
+        this.remember(metadata.message_id);
         this.statusValue = "reconnecting";
         this.open(reconnect.data.session.reconnect_url, true);
         return;
       }
       case "revocation":
         if (!RevocationSchema.safeParse(payload).success) return;
+        this.remember(metadata.message_id);
         this.stopAs("revoked");
         return;
       default:
@@ -206,8 +234,8 @@ export class EventSubSession {
   /** Called for WebSocket control-frame pings; responds with a control pong. */
   receivePing(transportId = this.activeTransportId): void {
     if (transportId === null) return;
+    if (transportId !== this.activeTransportId && transportId !== this.pendingReconnectId) return;
     this.transports.get(transportId)?.pong?.();
-    this.resetKeepalive(transportId);
   }
 
   disconnect(transportId = this.activeTransportId): void {
@@ -286,6 +314,7 @@ export class EventSubSession {
     const transport = this.transports.get(id);
     if (!transport) return;
     this.transports.delete(id);
+    this.welcomedTransports.delete(id);
     transport.close();
   }
 
@@ -296,6 +325,7 @@ export class EventSubSession {
     this.keepaliveTimers.clear();
     for (const id of this.transports.keys()) this.transports.get(id)?.close();
     this.transports.clear();
+    this.welcomedTransports.clear();
     this.activeTransportId = null;
     this.pendingReconnectId = null;
     this.statusValue = status;

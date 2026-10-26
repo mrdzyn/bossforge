@@ -321,8 +321,43 @@ Validation results:
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check` — PASS.
 - `pnpm test` — PASS, 85 tests total (23 shared, 62 server), preserving all 62
   P2 tests. Focused P3-A tests: 23 (13 normalizer, 10 lifecycle).
-- `pnpm simulate` — PASS; completed the synthetic four-category mock workflow.
+- `BOSSFORGE_PORT=3013 pnpm --filter @bossforge/server dev` started the local
+  server on loopback, `/health` returned 200, and
+  `BOSSFORGE_URL=http://127.0.0.1:3013 pnpm simulate` — PASS; completed all four
+  synthetic categories and revealed Thunder Tempest. The temporary server was
+  stopped afterward; the already-occupied default port was left untouched.
 - `git diff --check` — PASS.
 
 Real Twitch connectivity, OAuth, subscription, and live voting are **NOT
 TESTED** and remain unauthorized. Independent exact-head review is pending.
+
+## P3-A-C2 bounded remediation of C1 findings
+
+This section supersedes the initial P3-A check counts above for the current
+candidate. It remains entirely offline and does not enable live Twitch votes.
+
+| Finding                          | Focused verification                                                                  | Result                                                                                                                                                                                                        |
+| -------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authorized chat-reader condition | `apps/server/test/eventsub-normalizer.test.ts`                                        | PASS — realistic v1 fixture requires both broadcaster and `user_id`; configured reader is validated; missing, malformed and mismatched reader IDs reject, while `chatter_user_id` remains the viewer identity |
+| Per-transport welcome gate       | `apps/server/test/eventsub-session.test.ts`                                           | PASS — pre-welcome, retry-before-welcome and pending-reconnect notifications reject; old welcomed socket remains usable until replacement welcome; closed and revoked socket events reject                    |
+| Keepalive/Ping semantics         | `apps/server/test/eventsub-session.test.ts`                                           | PASS — Ping returns Pong without deadline extension; malformed frames and rejected notifications do not refresh; valid welcome, empty keepalive and accepted notification refresh; timeout enters retry path  |
+| Mock-only behavior               | Normalizer plus `ForgeSession` regression and existing server security tests          | PASS — Twitch normalized fixture cannot mutate live mock session; `simulated: true`, `connectedToTwitch: false`, and mock-only simulation validation remain unchanged                                         |
+| Full validation                  | Frozen install, build, typecheck, lint, format, full tests, diff check and simulation | PASS — actual outcomes are listed below                                                                                                                                                                       |
+
+Validation results:
+
+- `pnpm install --frozen-lockfile --store-dir /workspace/.pnpm-store` — PASS.
+- `pnpm build` — PASS; Vite reports the existing lazy Phaser chunk size advisory.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `git diff --check` — PASS.
+- `pnpm test` — PASS, 92 total (23 shared, 69 server), preserving all 85
+  pre-remediation P3-A tests. Focused C2 suites: 30 (17 normalizer, 13
+  lifecycle).
+- With the local development server running on loopback port 3013,
+  `BOSSFORGE_URL=http://127.0.0.1:3013 pnpm simulate` — PASS; completed all
+  four synthetic categories and revealed Thunder Tempest. Port 3001 was occupied
+  by an existing process and was left untouched; the temporary server was
+  stopped after the smoke run.
+
+No browser UI changed. No Twitch endpoints, credentials, OAuth, subscription
+creation, or public endpoints were used. Real Twitch access remains **NOT
+TESTED** and P3-B is not authorized. Independent exact-head C2 review is pending.

@@ -22,7 +22,10 @@ const EventSubChatNotificationSchema = z.object({
     subscription: z.object({
       type: z.literal("channel.chat.message"),
       version: z.literal("1"),
-      condition: z.object({ broadcaster_user_id: UserIdSchema }),
+      condition: z.object({
+        broadcaster_user_id: UserIdSchema,
+        user_id: UserIdSchema,
+      }),
     }),
     event: z.object({
       broadcaster_user_id: UserIdSchema,
@@ -40,6 +43,7 @@ export type EventSubNormalizationFailure =
   | "malformed"
   | "unsupported"
   | "wrong-channel"
+  | "unauthorized-chat-reader"
   | "duplicate"
   | "out-of-order"
   | "stale-or-future";
@@ -50,6 +54,7 @@ export type EventSubNormalizationResult =
 
 export interface EventSubNormalizerOptions {
   broadcasterUserId: string;
+  authorizedChatReaderUserId: string;
   now?: () => Date;
   maxMessageBytes?: number;
   maxAgeMs?: number;
@@ -69,6 +74,8 @@ export class EventSubChatNormalizer {
   constructor(private readonly options: EventSubNormalizerOptions) {
     if (!UserIdSchema.safeParse(options.broadcasterUserId).success)
       throw new Error("Expected a numeric Twitch broadcaster user ID");
+    if (!UserIdSchema.safeParse(options.authorizedChatReaderUserId).success)
+      throw new Error("Expected a numeric authorized Twitch chat reader user ID");
     this.now = options.now ?? (() => new Date());
     this.maxMessageBytes = options.maxMessageBytes ?? 8 * 1024;
     this.maxAgeMs = options.maxAgeMs ?? 5 * 60 * 1000;
@@ -101,6 +108,8 @@ export class EventSubChatNormalizer {
       event.broadcaster_user_id !== this.options.broadcasterUserId
     )
       return { ok: false, reason: "wrong-channel" };
+    if (payload.subscription.condition.user_id !== this.options.authorizedChatReaderUserId)
+      return { ok: false, reason: "unauthorized-chat-reader" };
     if (this.seenMessageIds.has(event.message_id)) return { ok: false, reason: "duplicate" };
 
     const occurredAtMs = Date.parse(metadata.message_timestamp);

@@ -51,15 +51,25 @@ or coding agent.
   contain no Twitch socket, HTTP client, OAuth flow, credential lookup, or
   subscription management.
 - The normalizer bounds serialized packets and chat text; validates v1 message
-  type, channel condition, stable numeric user ID, timestamp, and message ID;
-  and rejects malformed, wrong-channel, stale/future, out-of-order, and replayed
-  messages. Text stays ordinary untrusted chat text.
+  type, both the configured broadcaster and authorized chat-reader IDs in the
+  subscription condition, stable chatter ID, timestamp, and message ID; and
+  rejects malformed, wrong-channel/reader, stale/future, out-of-order, and
+  replayed messages. Text stays ordinary untrusted chat text.
+- The official chat subscription condition contains both the configured
+  broadcaster ID and an explicitly configured authorized chat-reader ID. The
+  latter is validated against the fixture condition; the chatter ID remains the
+  actual viewer identity in the normalized event.
 - The injected lifecycle harness consumes frames from a caller-supplied fake
   transport. Reconnect URLs must use `wss:`, match the configured host, and
   contain no user information; the URL is passed unchanged to the injected
   factory. Tests use a reserved `.invalid` fixture host only. The harness
   reports subscription plans to a callback and does not send subscription JSON
-  over the WebSocket.
+  over the WebSocket. Notifications require a successful welcome for their
+  transport and an accepting validation callback; only valid welcome, keepalive,
+  or accepted notification messages refresh the EventSub deadline. Control
+  Ping is answered with Pong without changing that deadline. Malformed frames,
+  rejected notifications, duplicate activity, and stale/closed/revoked sockets
+  do not renew deadlines or forward notifications.
 - Do not connect this harness to a real transport or feed normalized Twitch
   events to `ForgeSession` in P3-A. Forge events remain mock-sourced and
   `simulated: true` / `connectedToTwitch: false`; P3-B requires separate owner

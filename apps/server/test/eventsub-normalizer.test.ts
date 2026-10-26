@@ -4,17 +4,27 @@ import { EventSubChatNormalizer } from "../src/twitch/eventsub-normalizer.js";
 
 const NOW = "2026-10-26T12:00:10.000Z";
 const CHANNEL = "123456";
+const CHAT_READER = "111222";
 
 function fixture(overrides: Record<string, unknown> = {}) {
   const event = {
     broadcaster_user_id: CHANNEL,
+    broadcaster_user_login: "channel_login",
+    broadcaster_user_name: "ChannelName",
     chatter_user_id: "987654",
     chatter_user_login: "viewer_login",
     chatter_user_name: "ViewerName",
     message_id: "message-1",
     message: { text: "!vote body drake", fragments: [{ type: "text", text: "!vote body drake" }] },
+    color: "#9147FF",
+    badges: [{ set_id: "subscriber", id: "1", info: "12" }],
+    message_type: "text",
     ...((overrides.event as object | undefined) ?? {}),
   };
+  const subscriptionOverrides =
+    (overrides.subscription as Record<string, unknown> | undefined) ?? {};
+  const conditionOverrides =
+    (subscriptionOverrides.condition as Record<string, unknown> | undefined) ?? {};
   return {
     metadata: {
       message_id: "eventsub-1",
@@ -28,10 +38,18 @@ function fixture(overrides: Record<string, unknown> = {}) {
       ? overrides.payload
       : {
           subscription: {
+            id: "offline-subscription-1",
+            status: "enabled",
             type: "channel.chat.message",
             version: "1",
-            condition: { broadcaster_user_id: CHANNEL },
-            ...((overrides.subscription as object | undefined) ?? {}),
+            cost: 1,
+            ...subscriptionOverrides,
+            condition: {
+              broadcaster_user_id: CHANNEL,
+              user_id: CHAT_READER,
+              ...conditionOverrides,
+            },
+            transport: { method: "websocket", session_id: "offline-session-1" },
           },
           event,
         },
@@ -41,12 +59,23 @@ function fixture(overrides: Record<string, unknown> = {}) {
 function normalizer(options: { now?: string; maxMessageBytes?: number } = {}) {
   return new EventSubChatNormalizer({
     broadcasterUserId: CHANNEL,
+    authorizedChatReaderUserId: CHAT_READER,
     now: () => new Date(options.now ?? NOW),
     ...(options.maxMessageBytes ? { maxMessageBytes: options.maxMessageBytes } : {}),
   });
 }
 
 describe("offline EventSub chat normalizer", () => {
+  it("requires a valid configured chat-reader identity", () => {
+    expect(
+      () =>
+        new EventSubChatNormalizer({
+          broadcasterUserId: CHANNEL,
+          authorizedChatReaderUserId: "not-a-user-id",
+        }),
+    ).toThrow("authorized Twitch chat reader user ID");
+  });
+
   it("normalizes official-shaped v1 chat using stable IDs and Twitch timestamps", () => {
     const result = normalizer().normalize(fixture());
     expect(result).toMatchObject({
@@ -77,6 +106,17 @@ describe("offline EventSub chat normalizer", () => {
       "wrong condition",
       { subscription: { condition: { broadcaster_user_id: "654321" } } },
       "wrong-channel",
+    ],
+    ["missing chat reader", { subscription: { condition: { user_id: undefined } } }, "malformed"],
+    [
+      "malformed chat reader",
+      { subscription: { condition: { user_id: "reader name" } } },
+      "malformed",
+    ],
+    [
+      "unauthorized chat reader",
+      { subscription: { condition: { user_id: "999888" } } },
+      "unauthorized-chat-reader",
     ],
     ["unsupported message type", { metadata: { message_type: "session_welcome" } }, "unsupported"],
     ["invalid stable user ID", { event: { chatter_user_id: "viewer name" } }, "malformed"],
