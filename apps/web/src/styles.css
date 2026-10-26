@@ -1622,8 +1622,9 @@ p {
   color: #e2bd75;
 }
 .boss-stats {
+  margin: 8px 0 0;
   color: #96a9b9;
-  font: 10px ui-monospace;
+  font: 10px/1.4 ui-monospace;
   letter-spacing: 0.08em;
 }
 .draft-badge.revealed {
