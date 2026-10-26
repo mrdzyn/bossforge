@@ -114,7 +114,7 @@ describe("offline injected EventSub lifecycle", () => {
     h.session.start();
     const oldSocket = h.sockets[0]!;
     h.welcome(oldSocket, "welcome-old", "old-session");
-    const reconnectUrl = "wss://redirect.example/eventsub?session_id=preserve-me";
+    const reconnectUrl = "wss://fixtures.invalid/eventsub?session_id=preserve-me";
     h.send(
       oldSocket,
       message("reconnect-1", "session_reconnect", { session: { reconnect_url: reconnectUrl } }),
@@ -140,7 +140,7 @@ describe("offline injected EventSub lifecycle", () => {
     h.send(
       oldSocket,
       message("reconnect-1", "session_reconnect", {
-        session: { reconnect_url: "wss://redirect.example/eventsub" },
+        session: { reconnect_url: "wss://fixtures.invalid/eventsub" },
       }),
     );
     oldSocket.handlers.disconnect();
@@ -168,6 +168,12 @@ describe("offline injected EventSub lifecycle", () => {
       socket,
       message("credential-reconnect", "session_reconnect", {
         session: { reconnect_url: "wss://user:pass@evil.invalid/eventsub" },
+      }),
+    );
+    h.send(
+      socket,
+      message("foreign-wss-reconnect", "session_reconnect", {
+        session: { reconnect_url: "wss://evil.invalid/eventsub" },
       }),
     );
     expect(h.sockets).toHaveLength(1);

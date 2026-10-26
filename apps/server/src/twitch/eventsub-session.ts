@@ -77,6 +77,7 @@ export class EventSubSession {
   private readonly maxRetries: number;
   private readonly baseRetryDelayMs: number;
   private readonly connectionTimeoutMs: number;
+  private readonly initialHost: string;
   private nextTransportId = 0;
   private activeTransportId: number | null = null;
   private pendingReconnectId: number | null = null;
@@ -91,6 +92,7 @@ export class EventSubSession {
     const initialUrl = new URL(options.initialUrl);
     if (initialUrl.protocol !== "wss:" || initialUrl.username || initialUrl.password)
       throw new Error("EventSub transport URL must be a credential-free wss URL");
+    this.initialHost = initialUrl.host.toLowerCase();
     this.scheduler = options.scheduler ?? realScheduler;
     this.maxRetries = options.maxRetries ?? 3;
     this.baseRetryDelayMs = options.baseRetryDelayMs ?? 500;
@@ -181,7 +183,13 @@ export class EventSubSession {
         } catch {
           return;
         }
-        if (url.protocol !== "wss:" || url.username || url.password) return;
+        if (
+          url.protocol !== "wss:" ||
+          url.username ||
+          url.password ||
+          url.host.toLowerCase() !== this.initialHost
+        )
+          return;
         this.statusValue = "reconnecting";
         this.open(reconnect.data.session.reconnect_url, true);
         return;

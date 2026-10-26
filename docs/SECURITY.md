@@ -55,10 +55,11 @@ or coding agent.
   and rejects malformed, wrong-channel, stale/future, out-of-order, and replayed
   messages. Text stays ordinary untrusted chat text.
 - The injected lifecycle harness consumes frames from a caller-supplied fake
-  transport. Reconnect URLs must use `wss:` and contain no user information; the
-  URL is passed unchanged to the injected factory. Tests use reserved fixture
-  hosts only. The harness reports subscription plans to a callback and does not
-  send subscription JSON over the WebSocket.
+  transport. Reconnect URLs must use `wss:`, match the configured host, and
+  contain no user information; the URL is passed unchanged to the injected
+  factory. Tests use a reserved `.invalid` fixture host only. The harness
+  reports subscription plans to a callback and does not send subscription JSON
+  over the WebSocket.
 - Do not connect this harness to a real transport or feed normalized Twitch
   events to `ForgeSession` in P3-A. Forge events remain mock-sourced and
   `simulated: true` / `connectedToTwitch: false`; P3-B requires separate owner
