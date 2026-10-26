@@ -70,16 +70,16 @@ available; otherwise mark browser testing NOT TESTED and report that limitation.
 Status is recorded for the exact Phase 1 branch head in the handoff. These
 results are Codex-run evidence, not independent audit approval.
 
-| Criterion                                                                 | Verification                        | Result                                                                                                                               |
-| ------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Frozen install, build, typecheck, lint, formatting, complete suite        | Workspace commands                  | PASS — frozen install, build, typecheck, lint, format, and test completed; 44 tests passed (6 shared, 38 server)                     |
-| Timed four-stage server-authoritative voting                              | Forge session and integration tests | PASS — injectable scheduler transitions; real simulation completed four 5-second windows                                             |
-| Mutable ballot, deterministic tie/fallback, replay/invalid/late rejection | Focused session tests               | PASS — 6 forge tests cover vote changes, ties, fallback, replay, invalid/non-mock/wrong/stale/future/late votes, and timer disposal  |
-| HTTP/WebSocket snapshots, two-client updates and reconnect                | Server integration tests            | PASS — two clients receive versioned state and reconnect reads the current snapshot                                                  |
-| Local-only simulation and retained Phase 0 security                       | Existing plus targeted route tests  | PASS — remote/foreign-origin mutations rejected; local dashboard and originless CLI accepted; production routes absent               |
-| Repeatable end-to-end synthetic forge cycle                               | `pnpm simulate`                     | PASS — multiple cycles completed; deterministic `Thunder Tempest` reveal after reset                                                 |
-| Desktop/mobile dashboard and two OBS sizes                                | Chromium visual QA and screenshots  | PASS — real captures and viewport checks at all four required sizes                                                                  |
-| Independent review                                                        | C4 review handoff on Draft PR #2    | CHANGES REQUESTED — C4 comment 6415746841 identified restart epoch and stale HTTP response races; C5 remediation below awaits review |
+| Criterion                                                                 | Verification                        | Result                                                                                                                              |
+| ------------------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Frozen install, build, typecheck, lint, formatting, complete suite        | Workspace commands                  | PASS — frozen install, build, typecheck, lint, format, and test completed; 44 tests passed (6 shared, 38 server)                    |
+| Timed four-stage server-authoritative voting                              | Forge session and integration tests | PASS — injectable scheduler transitions; real simulation completed four 5-second windows                                            |
+| Mutable ballot, deterministic tie/fallback, replay/invalid/late rejection | Focused session tests               | PASS — 6 forge tests cover vote changes, ties, fallback, replay, invalid/non-mock/wrong/stale/future/late votes, and timer disposal |
+| HTTP/WebSocket snapshots, two-client updates and reconnect                | Server integration tests            | PASS — two clients receive versioned state and reconnect reads the current snapshot                                                 |
+| Local-only simulation and retained Phase 0 security                       | Existing plus targeted route tests  | PASS — remote/foreign-origin mutations rejected; local dashboard and originless CLI accepted; production routes absent              |
+| Repeatable end-to-end synthetic forge cycle                               | `pnpm simulate`                     | PASS — multiple cycles completed; deterministic `Thunder Tempest` reveal after reset                                                |
+| Desktop/mobile dashboard and two OBS sizes                                | Chromium visual QA and screenshots  | PASS — real captures and viewport checks at all four required sizes                                                                 |
+| Independent review                                                        | C5 exact-head review on Draft PR #2 | PASS — C5 comment 6417063491 reviewed `1c836d9b7726a69ab559d342a4a3c283bdf2eb2a`; C6 UI review is pending                           |
 
 Phase 1 QA screenshots use the requested viewport paths; the original Phase 0
 captures are preserved under `p0-` filenames. Only real Chromium captures are
@@ -179,7 +179,7 @@ open.
 | Frozen install, build, typecheck, lint, formatting, full suite | Workspace commands                                | PASS — C5 candidate has 49 tests total (10 shared, 39 server)                                                                               |
 | Repeated four-category synthetic cycles                        | `BOSSFORGE_VOTE_SECONDS=5 pnpm simulate`          | PASS — repeated full cycles revealed deterministic Thunder Tempest                                                                          |
 | Dashboard and OBS recovery after backend restart               | Chromium 154.0.8037.57, local Vite/Fastify        | PASS — both open pages removed the old revealed boss, accepted new idle state, then displayed the new body vote after start                 |
-| Independent C5 review                                          | Existing Draft PR #2                              | PENDING — review the exact pushed HEAD in the C5 handoff; no independent approval claimed                                                   |
+| Independent C5 review                                          | Existing Draft PR #2                              | PASS — comment 6417063491 approved the bounded remediation at `1c836d9b7726a69ab559d342a4a3c283bdf2eb2a`; C6 is separate and pending        |
 
 Actual Chromium captures from the restart smoke are
 [old reveal — dashboard](visual-qa/c5-before-restart-dashboard.png),
@@ -192,3 +192,35 @@ periodic polling succeeded after the backend returned. Recovery can lag backend
 availability by up to the two-second poll interval. The existing local-only
 simulation model remains development-only and is not authorized for remote or
 public use; no Twitch connection or combat was tested.
+
+## C6 bounded UI polish — revealed boss statistics spacing
+
+The independent C5 review [6417063491](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6417063491)
+recorded a small overlap between the revealed boss statistics and progress
+track. The global paragraph reset set `margin-top: 0`; `.boss-stats` did not
+restore spacing, so its line box began at the progress track's bottom edge.
+The dashboard-only `.boss-stats` rule now adds an 8px top margin and explicit
+1.4 line height. Idle and voting states do not render this paragraph; the OBS
+uses a separate class and is unaffected. Reduced-motion styles were unchanged.
+
+| Criterion                                           | Verification                                               | Result                                                                                                                          |
+| --------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1440×900 revealed dashboard                         | Chromium 154.0.8037.57, real screenshot and DOM rectangles | PASS — progress box y=820–825; statistics y=833–847; 8px gap; no horizontal overflow                                            |
+| 390×844 revealed dashboard                          | Chromium 154.0.8037.57, real screenshot and DOM rectangles | PASS — progress box y=978–983; statistics y=991–1005; 8px gap; width 390px with no horizontal overflow; full page height 1992px |
+| Idle and voting dashboard                           | Real Chromium state/control smoke at desktop and mobile    | PASS — statistics paragraph absent in both states; ready and BODY voting labels render; no horizontal overflow                  |
+| OBS overlay 1920×1080                               | Real Chromium screenshot and document bounds               | PASS — document exactly 1920×1080; safe label x=1654–1868, y=1039–1050; no overflow                                             |
+| OBS overlay 1280×720                                | Real Chromium screenshot and document bounds               | PASS — document exactly 1280×720; safe label x=1014–1228, y=679–690; no overflow                                                |
+| Reduced motion                                      | Chromium emulation and computed CSS                        | PASS — reduced-motion media query matched; primary-button transition remained 0.01ms                                            |
+| Build, typecheck, lint, formatting, full test suite | Workspace commands                                         | PASS — 49 tests (10 shared, 39 server)                                                                                          |
+| Independent C6 review                               | Existing Draft PR #2                                       | PENDING — request exact-head review; C5 PASS remains intact                                                                     |
+
+Screenshots captured from the actual Chromium run:
+[dashboard 1440×900](visual-qa/c6-dashboard-1440x900.png),
+[dashboard 390×844](visual-qa/c6-dashboard-390x844.png),
+[OBS 1920×1080](visual-qa/c6-overlay-1920x1080.png), and
+[OBS 1280×720](visual-qa/c6-overlay-1280x720.png). The four browser pages
+reported no failed requests or page errors. Before the fix, measured stats
+`top` equaled progress `bottom` (0px gap); after the fix the gap is 8px in both
+dashboard viewports. The mobile stats line wraps within the card width without
+clipping. Existing C5 wall-clock epoch ordering remains a disclosed,
+non-production limitation; this presentation-only change does not affect it.

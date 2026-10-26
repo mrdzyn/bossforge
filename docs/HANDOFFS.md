@@ -173,3 +173,33 @@ only after they exist. Do not invent a Codex session ID; use the session's
   preserved Phase 0 boundaries, and the recorded validation. This is a Codex
   handoff, not independent approval. Do not merge, deploy, publish, implement
   Twitch authentication or combat, or start Phase 2.
+
+## Phase 1 C6 — revealed-stat layout polish
+
+- **C5 approval preserved:** Independent review comment
+  [6417063491](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6417063491)
+  passed C5 at `1c836d9b7726a69ab559d342a4a3c283bdf2eb2a`, with a non-blocking
+  note that revealed boss statistics touch the progress track.
+- **Bounded fix:** In `apps/web/src/styles.css`, `.boss-stats` now has an 8px
+  top margin and 1.4 line height. This restores the gap removed by the global
+  paragraph top-margin reset. No React or OBS markup, state, security, voting,
+  or reduced-motion rules changed.
+- **Implementation commit:** `a0236e78e2d28e839d9e7ab49e05030e79f6518d`.
+- **Validation (Codex-reported):** `pnpm build`, `pnpm typecheck`, `pnpm lint`,
+  `pnpm format:check`, `pnpm test`, and `git diff --check` passed. The suite
+  remains 49 tests (10 shared, 39 server). Real Chromium measured an 8px gap
+  between progress and statistics at 1440×900 and 390×844. Idle/voting omitted
+  the revealed-only statistics; no mobile horizontal overflow appeared. Both
+  OBS sizes retained exact viewport-sized documents, safe labels, and no
+  overflow. Reduced-motion emulation retained the 0.01ms transition setting.
+- **Screenshots:** Actual Chromium captures are in `docs/visual-qa/` with names
+  `c6-dashboard-1440x900.png`, `c6-dashboard-390x844.png`,
+  `c6-overlay-1920x1080.png`, and `c6-overlay-1280x720.png`. C5 screenshots and
+  review references remain preserved.
+- **Limitations:** No C6 visual issue remained in the tested viewports. The
+  inherited C5 wall-clock epoch ordering note remains; C6 did not alter it.
+- **C6 review request:** Independently review the exact latest pushed HEAD on
+  Draft PR #2 for this CSS-only spacing correction, screenshots/rectangle
+  evidence, responsive behavior, and preservation of C5 approval and scope.
+  Codex-run checks are not independent approval. Do not merge, deploy, publish,
+  or begin Phase 2; owner approval is required before merge.
