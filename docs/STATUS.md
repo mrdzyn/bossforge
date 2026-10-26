@@ -1,45 +1,23 @@
 # Project status
 
-- **Active milestone:** Phase 0 — Repository Foundation and Architecture
-- **Current state:** Phase 0 C3-01 bounded remediation is validated and pushed
-  to `feat/phase0-foundation` on Draft PR
-  [#1](https://github.com/mrdzyn/bossforge/pull/1). PR #1 remains Draft. The
-  branch is ready for C4 independent review.
-- **Twitch status:** No real Twitch authentication or EventSub connection is
-  implemented or claimed. The owner-reported Twitch two-factor setup issue
-  remains an external blocker for the later real integration phase.
+- **Active milestone:** P1 — Audience Voting and Modular Boss Assembly.
+- **Phase 0:** Completed, C4 source audit passed, and squash-merged via [PR #1](https://github.com/mrdzyn/bossforge/pull/1) to `main` at `1fc0d8b8f8d3665266a4a5092f6da240bbddf7b1`. Phase 0 automated results were Codex-reported (36 passing tests), not independently rerun.
+- **P1 branch:** `feat/phase1-voting-boss-assembly`, forked from the merged Phase 0 commit. Owner authorized starting Phase 1.
+- **P1 work status:** C5 independently passed on `1c836d9b7726a69ab559d342a4a3c283bdf2eb2a` ([review](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6417063491)). The bounded C6 revealed-stat spacing fix is implemented in `a0236e78e2d28e839d9e7ab49e05030e79f6518d`; Chromium viewport checks and required project checks passed. C6 exact-head review is pending on the existing Draft PR #2.
+- **Twitch registration blocker:** Owner's 2FA/mobile verification problem remains unresolved. Genuine Twitch OAuth/EventSub is deferred, and simulated events must remain labeled mock.
+- **Merge / deployment:** No Phase 1 merge, production deployment, or release authorized.
 
-## Scope in this milestone
+## P1 acceptance target
 
-Phase 0 provides the TypeScript/pnpm workspace, shared runtime contracts, a
-Fastify health endpoint and WebSocket event stream, a deterministic local mock
-chat adapter, a streamer dashboard shell, and an OBS-oriented overlay preview.
-Voting, procedural boss assembly, and playable combat remain planned work.
+One complete, deterministic, development-only four-category audience voting cycle, fed by validated mock chat events, yields a modular boss with meaningful visual differences per trait. Dashboard and OBS preview show server-authoritative counts, timer, results, and consistent snapshots. Backend restart recovery and response ordering are covered by the C5 remediation, which passed independent review. The C6 UI polish review is pending. Local mutation and WebSocket security requirements from Phase 0 remain required. P1 is not merged.
 
-## Current validation
+## Documentation and review
 
-The C1 and C2 protections remain in place. C3-01 validates Vite's final
-resolved development host after CLI options are merged and before bind, so
-`--host 0.0.0.0` fails closed. The process test verifies startup failure and
-that no listener remains. Simulation POST Origin and Fetch Metadata checks
-still preserve local dashboard and originless loopback CLI requests. The
-reported browser 404 is fixed; current checks and the settled feed screenshot
-are recorded in [ACCEPTANCE.md](ACCEPTANCE.md).
+- Active spec: [P1 Audience Voting and Boss Assembly](P1-AUDIENCE-VOTING-AND-BOSS-ASSEMBLY.md).
+- Original architecture: [ARCHITECTURE.md](ARCHITECTURE.md); update as implementation changes.
+- Original Phase 0 acceptance evidence remains in [ACCEPTANCE.md](ACCEPTANCE.md); append P1 outcomes without relabeling old tests.
+- PR stays Draft until exact-head independent review, followed by an explicit owner merge decision.
 
-## Known limitations
+## Deferred work
 
-- The mock sequence uses synthetic viewer data and is not evidence of Twitch
-  authorization or a live Twitch message.
-- Dashboard and overlay surfaces are presentation shells; voting and battle
-  controls are not functional gameplay.
-- Production WebSocket access still needs authentication and appropriate event
-  authorization before any production use. Phase 0 does not implement either.
-- An earlier `gh pr create` attempt failed due to GitHub API access, but Draft
-  PR #1 now exists through the owner's connected GitHub account. That historical
-  failure is retained in [HANDOFFS.md](HANDOFFS.md); PR creation is not blocked.
-- Merge remains owner-controlled.
-
-## Next handoff
-
-Provide the exact pushed branch head on Draft PR #1 for C4 independent review.
-Do not start Phase 1 without separate owner authorization.
+Real Twitch integration, Phaser combat, persistence, production authorization, deployment, publishing, and payment features are not within P1.

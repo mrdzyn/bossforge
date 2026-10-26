@@ -65,6 +65,58 @@ oversized payload rejection, rate limiting, and connection-state reporting.
 Firefox testing is out of scope. Browser automation should use Chromium if
 available; otherwise mark browser testing NOT TESTED and report that limitation.
 
+## Phase 1 — Audience voting and boss assembly
+
+Status is recorded for the exact Phase 1 branch head in the handoff. These
+results are Codex-run evidence, not independent audit approval.
+
+| Criterion                                                                 | Verification                        | Result                                                                                                                              |
+| ------------------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Frozen install, build, typecheck, lint, formatting, complete suite        | Workspace commands                  | PASS — frozen install, build, typecheck, lint, format, and test completed; 44 tests passed (6 shared, 38 server)                    |
+| Timed four-stage server-authoritative voting                              | Forge session and integration tests | PASS — injectable scheduler transitions; real simulation completed four 5-second windows                                            |
+| Mutable ballot, deterministic tie/fallback, replay/invalid/late rejection | Focused session tests               | PASS — 6 forge tests cover vote changes, ties, fallback, replay, invalid/non-mock/wrong/stale/future/late votes, and timer disposal |
+| HTTP/WebSocket snapshots, two-client updates and reconnect                | Server integration tests            | PASS — two clients receive versioned state and reconnect reads the current snapshot                                                 |
+| Local-only simulation and retained Phase 0 security                       | Existing plus targeted route tests  | PASS — remote/foreign-origin mutations rejected; local dashboard and originless CLI accepted; production routes absent              |
+| Repeatable end-to-end synthetic forge cycle                               | `pnpm simulate`                     | PASS — multiple cycles completed; deterministic `Thunder Tempest` reveal after reset                                                |
+| Desktop/mobile dashboard and two OBS sizes                                | Chromium visual QA and screenshots  | PASS — real captures and viewport checks at all four required sizes                                                                 |
+| Independent review                                                        | C5 exact-head review on Draft PR #2 | PASS — C5 comment 6417063491 reviewed `1c836d9b7726a69ab559d342a4a3c283bdf2eb2a`; C6 UI review is pending                           |
+
+Phase 1 QA screenshots use the requested viewport paths; the original Phase 0
+captures are preserved under `p0-` filenames. Only real Chromium captures are
+recorded. Screenshots show local synthetic data and do not demonstrate Twitch
+connection or combat.
+
+Chromium 154.0.8037.57 ran through the environment Playwright runtime against
+the local Vite/Fastify app after a complete forge reveal. Captures: [dashboard
+1440×900](visual-qa/dashboard-1440x900.png), [dashboard
+390×844](visual-qa/dashboard-390x844.png), [settled chat
+feed](visual-qa/dashboard-chat-settled.png), [overlay
+1920×1080](visual-qa/overlay-1920x1080.png), and [overlay
+1280×720](visual-qa/overlay-1280x720.png). All captured pages reported no
+failed browser requests or console errors. Dashboard labels showed `LOCAL
+SIMULATION` and `LIVE LINK`; reset/start controls were exercised, `Voting ·
+BODY` appeared, and Start disabled while voting. The 1440×900 document measured
+1440×1519 with vertical scrolling and no horizontal overflow. At 390×844 it
+measured 390×1952; scrolling reached 1108 px with no horizontal overflow. After
+an 800 ms settle, the synthetic feed row opacity was 1 and its viewer/message
+text was readable. Both overlay documents matched their viewport dimensions,
+showed the complete boss reveal and `SIMULATED / NOT CONNECTED TO TWITCH`, and
+had no clipping. The safe-layout label bounds were x=1654–1868, y=1039–1050 at
+1920×1080 and x=1014–1228, y=679–690 at 1280×720. Primary text and vote bars
+were legible; small metadata remained lower contrast. The dashboard is
+vertically scrollable and its controls and results remain reachable. A first
+1280×720 pass exposed cropped art; the final capture follows the CSS correction.
+The active overlay was also checked in Chromium: it displayed the server
+category countdown (`VOTE: BODY · 15s`) and per-option percentages. The
+dashboard `Forge again` action was exercised after a reveal and successfully
+reset and opened the next body vote.
+
+Focused tests cover malformed and spoofed command fields, mock-provider
+enforcement, session lifecycle, mutable ballots, deterministic results,
+event delivery to two clients, snapshot recovery after reconnect, loopback and
+Origin protection, forwarded-IP spoofing, and production route absence. The
+normal Vite proxy and originless CLI simulation path were exercised.
+
 ## C1 security regression coverage
 
 Focused server tests verify that local Vite origins and local no-Origin clients
@@ -104,3 +156,71 @@ The process-level regression uses an otherwise valid local
 reserved test port, expects a nonzero exit with the host-guard diagnostic, then
 successfully binds the same port on `0.0.0.0` to prove no network listener was
 left behind.
+
+## C5 bounded remediation — backend restart and state ordering
+
+The C4 review comment [6415746841](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6415746841)
+identified stale revealed state after process restart and an HTTP mutation
+response that could roll back a newer WebSocket state. Forge snapshots now
+carry a per-process UUID and process start timestamp. The shared client
+reconciler accepts a newer process epoch even at revision zero, orders states
+within one process by revision, rejects earlier connection generations, and
+rejects delayed snapshots from an older process epoch. Dashboard and OBS use
+this same hook and freshness policy. A two-second local snapshot poll detects
+backend replacement even if the Vite WebSocket proxy keeps its browser socket
+open.
+
+| Criterion                                                      | Verification                                      | Result                                                                                                                                      |
+| -------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Restart from old revealed revision N to new idle revision 0    | Server and shared reconciliation regression tests | PASS — prior process revealed at revision 5; new instance snapshot accepted at revision 0; immediate fresh body vote accepted at revision 1 |
+| Delayed old connection and old process responses               | Shared reconciler tests                           | PASS — stale socket generation, lower same-instance revision, and delayed prior-epoch response all rejected                                 |
+| HTTP/WebSocket/snapshot freshness, reset/start/category order  | Shared reconciler tests and browser smoke         | PASS — reset/start and all four category transitions keep newer state; old mutation response cannot roll it back                            |
+| Phase 0 local-only security boundaries                         | Full server test suite                            | PASS — all existing route, Origin, loopback, mock-provider, WebSocket, and production restriction tests remain green                        |
+| Frozen install, build, typecheck, lint, formatting, full suite | Workspace commands                                | PASS — C5 candidate has 49 tests total (10 shared, 39 server)                                                                               |
+| Repeated four-category synthetic cycles                        | `BOSSFORGE_VOTE_SECONDS=5 pnpm simulate`          | PASS — repeated full cycles revealed deterministic Thunder Tempest                                                                          |
+| Dashboard and OBS recovery after backend restart               | Chromium 154.0.8037.57, local Vite/Fastify        | PASS — both open pages removed the old revealed boss, accepted new idle state, then displayed the new body vote after start                 |
+| Independent C5 review                                          | Existing Draft PR #2                              | PASS — comment 6417063491 approved the bounded remediation at `1c836d9b7726a69ab559d342a4a3c283bdf2eb2a`; C6 is separate and pending        |
+
+Actual Chromium captures from the restart smoke are
+[old reveal — dashboard](visual-qa/c5-before-restart-dashboard.png),
+[old reveal — OBS](visual-qa/c5-before-restart-overlay.png),
+[recovered cycle — dashboard](visual-qa/c5-after-restart-dashboard.png), and
+[recovered cycle — OBS](visual-qa/c5-after-restart-overlay.png). The recovered
+dashboard and overlay show the old boss removed and the new body vote active.
+The intentional backend stop aborted several in-flight snapshot HTTP requests;
+periodic polling succeeded after the backend returned. Recovery can lag backend
+availability by up to the two-second poll interval. The existing local-only
+simulation model remains development-only and is not authorized for remote or
+public use; no Twitch connection or combat was tested.
+
+## C6 bounded UI polish — revealed boss statistics spacing
+
+The independent C5 review [6417063491](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6417063491)
+recorded a small overlap between the revealed boss statistics and progress
+track. The global paragraph reset set `margin-top: 0`; `.boss-stats` did not
+restore spacing, so its line box began at the progress track's bottom edge.
+The dashboard-only `.boss-stats` rule now adds an 8px top margin and explicit
+1.4 line height. Idle and voting states do not render this paragraph; the OBS
+uses a separate class and is unaffected. Reduced-motion styles were unchanged.
+
+| Criterion                                           | Verification                                               | Result                                                                                                                          |
+| --------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1440×900 revealed dashboard                         | Chromium 154.0.8037.57, real screenshot and DOM rectangles | PASS — progress box y=820–825; statistics y=833–847; 8px gap; no horizontal overflow                                            |
+| 390×844 revealed dashboard                          | Chromium 154.0.8037.57, real screenshot and DOM rectangles | PASS — progress box y=978–983; statistics y=991–1005; 8px gap; width 390px with no horizontal overflow; full page height 1992px |
+| Idle and voting dashboard                           | Real Chromium state/control smoke at desktop and mobile    | PASS — statistics paragraph absent in both states; ready and BODY voting labels render; no horizontal overflow                  |
+| OBS overlay 1920×1080                               | Real Chromium screenshot and document bounds               | PASS — document exactly 1920×1080; safe label x=1654–1868, y=1039–1050; no overflow                                             |
+| OBS overlay 1280×720                                | Real Chromium screenshot and document bounds               | PASS — document exactly 1280×720; safe label x=1014–1228, y=679–690; no overflow                                                |
+| Reduced motion                                      | Chromium emulation and computed CSS                        | PASS — reduced-motion media query matched; primary-button transition remained 0.01ms                                            |
+| Build, typecheck, lint, formatting, full test suite | Workspace commands                                         | PASS — 49 tests (10 shared, 39 server)                                                                                          |
+| Independent C6 review                               | Existing Draft PR #2                                       | PENDING — request exact-head review; C5 PASS remains intact                                                                     |
+
+Screenshots captured from the actual Chromium run:
+[dashboard 1440×900](visual-qa/c6-dashboard-1440x900.png),
+[dashboard 390×844](visual-qa/c6-dashboard-390x844.png),
+[OBS 1920×1080](visual-qa/c6-overlay-1920x1080.png), and
+[OBS 1280×720](visual-qa/c6-overlay-1280x720.png). The four browser pages
+reported no failed requests or page errors. Before the fix, measured stats
+`top` equaled progress `bottom` (0px gap); after the fix the gap is 8px in both
+dashboard viewports. The mobile stats line wraps within the card width without
+clipping. Existing C5 wall-clock epoch ordering remains a disclosed,
+non-production limitation; this presentation-only change does not affect it.

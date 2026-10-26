@@ -95,3 +95,111 @@ main --head feat/phase0-foundation` failed with `Post
 Record actual commit SHAs, PR references, validation outcomes, and screenshots
 only after they exist. Do not invent a Codex session ID; use the session's
 `/status` command at handoff time if the identifier is not available here.
+
+## Phase 1 — Audience voting and modular boss assembly
+
+- **Authorized branch:** `feat/phase1-voting-boss-assembly`, based on kickoff
+  HEAD `e40038f402985a92f496864dde62ef7d17124f18`. Draft PR #2 already exists;
+  update that branch and PR rather than creating another.
+- **Scope:** Four timed mock-only vote categories, mutable per-viewer ballots,
+  deterministic results/fallbacks, server state snapshots and WebSocket
+  updates, dashboard controls, read-only OBS voting/reveal, modular art,
+  bounded deterministic stats, and repeatable local simulation. No combat,
+  Twitch auth, merge, deploy, or Phase 2.
+- **Security:** Preserve Phase 0 Vite effective-host checks, WebSocket Origin
+  policy, local-only mutation Origin and Fetch Metadata checks, loopback peer
+  checks, no forwarded-IP trust, mock-only events, production route absence,
+  and rate limiting. P1 does not authenticate viewers and is not safe for public
+  access.
+- **Implementation:** The implementation is committed to the existing branch
+  and pushed to the existing Draft PR #2. Implementation commit:
+  `b4b31d6ec47c9e50457fc0e4e1967dd5b2c7349a`. The PR description and delivery
+  record identify the current full HEAD SHA to review. Do not amend code after
+  the reported SHA without updating the review target.
+- **Validation (Codex-reported):** Frozen pnpm install, build, typecheck, lint,
+  formatting check, and complete tests passed. The suite contains 44 passing
+  tests (6 shared, 38 server). `pnpm simulate` completed repeated four-stage
+  cycles, and Chromium exercised dashboard reset/restart plus the live overlay
+  countdown and percentages. These results are not independent audit approval.
+- **Browser evidence:** Real Chromium screenshots are in `docs/visual-qa/` at
+  dashboard 1440×900 and 390×844, settled chat feed, and overlay 1920×1080 and
+  1280×720. `docs/ACCEPTANCE.md` records scroll, overflow, labels, safe-area,
+  readability, and the initial 1280 art-crop fix confirmed by the final capture.
+- **C4 handoff:** Independently review Draft PR #2 at its current exact pushed
+  branch head for voting correctness, event lifecycle/reconnection, visual
+  assembly differences, complete local workflow, and preservation of all Phase
+  0 security controls. Independent approval remains pending; do not merge,
+  deploy, implement Twitch authentication, or start Phase 2.
+
+## Phase 1 C5 — backend restart and state ordering
+
+- **Audit input:** Independent C4 comment
+  [6415746841](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6415746841)
+  reviewed `d627491b06bac068d773313cf806676853664c97` and requested only the
+  restart-epoch and delayed HTTP response fixes.
+- **Remediation:** Forge snapshots and events now include a unique server
+  instance ID and server start timestamp. Dashboard and OBS apply snapshots,
+  WebSocket events, and mutation responses through the shared reconciler.
+  Within one instance it accepts only nondecreasing revisions; it adopts a
+  newer instance even at revision zero; it rejects earlier epochs and old
+  socket generations. A two-second snapshot poll covers backend restarts where
+  the Vite WebSocket proxy does not close the client socket. The repeatable CLI
+  simulation now seeds its loop from the start response so a second run cannot
+  print the previous revealed state as the result of the new run.
+- **Implementation commit:** `5b6abc1984c73ab1168bb693450d126e5a0eee41`.
+  Documentation and real Chromium captures are committed separately; the C5
+  reviewer should inspect the latest exact PR #2 head after push.
+- **Validation (Codex-reported):** Frozen install, build, typecheck, lint,
+  format check, and complete tests passed: 49 tests (10 shared, 39 server).
+  Two consecutive five-second synthetic cycles completed; both revealed the
+  deterministic Thunder Tempest. Full Phase 0 local-only route and WebSocket
+  security regression tests remain green. A real Chromium 154 backend restart
+  smoke kept dashboard and OBS open: both discarded the old boss, adopted the
+  new idle snapshot, and showed the new body vote after a fresh start. The
+  intentional backend shutdown aborted several pending snapshot requests; the
+  periodic retry recovered when the server returned.
+- **Browser evidence:** Captures are in `docs/visual-qa/`: the pre-restart
+  dashboard and OBS show the previous boss; the post-restart dashboard and OBS
+  show the new body vote and no old boss. Exact paths and dimensions are
+  recorded in `docs/ACCEPTANCE.md`.
+- **Limitations:** Restart recovery may take up to the two-second polling
+  interval after the backend is reachable. Epoch ordering assumes the local
+  machine's wall clock advances between process starts. Simulation remains
+  local development functionality; there is no Twitch authentication or public
+  access authorization.
+- **C5 review request:** Review the exact latest pushed HEAD on the existing
+  Draft PR #2 for server epoch identity, centralized state freshness, polling
+  recovery, stale response rejection, repeated simulation behavior, all
+  preserved Phase 0 boundaries, and the recorded validation. This is a Codex
+  handoff, not independent approval. Do not merge, deploy, publish, implement
+  Twitch authentication or combat, or start Phase 2.
+
+## Phase 1 C6 — revealed-stat layout polish
+
+- **C5 approval preserved:** Independent review comment
+  [6417063491](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6417063491)
+  passed C5 at `1c836d9b7726a69ab559d342a4a3c283bdf2eb2a`, with a non-blocking
+  note that revealed boss statistics touch the progress track.
+- **Bounded fix:** In `apps/web/src/styles.css`, `.boss-stats` now has an 8px
+  top margin and 1.4 line height. This restores the gap removed by the global
+  paragraph top-margin reset. No React or OBS markup, state, security, voting,
+  or reduced-motion rules changed.
+- **Implementation commit:** `a0236e78e2d28e839d9e7ab49e05030e79f6518d`.
+- **Validation (Codex-reported):** `pnpm build`, `pnpm typecheck`, `pnpm lint`,
+  `pnpm format:check`, `pnpm test`, and `git diff --check` passed. The suite
+  remains 49 tests (10 shared, 39 server). Real Chromium measured an 8px gap
+  between progress and statistics at 1440×900 and 390×844. Idle/voting omitted
+  the revealed-only statistics; no mobile horizontal overflow appeared. Both
+  OBS sizes retained exact viewport-sized documents, safe labels, and no
+  overflow. Reduced-motion emulation retained the 0.01ms transition setting.
+- **Screenshots:** Actual Chromium captures are in `docs/visual-qa/` with names
+  `c6-dashboard-1440x900.png`, `c6-dashboard-390x844.png`,
+  `c6-overlay-1920x1080.png`, and `c6-overlay-1280x720.png`. C5 screenshots and
+  review references remain preserved.
+- **Limitations:** No C6 visual issue remained in the tested viewports. The
+  inherited C5 wall-clock epoch ordering note remains; C6 did not alter it.
+- **C6 review request:** Independently review the exact latest pushed HEAD on
+  Draft PR #2 for this CSS-only spacing correction, screenshots/rectangle
+  evidence, responsive behavior, and preservation of C5 approval and scope.
+  Codex-run checks are not independent approval. Do not merge, deploy, publish,
+  or begin Phase 2; owner approval is required before merge.

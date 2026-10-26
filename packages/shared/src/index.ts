@@ -1,4 +1,5 @@
 import { z } from "zod";
+export { ForgeStateReconciler } from "./forge-state-reconciler.js";
 
 export const ProviderSchema = z.enum(["mock", "twitch"]);
 export type Provider = z.infer<typeof ProviderSchema>;
@@ -88,6 +89,61 @@ export const BossSchema = z.object({
 });
 export type Boss = z.infer<typeof BossSchema>;
 
+export const FORGE_VOTE_CHOICES = {
+  body: ["golem", "wraith", "drake", "mimic"],
+  element: ["fire", "ice", "storm", "void"],
+  special: ["ember-burst", "frost-chain", "thunder-dash", "shadow-pulse"],
+  weakness: ["water", "light", "earth", "wind"],
+} as const satisfies Record<VoteCategory, readonly string[]>;
+
+export const ForgeStartRequestSchema = z
+  .object({ durationSeconds: z.number().int().min(5).max(60).optional() })
+  .strict();
+export type ForgeStartRequest = z.infer<typeof ForgeStartRequestSchema>;
+
+export const ForgeOptionResultSchema = z.object({
+  choice: z.string().min(1).max(40),
+  count: z.number().int().min(0).max(10_000),
+  percentage: z.number().int().min(0).max(100),
+});
+export type ForgeOptionResult = z.infer<typeof ForgeOptionResultSchema>;
+
+export const ForgeCategoryStateSchema = z.object({
+  category: VoteCategorySchema,
+  status: z.enum(["pending", "open", "closed"]),
+  options: z.array(ForgeOptionResultSchema).min(2).max(12),
+  totalVotes: z.number().int().min(0).max(10_000),
+  openedAt: z.string().datetime().nullable(),
+  closesAt: z.string().datetime().nullable(),
+  winner: z.string().min(1).max(40).nullable(),
+  noVoteFallback: z.boolean(),
+});
+export type ForgeCategoryState = z.infer<typeof ForgeCategoryStateSchema>;
+
+export const ForgeStateSchema = z.object({
+  serverInstanceId: z.string().min(1).max(100),
+  serverStartedAt: z.string().datetime(),
+  revision: z.number().int().min(0),
+  cycleId: z.string().min(1).max(100).nullable(),
+  status: z.enum(["idle", "voting", "revealed"]),
+  simulated: z.literal(true),
+  connectedToTwitch: z.literal(false),
+  durationSeconds: z.number().int().min(5).max(60),
+  startedAt: z.string().datetime().nullable(),
+  activeCategory: VoteCategorySchema.nullable(),
+  progress: z.number().int().min(0).max(4),
+  categories: z.array(ForgeCategoryStateSchema).length(4),
+  boss: BossSchema.nullable(),
+});
+export type ForgeState = z.infer<typeof ForgeStateSchema>;
+
+export const ForgeStateEventSchema = z.object({
+  kind: z.literal("forge.state"),
+  source: z.literal("mock"),
+  state: ForgeStateSchema,
+});
+export type ForgeStateEvent = z.infer<typeof ForgeStateEventSchema>;
+
 export const BattlePlayerSchema = z.object({
   id: z.string().min(1).max(100),
   displayName: z.string().min(1).max(50),
@@ -111,7 +167,11 @@ export const ConnectionStatusSchema = z.object({
 });
 export type ConnectionStatus = z.infer<typeof ConnectionStatusSchema>;
 
-export const AppEventPayloadSchema = z.union([NormalizedChatEventSchema, ConnectionStatusSchema]);
+export const AppEventPayloadSchema = z.union([
+  NormalizedChatEventSchema,
+  ConnectionStatusSchema,
+  ForgeStateEventSchema,
+]);
 export type AppEventPayload = z.infer<typeof AppEventPayloadSchema>;
 
 export const AppEventEnvelopeSchema = z.discriminatedUnion("type", [
@@ -129,6 +189,13 @@ export const AppEventEnvelopeSchema = z.discriminatedUnion("type", [
     timestamp: z.string().datetime(),
     payload: ConnectionStatusSchema,
   }),
+  z.object({
+    type: z.literal("forge.state"),
+    schemaVersion: z.literal(1),
+    id: z.string().uuid(),
+    timestamp: z.string().datetime(),
+    payload: ForgeStateEventSchema,
+  }),
 ]);
 export type AppEventEnvelope = z.infer<typeof AppEventEnvelopeSchema>;
 
@@ -137,6 +204,11 @@ export function createEventEnvelope(
   id: string,
   timestamp: string,
 ): AppEventEnvelope {
-  const type = payload.kind === "connection.status" ? "connection.status" : "chat.event";
+  const type =
+    payload.kind === "connection.status"
+      ? "connection.status"
+      : payload.kind === "forge.state"
+        ? "forge.state"
+        : "chat.event";
   return AppEventEnvelopeSchema.parse({ type, schemaVersion: 1, id, timestamp, payload });
 }

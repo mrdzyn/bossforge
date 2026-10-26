@@ -9,8 +9,10 @@ handoff.
 
 ## Phase 1 — Audience Voting and Boss Assembly
 
-After separate owner authorization, implement voting windows, eligible choices,
-one mutable vote per viewer/category, final results, and modular boss assembly.
+Implement timed audience voting, one mutable vote per viewer/category, final
+results, modular boss assembly, streamer controls, OBS voting presentation, and
+a repeatable local synthetic-chat workflow. P1 does not include playable combat
+or Twitch authentication.
 
 ## Phase 2 — Playable Boss Battle
 
