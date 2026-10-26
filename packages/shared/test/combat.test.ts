@@ -18,6 +18,43 @@ function run(state: CombatState, input: Parameters<typeof stepCombat>[1], time: 
   return stepCombat(state, input, time);
 }
 
+function playSpecial(special: Boss["attributes"]["special"], evade: boolean): CombatState {
+  const selectedBoss = { ...boss, attributes: { ...boss.attributes, special } };
+  let state = startCombat(createCombatState(selectedBoss));
+  let hasTelegraphed = false;
+  let hasActivated = false;
+  let evaded = false;
+  let finishedAt: number | null = null;
+  for (let tick = 0; tick < 180 && state.status === "active"; tick += 1) {
+    const attack = state.attack;
+    let input: Parameters<typeof stepCombat>[1] = {};
+    if (attack?.phase === "telegraph") {
+      hasTelegraphed = true;
+      if (evade && special !== "shadow-pulse") {
+        input = { moveX: 1, dodgePressed: !evaded };
+        evaded = true;
+      }
+    } else if (evade && special === "shadow-pulse" && attack?.phase === "active") {
+      hasActivated = true;
+      if (!evaded && attack.elapsedMs >= 400) {
+        input = { moveX: 1, dodgePressed: true };
+        evaded = true;
+      }
+    }
+    if (attack?.phase === "active") hasActivated = true;
+    state = run(state, input, 50);
+    if (hasActivated && state.attack === null && finishedAt === null) finishedAt = state.elapsedMs;
+    if (finishedAt !== null && state.elapsedMs - finishedAt >= 1_400) break;
+    if (!evade && state.playerHealth < PLAYER_HEALTH) break;
+  }
+  expect(hasTelegraphed).toBe(true);
+  expect(hasActivated).toBe(true);
+  if (evade) expect(evaded).toBe(true);
+  return state;
+}
+
+const PLAYER_HEALTH = 100;
+
 describe("deterministic local combat", () => {
   it("uses the exact forged stats and makes the winning weakness actionable", () => {
     expect(createCombatState(boss).bossHealth).toBe(boss.stats.health);
@@ -56,6 +93,30 @@ describe("deterministic local combat", () => {
         expect(state.projectiles.some((projectile) => projectile.owner === "boss")).toBe(true);
       if (special === "thunder-dash") expect(state.bossX !== 480 || state.bossY !== 172).toBe(true);
     }
+  });
+
+  it.each(["ember-burst", "frost-chain", "thunder-dash", "shadow-pulse"] as const)(
+    "%s threatens a stationary default-spawn player and can be evaded",
+    (special) => {
+      const stationary = playSpecial(special, false);
+      expect(stationary.playerHealth).toBeLessThan(PLAYER_HEALTH);
+
+      const evasive = playSpecial(special, true);
+      expect(evasive.playerHealth).toBe(PLAYER_HEALTH);
+    },
+  );
+
+  it.each([
+    { ammo: "water" as const, feedback: "weakness" as const },
+    { ammo: "earth" as const, feedback: "normal" as const },
+  ])("records $feedback feedback only after a real player hit", ({ ammo, feedback }) => {
+    let state = startCombat(createCombatState(boss));
+    state = run(state, { attackPressed: true, aimX: state.bossX, aimY: state.bossY, ammo }, 50);
+    expect(state.lastBossHitFeedback).toBeNull();
+    for (let index = 0; index < 6 && state.lastBossHitFeedback === null; index += 1)
+      state = run(state, {}, 100);
+    expect(state.lastBossHitFeedback).toBe(feedback);
+    expect(state.lastBossHitMs).toBeGreaterThan(0);
   });
 
   it("allows a dodge only off cooldown and grants timed invulnerability", () => {

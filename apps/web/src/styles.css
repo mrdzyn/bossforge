@@ -2426,6 +2426,9 @@ p {
 .arena-controls .arena-weakness {
   font-weight: 800;
 }
+.arena-controls .arena-ammo b {
+  color: #a9e9ff;
+}
 .arena-disclaimer {
   color: #748894;
   font-size: 11px;

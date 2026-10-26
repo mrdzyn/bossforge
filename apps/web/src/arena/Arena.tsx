@@ -7,6 +7,8 @@ function ArenaPage({ forge }: { forge: ForgeState | null }) {
   const host = useRef<HTMLDivElement>(null);
   const [combat, setCombat] = useState<CombatState | null>(null);
   const [rematch, setRematch] = useState(0);
+  const terminalRef = useRef(false);
+  terminalRef.current = combat?.status === "streamer-won" || combat?.status === "community-won";
   const revealed = useMemo(() => {
     const parsed = RevealedForgeStateSchema.safeParse(forge);
     return parsed.success ? parsed.data : null;
@@ -19,7 +21,7 @@ function ArenaPage({ forge }: { forge: ForgeState | null }) {
     if (!host.current || !revealed) return;
     const game = createArenaGame(host.current, revealed.boss, setCombat);
     const onVisibility = () => {
-      if (document.hidden) game.pause();
+      if (document.hidden || terminalRef.current) game.pause();
       else game.resume();
     };
     document.addEventListener("visibilitychange", onVisibility);
@@ -138,6 +140,9 @@ function ArenaPage({ forge }: { forge: ForgeState | null }) {
           <span>
             AMMO <b>1 WATER · 2 LIGHT · 3 EARTH · 4 WIND</b>
           </span>
+          <span className="arena-ammo" aria-live="polite">
+            SELECTED AMMO <b>{combat?.selectedAmmo.toUpperCase() ?? "WATER"}</b>
+          </span>
           <span
             className="arena-weakness"
             style={{
@@ -149,7 +154,7 @@ function ArenaPage({ forge }: { forge: ForgeState | null }) {
         </footer>
         {combat && combat.elapsedMs - combat.lastBossHitMs < 220 && (
           <p className="arena-hit-feedback" role="status">
-            WEAKNESS HIT · BONUS DAMAGE
+            {combat.lastBossHitFeedback === "weakness" ? "WEAKNESS HIT · BONUS DAMAGE" : "HIT"}
           </p>
         )}
         <p className="arena-disclaimer">

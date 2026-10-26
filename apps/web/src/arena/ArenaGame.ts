@@ -18,7 +18,29 @@ class ArenaScene extends Phaser.Scene {
   private graphics!: Phaser.GameObjects.Graphics;
   private keys!: Record<string, Phaser.Input.Keyboard.Key | undefined>;
   private lastPublish = 0;
+  private terminalStopped = false;
   private readonly publish: (state: CombatState) => void;
+  private readonly onPointerDown = () => {
+    if (this.state.status === "ready") this.state = startCombat(this.state);
+  };
+  private readonly onAmmoKeyDown = (event: KeyboardEvent) => {
+    const ammo =
+      event.code === "Digit1" || event.code === "Numpad1"
+        ? "water"
+        : event.code === "Digit2" || event.code === "Numpad2"
+          ? "light"
+          : event.code === "Digit3" || event.code === "Numpad3"
+            ? "earth"
+            : event.code === "Digit4" || event.code === "Numpad4"
+              ? "wind"
+              : null;
+    if (!ammo) return;
+    this.state = { ...this.state, selectedAmmo: ammo };
+    this.publish(this.state);
+  };
+  private readonly cleanupKeyboard = () => {
+    this.input.keyboard?.off("keydown", this.onAmmoKeyDown);
+  };
 
   constructor(boss: Boss, publish: (state: CombatState) => void) {
     super("arena");
@@ -33,15 +55,18 @@ class ArenaScene extends Phaser.Scene {
     this.keys = keyboard.addKeys(
       "W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,SHIFT,ONE,TWO,THREE,FOUR",
     ) as Record<string, Phaser.Input.Keyboard.Key | undefined>;
-    this.input.on("pointerdown", () => {
-      if (this.state.status === "ready") this.state = startCombat(this.state);
-    });
+    keyboard.on("keydown", this.onAmmoKeyDown);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanupKeyboard);
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.cleanupKeyboard);
+    this.input.on("pointerdown", this.onPointerDown);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanupInputs);
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.cleanupInputs);
     this.state = startCombat(this.state);
     this.publish(this.state);
   }
 
   update(_time: number, delta: number) {
-    if (!this.keys) return;
+    if (!this.keys || this.terminalStopped) return;
     const pointer = this.input.activePointer;
     const worldPointer = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
     const justDown = Phaser.Input.Keyboard.JustDown;
@@ -50,15 +75,6 @@ class ArenaScene extends Phaser.Scene {
       const key = this.keys[name];
       return key ? justDown(key) : false;
     };
-    const ammo = isDown("ONE")
-      ? "water"
-      : isDown("TWO")
-        ? "light"
-        : isDown("THREE")
-          ? "earth"
-          : isDown("FOUR")
-            ? "wind"
-            : undefined;
     const input: CombatInput = {
       moveX: Number(isDown("D") || isDown("RIGHT")) - Number(isDown("A") || isDown("LEFT")),
       moveY: Number(isDown("S") || isDown("DOWN")) - Number(isDown("W") || isDown("UP")),
@@ -66,7 +82,6 @@ class ArenaScene extends Phaser.Scene {
       attackPressed: pointer.isDown || justPressed("SPACE"),
       aimX: worldPointer.x,
       aimY: worldPointer.y,
-      ...(ammo ? { ammo } : {}),
     };
     if (input.attackPressed && this.state.status === "ready") this.state = startCombat(this.state);
     this.state = stepCombat(this.state, input, delta);
@@ -74,6 +89,11 @@ class ArenaScene extends Phaser.Scene {
     if (this.time.now - this.lastPublish >= 66 || this.state.status !== "active") {
       this.publish(this.state);
       this.lastPublish = this.time.now;
+    }
+    if (this.state.status === "streamer-won" || this.state.status === "community-won") {
+      this.terminalStopped = true;
+      this.cleanupInputs();
+      this.game.pause();
     }
   }
 
@@ -92,7 +112,7 @@ class ArenaScene extends Phaser.Scene {
     if (attack?.phase === "telegraph") {
       g.lineStyle(4, bossColor, 0.9);
       if (attack.pattern === "ember-burst") {
-        g.strokeCircle(state.bossX, state.bossY, 245);
+        g.strokeCircle(state.bossX, state.bossY, 400);
         g.lineStyle(14, 0x101b26, 0.95);
         g.lineBetween(
           state.bossX,
@@ -101,9 +121,9 @@ class ArenaScene extends Phaser.Scene {
           state.bossY + Math.sin(attack.safeAngle) * 280,
         );
       } else if (attack.pattern === "frost-chain") {
-        g.lineBetween(state.bossX, state.bossY, state.playerX, state.playerY);
-        g.lineBetween(state.bossX - 14, state.bossY, state.playerX - 14, state.playerY);
-        g.lineBetween(state.bossX + 14, state.bossY, state.playerX + 14, state.playerY);
+        g.lineBetween(state.bossX, state.bossY, attack.targetX, attack.targetY);
+        g.lineBetween(state.bossX - 14, state.bossY, attack.targetX - 14, attack.targetY);
+        g.lineBetween(state.bossX + 14, state.bossY, attack.targetX + 14, attack.targetY);
       } else if (attack.pattern === "thunder-dash") {
         g.lineStyle(16, bossColor, 0.34);
         g.lineBetween(
@@ -113,13 +133,13 @@ class ArenaScene extends Phaser.Scene {
           attack.originY + Math.sin(attack.targetAngle) * 500,
         );
       } else {
-        g.strokeCircle(state.bossX, state.bossY, 245);
+        g.strokeCircle(state.bossX, state.bossY, 430);
         g.fillStyle(bossColor, 0.28);
         g.fillCircle(state.bossX, state.bossY, 70);
       }
     }
     if (attack?.pattern === "shadow-pulse" && attack.phase === "active") {
-      const pulseRadius = (attack.elapsedMs / 940) * 245;
+      const pulseRadius = (attack.elapsedMs / 940) * 430;
       g.lineStyle(12, bossColor, 0.7);
       g.strokeCircle(state.bossX, state.bossY, pulseRadius);
     }
@@ -153,6 +173,11 @@ class ArenaScene extends Phaser.Scene {
     g.lineStyle(2, 0xc4f5ff, 0.9);
     g.strokeCircle(state.playerX, state.playerY, 22);
   }
+
+  private readonly cleanupInputs = () => {
+    this.input.off("pointerdown", this.onPointerDown);
+    this.input.keyboard?.off("keydown", this.onAmmoKeyDown);
+  };
 }
 
 export function createArenaGame(

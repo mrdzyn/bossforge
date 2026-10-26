@@ -25,6 +25,7 @@ export interface CombatProjectile {
   radius: number;
   damage: number;
   color: number;
+  hitFeedback: "weakness" | "normal" | null;
 }
 
 export type BossAttackPhase = "telegraph" | "active";
@@ -64,6 +65,7 @@ export interface CombatState {
   nextProjectileId: number;
   lastDamageMs: number;
   lastBossHitMs: number;
+  lastBossHitFeedback: "weakness" | "normal" | null;
 }
 
 export interface CombatInput {
@@ -166,6 +168,7 @@ export function createCombatState(boss: Boss): CombatState {
     nextProjectileId: 1,
     lastDamageMs: -Infinity,
     lastBossHitMs: -Infinity,
+    lastBossHitFeedback: null,
   };
 }
 
@@ -185,6 +188,7 @@ function addProjectile(
   damage: number,
   radius: number,
   color: number,
+  hitFeedback: CombatProjectile["hitFeedback"],
 ): void {
   const direction = normalize(directionX, directionY);
   state.projectiles.push({
@@ -197,6 +201,7 @@ function addProjectile(
     radius,
     damage,
     color,
+    hitFeedback,
   });
   state.nextProjectileId += 1;
 }
@@ -221,7 +226,9 @@ function beginAttack(state: CombatState): BossAttack {
     targetX,
     targetY,
     targetAngle,
-    safeAngle: targetAngle,
+    // Keep the burst gap visibly offset so baseline position is endangered,
+    // while a lateral dash during the wind-up can reach it.
+    safeAngle: targetAngle - 0.65,
     shotCount: 0,
     hitPlayer: false,
   };
@@ -246,6 +253,7 @@ function releaseAttack(state: CombatState, attack: BossAttack): BossAttack {
         state.boss.stats.damage,
         10,
         ELEMENT_COLORS[state.boss.attributes.element],
+        null,
       );
     }
     attack.shotCount = totalShots;
@@ -271,8 +279,10 @@ function advanceBossAttack(state: CombatState, deltaMs: number): void {
 
   if (attack.pattern === "frost-chain") {
     while (attack.shotCount < 3 && attack.elapsedMs >= attack.shotCount * 270) {
-      const aimX = state.playerX - state.bossX;
-      const aimY = state.playerY - state.bossY;
+      // The staggered chain follows the telegraphed target, not the player's
+      // later position, so a lateral move after the warning can evade it.
+      const aimX = attack.targetX - state.bossX;
+      const aimY = attack.targetY - state.bossY;
       addProjectile(
         state,
         "boss",
@@ -284,6 +294,7 @@ function advanceBossAttack(state: CombatState, deltaMs: number): void {
         state.boss.stats.damage,
         9,
         ELEMENT_COLORS[state.boss.attributes.element],
+        null,
       );
       attack.shotCount += 1;
     }
@@ -294,14 +305,13 @@ function advanceBossAttack(state: CombatState, deltaMs: number): void {
   if (attack.pattern === "thunder-dash") {
     const dashDuration = 560;
     if (attack.elapsedMs <= dashDuration) {
-      const bodySpeed = attack.pattern === "thunder-dash" ? 1 : 1;
       state.bossX = clamp(
-        attack.originX + Math.cos(attack.targetAngle) * 480 * bodySpeed * (attack.elapsedMs / 1000),
+        attack.originX + Math.cos(attack.targetAngle) * 700 * (attack.elapsedMs / 1000),
         52,
         ARENA_WIDTH - 52,
       );
       state.bossY = clamp(
-        attack.originY + Math.sin(attack.targetAngle) * 480 * bodySpeed * (attack.elapsedMs / 1000),
+        attack.originY + Math.sin(attack.targetAngle) * 700 * (attack.elapsedMs / 1000),
         52,
         ARENA_HEIGHT - 52,
       );
@@ -321,7 +331,7 @@ function advanceBossAttack(state: CombatState, deltaMs: number): void {
   }
 
   if (attack.pattern === "shadow-pulse") {
-    const radius = (attack.elapsedMs / 940) * 245;
+    const radius = (attack.elapsedMs / 940) * 430;
     const distance = length(state.playerX - state.bossX, state.playerY - state.bossY);
     if (!attack.hitPlayer && Math.abs(distance - radius) <= PLAYER_RADIUS + 10) {
       damagePlayer(state, state.boss.stats.damage);
@@ -364,6 +374,7 @@ function stepProjectiles(state: CombatState, deltaMs: number): void {
       ) {
         state.bossHealth = Math.max(0, state.bossHealth - projectile.damage);
         state.lastBossHitMs = state.elapsedMs;
+        state.lastBossHitFeedback = projectile.hitFeedback;
         continue;
       }
     } else {
@@ -439,6 +450,8 @@ export function stepCombat(
       state.selectedAmmo === state.boss.attributes.weakness
         ? Math.round(PLAYER_SHOT_DAMAGE * WEAKNESS_DAMAGE_MULTIPLIER)
         : PLAYER_SHOT_DAMAGE;
+    const hitFeedback =
+      state.selectedAmmo === state.boss.attributes.weakness ? "weakness" : "normal";
     addProjectile(
       state,
       "player",
@@ -450,6 +463,7 @@ export function stepCombat(
       damage,
       7,
       AMMO_COLORS[state.selectedAmmo],
+      hitFeedback,
     );
     state.shotCooldownMs = PLAYER_SHOT_COOLDOWN_MS;
   }
