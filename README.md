@@ -4,8 +4,8 @@
 
 BossForge Live is an interactive browser game concept for Twitch streams. The
 audience will shape a monster through chat and the streamer will fight it in an
-arcade arena. Phase 1 adds server-authoritative local voting and a
-broadcast-oriented OBS overlay.
+arcade arena. Phase 1 established server-authoritative local voting and a
+broadcast-oriented OBS overlay. Phase 2 develops the playable local boss battle.
 
 ## Current status
 
@@ -14,9 +14,10 @@ vote per mock viewer/category, deterministic ties and fallbacks, in-memory
 session state, modular boss traits and bounded statistics, streamer controls,
 a read-only live OBS overlay, and repeatable synthetic simulation.
 
-**Deferred:** Playable combat and official Twitch OAuth/EventSub integration.
-The mock adapter uses synthetic data and is not a Twitch connection. P1 remains
-development-only and has not been independently audited or merged.
+**Phase 1:** Independently source-reviewed and squash-merged to `main` via PR #2.
+**Phase 2:** Authorized, with [active battle spec](docs/P2-PLAYABLE-BOSS-BATTLE.md);
+combat implementation is not yet delivered. Official Twitch OAuth/EventSub remains
+deferred. The mock adapter uses synthetic data and is not a Twitch connection.
 
 See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 [roadmap](docs/ROADMAP.md).
@@ -26,7 +27,7 @@ See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 - Node.js 22.13 or newer in the Node 22 LTS line, or Node.js 24 LTS.
 - pnpm 11.25.0 (Corepack can select the version pinned in `package.json`).
 
-No Twitch credentials, database, Docker, or external API is needed for Phase 1.
+No Twitch credentials, database, Docker, or external API is needed for the local Phase 1 demo or Phase 2 kickoff.
 
 ## Install and run
 
@@ -50,7 +51,7 @@ corepack pnpm simulate
 
 The dashboard's **Generate event** button also advances the local mock sequence
 one event at a time. The developer simulation routes are only
-registered outside production mode. Both local services bind to loopback by
+registered in explicit development mode. Both local services bind to loopback by
 default.
 
 ## OBS overlay preview
