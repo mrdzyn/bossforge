@@ -129,10 +129,60 @@ describe("BossForge server", () => {
     expect(response.json()).toEqual({ accepted: true, kind: "viewer.connected" });
   });
 
+  it("accepts a same-origin dashboard simulation request", async () => {
+    const response = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/next",
+      headers: {
+        origin: `http://127.0.0.1:${process.env.VITE_PORT ?? "5173"}`,
+        "sec-fetch-site": "same-origin",
+      },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(response.statusCode).toBe(202);
+  });
+
+  it("rejects foreign-origin and cross-site simulation requests", async () => {
+    const foreignOrigin = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/next",
+      headers: { origin: "https://foreign.example", "sec-fetch-site": "cross-site" },
+      remoteAddress: "127.0.0.1",
+    });
+    const crossSite = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/next",
+      headers: {
+        origin: `http://127.0.0.1:${process.env.VITE_PORT ?? "5173"}`,
+        "sec-fetch-site": "cross-site",
+      },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(foreignOrigin.statusCode).toBe(403);
+    expect(crossSite.statusCode).toBe(403);
+  });
+
+  it("accepts origin-less local CLI simulation and ignores spoofed forwarded IPs", async () => {
+    const localCli = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/next",
+      remoteAddress: "127.0.0.1",
+    });
+    const remoteWithSpoofedForwardedIp = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/next",
+      headers: { "x-forwarded-for": "127.0.0.1" },
+      remoteAddress: "203.0.113.20",
+    });
+    expect(localCli.statusCode).toBe(202);
+    expect(remoteWithSpoofedForwardedIp.statusCode).toBe(403);
+  });
+
   it("rejects simulation requests from non-loopback clients", async () => {
     const next = await server.app.inject({
       method: "POST",
       url: "/dev/simulation/next",
+      headers: { "x-forwarded-for": "127.0.0.1" },
       remoteAddress: "203.0.113.20",
     });
     const custom = await server.app.inject({

@@ -16,18 +16,36 @@
   This is the branch head C1 reviewed before the bounded remediation below.
 - **PR:** Draft PR [#1](https://github.com/mrdzyn/bossforge/pull/1) exists and
   was created through the owner's connected GitHub account. The C1 remediation
-  commit `7f69d9fd289ff34ccdba560eeb2dfa881ee0e12c` was pushed successfully; the
-  current branch tip includes the follow-up documentation status update.
-  Request C2 independent review of the pushed branch tip, distinct from both the
-  original implementation commit and the pre-C1 review head.
+  code commit `7f69d9fd289ff34ccdba560eeb2dfa881ee0e12c` was pushed
+  successfully, followed by the documentation and exact-viewport screenshot
+  commits. The latest C2 audit reviewed `498f15d2dbf5d26755094b1d4e8576ad5ab92742`
+  and identified C2-01. The C3 review target is the C2-remediated pushed branch
+  tip, distinct from the original implementation and pre-C1 review heads.
 - **C1 remediation:** WebSocket upgrades now accept only explicit local Vite
   development origins (or no Origin from a loopback client); simulation routes
   require development mode and a loopback peer even if the server bind host is
   changed; synthetic event submissions must use provider `mock`. Production
   WebSocket access still requires authentication and event authorization.
+- **C2-01 bounded remediation:** Vite now fails during config loading unless
+  `VITE_HOST` resolves to an explicit loopback address. Simulation POSTs require
+  a loopback socket peer, exact local Vite Origin when present, and
+  `Sec-Fetch-Site: same-origin` when Fetch Metadata is present; originless local
+  CLI requests remain accepted. Authorization never uses forwarded-IP headers.
+  The reported 404 was `/favicon.ico`, now served by the app's SVG favicon.
+  `docs/visual-qa/dashboard-1440x900.png` contains a settled chat-feed row.
+- **C2 verification:** The targeted server suite passes 29 tests; total
+  workspace suite passes 35. An actual Vite proxy smoke accepted a same-origin
+  dashboard POST (`202`), rejected a foreign Origin (`403`) and rejected a
+  cross-site Fetch Metadata request (`403`). `pnpm simulate` succeeded with
+  originless loopback requests. An attempted Vite start with `VITE_HOST=0.0.0.0`
+  exited during config loading before listening. See `ACCEPTANCE.md` for full
+  required command results.
+- **C3 handoff:** Review the pushed tip of `origin/feat/phase0-foundation` on
+  Draft PR #1 for C2-01 closure and retention of C1 protections. No merge,
+  deployment, Twitch authentication, or Phase 1 work is authorized.
 - **Visual QA:** Chromium screenshots and observations are committed in
   `docs/visual-qa/` and `ACCEPTANCE.md`.
-- **Validation:** On the C1 remediation worktree, `pnpm install
+- **Prior C1 validation:** On the C1 remediation worktree, `pnpm install
 --frozen-lockfile --store-dir /workspace/.pnpm-store`, `pnpm build`,
   `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `pnpm test` all passed.
   The test suite passed 24 tests (6 shared and 18 server). See `ACCEPTANCE.md`.

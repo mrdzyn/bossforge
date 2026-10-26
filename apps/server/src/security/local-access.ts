@@ -30,3 +30,12 @@ export function isAllowedViteOrigin(
     return false;
   }
 }
+
+export function isAllowedLocalMutationRequest(
+  origin: string | undefined,
+  fetchSite: string | undefined,
+  allowedOrigins: ReadonlySet<string>,
+): boolean {
+  if (fetchSite !== undefined && fetchSite !== "same-origin") return false;
+  return isAllowedViteOrigin(origin, allowedOrigins);
+}

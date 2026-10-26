@@ -1,11 +1,10 @@
 # Project status
 
 - **Active milestone:** Phase 0 — Repository Foundation and Architecture
-- **Current state:** Phase 0 C1 remediation is validated and pushed to
-  `feat/phase0-foundation` on Draft PR
-  [#1](https://github.com/mrdzyn/bossforge/pull/1). PR #1 exists and was created
-  through the owner's connected GitHub account. The pushed branch is ready for
-  C2 independent review.
+- **Current state:** Phase 0 C2-01 bounded remediation for Draft PR
+  [#1](https://github.com/mrdzyn/bossforge/pull/1) is implemented and validated,
+  ready to push to `feat/phase0-foundation`. PR #1 was created through the
+  owner's connected GitHub account and remains Draft.
 - **Twitch status:** No real Twitch authentication or EventSub connection is
   implemented or claimed. The owner-reported Twitch two-factor setup issue
   remains an external blocker for the later real integration phase.
@@ -19,13 +18,12 @@ Voting, procedural boss assembly, and playable combat remain planned work.
 
 ## Current validation
 
-The C1 remediation adds local-origin WebSocket restrictions, loopback-only
-development simulation controls, and mock-provider enforcement. Frozen install,
-production build, strict TypeScript checks, ESLint, formatting, and all tests
-passed against this head; see [ACCEPTANCE.md](ACCEPTANCE.md) for exact results.
-Chromium QA ran at the requested dashboard and overlay sizes; screenshots and
-observations are in `docs/visual-qa/`. Do not treat placeholder UI or simulation
-output as real gameplay or Twitch connectivity.
+The C1 protections remain in place. C2-01 now also fails Vite startup for
+non-loopback `VITE_HOST` values and checks simulation POST Origin and Fetch
+Metadata while preserving originless loopback CLI calls. The reported browser
+404 was traced to `/favicon.ico`; the app now serves an SVG favicon, and a fresh
+Chromium load completed without resource errors. A settled feed screenshot and
+results are recorded in [ACCEPTANCE.md](ACCEPTANCE.md).
 
 ## Known limitations
 
@@ -42,5 +40,5 @@ output as real gameplay or Twitch connectivity.
 
 ## Next handoff
 
-Request a C2 independent review of the pushed remediation head on Draft PR #1.
-Do not start Phase 1 without separate owner authorization.
+After validation and push, request a C3 independent review of the exact branch
+head on Draft PR #1. Do not start Phase 1 without separate owner authorization.

@@ -1,10 +1,11 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { getLoopbackViteHost } from "./src/dev-server-host.js";
 
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: process.env.VITE_HOST ?? "127.0.0.1",
+    host: getLoopbackViteHost(),
     port: Number(process.env.VITE_PORT ?? 5173),
     strictPort: true,
     proxy: {

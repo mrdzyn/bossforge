@@ -5,6 +5,7 @@ import { MockChatAdapter } from "./adapters/mock-chat-adapter.js";
 import { EventHub } from "./events/event-hub.js";
 import {
   getAllowedViteOrigins,
+  isAllowedLocalMutationRequest,
   isAllowedViteOrigin,
   isLoopbackAddress,
 } from "./security/local-access.js";
@@ -45,6 +46,16 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
   ): Promise<void> => {
     if (!developmentMode || !isLoopbackAddress(request.raw.socket.remoteAddress)) {
       reply.code(403).send({ error: "Local development access only" });
+      return;
+    }
+    if (
+      !isAllowedLocalMutationRequest(
+        request.headers.origin,
+        request.headers["sec-fetch-site"],
+        allowedViteOrigins,
+      )
+    ) {
+      reply.code(403).send({ error: "Local simulation origin is not allowed" });
     }
   };
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getAllowedViteOrigins,
+  isAllowedLocalMutationRequest,
   isAllowedViteOrigin,
   isLoopbackAddress,
 } from "../src/security/local-access.js";
@@ -36,6 +37,23 @@ describe("local development access policy", () => {
     expect(isAllowedViteOrigin(undefined, getAllowedViteOrigins("5173"))).toBe(true);
     expect(getAllowedViteOrigins("70000")).toEqual(new Set());
     expect(isAllowedViteOrigin("http://localhost:5173", getAllowedViteOrigins("70000"))).toBe(
+      false,
+    );
+  });
+
+  it("permits local dashboard mutations and blocks cross-site fetch metadata", () => {
+    const origins = getAllowedViteOrigins("5173");
+    expect(isAllowedLocalMutationRequest("http://127.0.0.1:5173", "same-origin", origins)).toBe(
+      true,
+    );
+    expect(isAllowedLocalMutationRequest(undefined, undefined, origins)).toBe(true);
+    expect(isAllowedLocalMutationRequest("https://foreign.example", "cross-site", origins)).toBe(
+      false,
+    );
+    expect(isAllowedLocalMutationRequest("http://127.0.0.1:5173", "cross-site", origins)).toBe(
+      false,
+    );
+    expect(isAllowedLocalMutationRequest("http://127.0.0.1:5173", "same-site", origins)).toBe(
       false,
     );
   });
