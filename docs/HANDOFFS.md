@@ -16,10 +16,12 @@
 --head feat/phase0-foundation` failed with `Post
 "https://api.github.com/graphql": Forbidden`. `gh auth status -h github.com`
   also reports `The token in GH_TOKEN is invalid.` The current environment has
-  no GH token binding and does not allow `api.github.com`. The environment draft
-  is being updated to add that domain and a secure `GH_TOKEN` requirement. After
-  entering an authorized value in environment settings and publishing, retry
-  PR creation. As a manual alternative, open
+  no GH token binding and does not allow `api.github.com`. An environment
+  configuration draft is saved with `api.github.com` access, a secure
+  `GH_TOKEN` requirement, tested install/start instructions, and the repository
+  pinned to the pushed commit. Review and save the draft, enter an authorized
+  value securely, then publish before retrying PR creation. As a manual
+  alternative, open
   <https://github.com/mrdzyn/bossforge/pull/new/feat/phase0-foundation>, set the
   base to `main`, and mark the PR as Draft. Do not merge.
 
