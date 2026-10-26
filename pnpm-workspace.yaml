@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/*
+
+# esbuild is the standard Vite/TypeScript transform engine. Other dependency
+# build scripts remain blocked.
+allowBuilds:
+  esbuild: true
