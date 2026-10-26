@@ -92,3 +92,31 @@ introduced in Phase 1.
 - Before attaching a real WebSocket to P3-A harness, fix repeated distinct reconnect instructions that could orphan pending sockets. Control Ping/Pong must not reset application keepalive; no real notification may be forwarded until verified welcome and active Helix subscription. Never infer `connectedToTwitch` from a local browser socket.
 - Owner must opt in to local OAuth authorization and provide the secret through private local configuration. Never force browser login or make real Twitch API calls in tests. Real operational QA is **NOT TESTED** until executed against the account.
 - Full [active implementation and test gates](P3B-LIVE-TWITCH-INTEGRATION.md).
+
+### P3-B implementation status
+
+- The implementation uses `TWITCH_INTEGRATION_ENABLED=true` only in
+  development and still requires both Client ID and Client Secret. Missing
+  configuration leaves OAuth disabled; no browser action automatically starts
+  consent or contacts Twitch.
+- OAuth uses the exact `localhost:3001` callback, one-time state bound to an
+  HttpOnly SameSite=Lax cookie, loopback peer and exact Host checks, then
+  validates the returned client, numeric account ID and minimum scope. Tokens
+  stay in process memory, refresh tokens rotate, validation runs hourly, and
+  logout/revocation invalidates local access. Auth responses are no-store and
+  return no tokens or authorization codes to the frontend.
+- Twitch mode changes shared event/state provenance to `twitch`; it does not
+  relabel real messages as mock. The EventSub adapter requires a welcomed
+  transport and verified enabled Helix subscription before forwarding. It
+  validates channel, reader, type/version, timestamp and replay through the
+  P3-A normalizer/session code. Revocation/disconnect disables the intake and
+  cancels any active voting cycle.
+- Twitch-mode start/reset/connect/disconnect/mode-switch controls require the
+  process-memory OAuth session plus exact local Origin and Fetch Metadata.
+  Loopback peer checks remain in force. Mock event-generation/injection
+  endpoints are rejected while a Twitch forge is selected; authenticated live
+  start/reset controls remain available. OBS receives only provider mode,
+  verified connection status and forge state, never credentials or controls.
+- B1/B2/B3 tests use fake fetch responses and fake WSS sockets. Real Twitch
+  account consent, live subscription, token validation and channel chat have
+  **NOT TESTED** status; synthetic test results are not operational proof.

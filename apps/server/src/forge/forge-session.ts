@@ -7,6 +7,7 @@ import {
   type ForgeCategoryState,
   type ForgeState,
   type NormalizedChatEvent,
+  type Provider,
   type VoteCategory,
 } from "@bossforge/shared";
 import { assembleBoss } from "./boss-assembly.js";
@@ -50,6 +51,8 @@ export class ForgeSession {
     private readonly onChange: (state: ForgeState) => void = () => undefined,
     private readonly serverInstanceId: string = randomUUID(),
     private readonly serverStartedAt: string = new Date().toISOString(),
+    private readonly mode: Provider = "mock",
+    private connectedToTwitch = false,
   ) {}
 
   start(durationSeconds = 15): ForgeState {
@@ -89,7 +92,12 @@ export class ForgeSession {
   }
 
   handleEvent(event: NormalizedChatEvent): boolean {
-    if (event.kind !== "chat.message" || event.provider !== "mock") return false;
+    if (
+      event.kind !== "chat.message" ||
+      event.provider !== this.mode ||
+      (this.mode === "twitch" && !this.connectedToTwitch)
+    )
+      return false;
     const { message } = event;
     if (this.seenMessageIds.has(message.id)) return false;
     this.seenMessageIds.add(message.id);
@@ -127,6 +135,13 @@ export class ForgeSession {
     return this.buildState();
   }
 
+  setTwitchConnected(connected: boolean): ForgeState {
+    if (this.mode !== "twitch" || this.connectedToTwitch === connected) return this.buildState();
+    this.connectedToTwitch = connected;
+    if (!connected && this.status === "voting") this.reset();
+    return this.changed();
+  }
+
   private buildState(): ForgeState {
     const categoryStates = categories.map((category, index): ForgeCategoryState => {
       const choices = FORGE_VOTE_CHOICES[category] as readonly string[];
@@ -161,8 +176,9 @@ export class ForgeSession {
       revision: this.revision,
       cycleId: this.cycleId,
       status: this.status,
-      simulated: true,
-      connectedToTwitch: false,
+      mode: this.mode,
+      simulated: this.mode === "mock",
+      connectedToTwitch: this.mode === "twitch" && this.connectedToTwitch,
       durationSeconds: this.durationSeconds,
       startedAt: this.startedAt?.toISOString() ?? null,
       activeCategory: this.status === "voting" ? categories[this.activeIndex] : null,

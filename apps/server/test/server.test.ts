@@ -1,8 +1,16 @@
 import { once } from "node:events";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { EventEmitter } from "node:events";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 import { createBossForgeApp, type BossForgeApp } from "../src/app.js";
 import { getAllowedViteOrigins } from "../src/security/local-access.js";
+import { TwitchOAuth } from "../src/twitch/oauth.js";
+
+class FakeTwitchSocket extends EventEmitter {
+  sendFrame(value: unknown): void {
+    this.emit("message", Buffer.from(JSON.stringify(value)));
+  }
+}
 
 describe("BossForge server", () => {
   let server: BossForgeApp;
@@ -91,6 +99,226 @@ describe("BossForge server", () => {
     const response = await server.app.inject({ method: "POST", url: "/health" });
     expect(response.statusCode).toBe(404);
     expect(response.json()).toEqual({ error: "Not found" });
+  });
+
+  it("keeps Twitch authorization disabled by default and rejects a mismatched callback Host", async () => {
+    const disabled = await server.app.inject({
+      method: "GET",
+      url: "/auth/twitch",
+      headers: { host: "localhost:3001" },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(disabled.statusCode).toBe(503);
+    const wrongHost = await server.app.inject({
+      method: "GET",
+      url: "/auth/twitch",
+      headers: { host: "127.0.0.1:3001" },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(wrongHost.statusCode).toBe(403);
+  });
+
+  it("rejects OAuth callback denial and duplicate authorization parameters without contacting Twitch", async () => {
+    const denied = await server.app.inject({
+      method: "GET",
+      url: "/auth/twitch/callback?error=access_denied&state=bad-state",
+      headers: { host: "localhost:3001" },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(denied.statusCode).toBe(400);
+    const duplicate = await server.app.inject({
+      method: "GET",
+      url: "/auth/twitch/callback?state=one&state=two&code=code",
+      headers: { host: "localhost:3001" },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(duplicate.statusCode).toBe(400);
+  });
+
+  it("requires OAuth owner controls and keeps live Twitch ballots separate from mock simulation", async () => {
+    const sockets: FakeTwitchSocket[] = [];
+    const mockFetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/token"))
+        return new Response(
+          JSON.stringify({
+            access_token: "access-token",
+            refresh_token: "refresh-token",
+            expires_in: 3600,
+          }),
+        );
+      if (url.endsWith("/validate"))
+        return new Response(
+          JSON.stringify({
+            client_id: "client-id",
+            user_id: "12345",
+            login: "owner",
+            user_name: "Owner",
+            scopes: ["user:read:chat"],
+          }),
+        );
+      if (url.includes("/eventsub/subscriptions")) {
+        expect(init?.method).toBe("POST");
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                type: "channel.chat.message",
+                version: "1",
+                status: "enabled",
+                condition: { broadcaster_user_id: "12345", user_id: "12345" },
+                transport: { session_id: "live-session" },
+              },
+            ],
+          }),
+          { status: 202 },
+        );
+      }
+      return new Response(null, { status: 204 });
+    }) as typeof fetch;
+    const oauth = new TwitchOAuth({
+      clientId: "client-id",
+      clientSecret: "test-only-secret",
+      redirectUri: "http://localhost:3001/auth/twitch/callback",
+      enabled: true,
+      fetch: mockFetch,
+    });
+    const live = await createBossForgeApp({
+      mode: "development",
+      twitchOAuth: oauth,
+      twitchFetch: mockFetch,
+      twitchCreateSocket: () => {
+        const socket = new FakeTwitchSocket();
+        sockets.push(socket);
+        return socket as unknown as WebSocket;
+      },
+    });
+    const origin = `http://127.0.0.1:${process.env.VITE_PORT ?? "5173"}`;
+    const start = await live.app.inject({
+      method: "GET",
+      url: "/auth/twitch",
+      headers: { host: "localhost:3001" },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(start.statusCode).toBe(302);
+    expect(String(start.headers["set-cookie"])).toContain("HttpOnly");
+    expect(String(start.headers["set-cookie"])).toContain("SameSite=Lax");
+    const authLocation = new URL(start.headers.location!);
+    const state = authLocation.searchParams.get("state")!;
+    const stateCookieHeader = start.headers["set-cookie"];
+    const stateCookie = (
+      Array.isArray(stateCookieHeader) ? stateCookieHeader[0] : stateCookieHeader
+    )!.split(";")[0]!;
+    const callback = await live.app.inject({
+      method: "GET",
+      url: `/auth/twitch/callback?state=${encodeURIComponent(state)}&code=test-code`,
+      headers: { host: "localhost:3001", cookie: stateCookie },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(callback.statusCode).toBe(302);
+    expect(callback.headers["cache-control"]).toBe("no-store");
+    const sessionCookies = callback.headers["set-cookie"];
+    const sessionCookie = (Array.isArray(sessionCookies) ? sessionCookies : [sessionCookies])
+      .find((value) => value?.startsWith("bossforge_twitch_session="))!
+      .split(";")[0]!;
+
+    const unauthenticated = await live.app.inject({
+      method: "POST",
+      url: "/twitch/connect",
+      headers: { host: "localhost:3001", origin },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(unauthenticated.statusCode).toBe(401);
+    const foreignOrigin = await live.app.inject({
+      method: "POST",
+      url: "/twitch/connect",
+      headers: { host: "localhost:3001", origin: "https://foreign.example", cookie: sessionCookie },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(foreignOrigin.statusCode).toBe(403);
+    const connected = await live.app.inject({
+      method: "POST",
+      url: "/twitch/connect",
+      headers: {
+        host: "localhost:3001",
+        origin,
+        "sec-fetch-site": "same-origin",
+        cookie: sessionCookie,
+      },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(connected.statusCode).toBe(202);
+    expect(sockets).toHaveLength(1);
+
+    const noOriginControl = await live.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      headers: { host: "localhost:3001", cookie: sessionCookie },
+      remoteAddress: "127.0.0.1",
+      payload: { durationSeconds: 5 },
+    });
+    expect(noOriginControl.statusCode).toBe(403);
+
+    sockets[0]!.sendFrame({
+      metadata: {
+        message_id: "welcome-id",
+        message_type: "session_welcome",
+        message_timestamp: new Date().toISOString(),
+      },
+      payload: { session: { id: "live-session", keepalive_timeout_seconds: 30 } },
+    });
+    await vi.waitFor(async () => {
+      const status = await live.app.inject({
+        method: "GET",
+        url: "/twitch/status",
+        remoteAddress: "127.0.0.1",
+      });
+      expect(status.json().connected).toBe(true);
+    });
+    const started = await live.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      headers: {
+        host: "localhost:3001",
+        origin,
+        "sec-fetch-site": "same-origin",
+        cookie: sessionCookie,
+      },
+      remoteAddress: "127.0.0.1",
+      payload: { durationSeconds: 5 },
+    });
+    expect(started.statusCode).toBe(200);
+    expect(started.json()).toMatchObject({
+      mode: "twitch",
+      simulated: false,
+      connectedToTwitch: true,
+    });
+    const mockInjection = await live.app.inject({
+      method: "POST",
+      url: "/dev/simulation/next",
+      headers: {
+        host: "localhost:3001",
+        origin,
+        "sec-fetch-site": "same-origin",
+        cookie: sessionCookie,
+      },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(mockInjection.statusCode).toBe(403);
+    const reset = await live.app.inject({
+      method: "POST",
+      url: "/dev/forge/reset",
+      headers: {
+        host: "localhost:3001",
+        origin,
+        "sec-fetch-site": "same-origin",
+        cookie: sessionCookie,
+      },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(reset.statusCode).toBe(200);
+    expect(reset.json()).toMatchObject({ mode: "twitch", status: "idle", connectedToTwitch: true });
+    await live.close();
   });
 
   it("reports live websocket connection state", async () => {
@@ -447,8 +675,12 @@ describe("BossForge server", () => {
     expect(response.statusCode).toBe(404);
     const startForge = await production.app.inject({ method: "POST", url: "/dev/forge/start" });
     const forgeSnapshot = await production.app.inject({ method: "GET", url: "/forge/state" });
+    const oauthStart = await production.app.inject({ method: "GET", url: "/auth/twitch" });
+    const twitchStatus = await production.app.inject({ method: "GET", url: "/twitch/status" });
     expect(startForge.statusCode).toBe(404);
     expect(forgeSnapshot.statusCode).toBe(404);
+    expect(oauthStart.statusCode).toBe(404);
+    expect(twitchStatus.statusCode).toBe(404);
     await production.close();
   });
 });

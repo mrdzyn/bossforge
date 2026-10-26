@@ -23,7 +23,7 @@ or Twitch authentication.
 
 **P3-A completed and squash-merged** via PR #4; offline EventSub fixtures/harness are available.
 
-**P3-B AUTHORIZED for local development:** The owner has registered a Twitch app and approved implementation of real server-side OAuth and least-privilege user-token EventSub WebSocket chat. Implement with strict localhost-only controls, volatile token storage, validated broadcaster/reader identities, real chat vote provenance, disconnect/revocation handling and honest mock/live labels. See [active P3-B spec](P3B-LIVE-TWITCH-INTEGRATION.md). Live QA requires owner consent and local secret configuration. This authorization does not allow merge/deploy/release.
+**P3-B implementation candidate:** B1–B3 add local OAuth, outbound user-token EventSub, and mode-separated voting/UI on Draft PR #5. Fake-network tests and Chromium regressions pass; real Twitch QA remains NOT TESTED until the owner applies private environment configuration and initiates OAuth. Keep the PR Draft and unmerged; no deployment/release is authorized. See [active P3-B spec](P3B-LIVE-TWITCH-INTEGRATION.md).
 
 ## Phase 4 — Streamer UX and OBS Integration
 

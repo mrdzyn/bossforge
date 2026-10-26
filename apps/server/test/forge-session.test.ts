@@ -149,4 +149,50 @@ describe("ForgeSession", () => {
       stats: { health: 250, damage: 24, attackIntervalMs: 1600 },
     });
   });
+
+  it("isolates Twitch and mock ballots by explicit forge mode and connection status", () => {
+    const now = () => new Date("2026-10-26T12:00:00.000Z");
+    const scheduler: ForgeScheduler = { schedule: () => () => undefined };
+    const live = new ForgeSession(
+      now,
+      scheduler,
+      () => undefined,
+      "live-instance",
+      undefined,
+      "twitch",
+      true,
+    );
+    expect(live.getState()).toMatchObject({
+      mode: "twitch",
+      simulated: false,
+      connectedToTwitch: true,
+    });
+    live.start(15);
+    const event = (provider: "mock" | "twitch") => ({
+      kind: "chat.message" as const,
+      provider,
+      message: {
+        id: `message-${provider}`,
+        viewer: { id: "123456", displayName: "Viewer" },
+        text: "!vote body drake",
+        occurredAt: "2026-10-26T12:00:00.000Z",
+      },
+    });
+    expect(live.handleEvent(event("mock"))).toBe(false);
+    expect(live.handleEvent(event("twitch"))).toBe(true);
+    live.setTwitchConnected(false);
+    expect(live.getState()).toMatchObject({
+      mode: "twitch",
+      simulated: false,
+      connectedToTwitch: false,
+      status: "idle",
+    });
+    expect(
+      live.handleEvent({
+        ...event("twitch"),
+        message: { ...event("twitch").message, id: "after-disconnect" },
+      }),
+    ).toBe(false);
+    live.close();
+  });
 });

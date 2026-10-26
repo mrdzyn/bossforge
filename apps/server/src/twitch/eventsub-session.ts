@@ -218,6 +218,10 @@ export class EventSubSession {
           return;
         this.remember(metadata.message_id);
         this.statusValue = "reconnecting";
+        // Twitch can issue another reconnect instruction before the current
+        // replacement welcomes. Retire that pending socket before opening a
+        // new one so there is never an orphaned transport.
+        if (this.pendingReconnectId !== null) this.closeTransport(this.pendingReconnectId);
         this.open(reconnect.data.session.reconnect_url, true);
         return;
       }

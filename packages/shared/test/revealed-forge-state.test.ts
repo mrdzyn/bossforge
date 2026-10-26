@@ -7,6 +7,7 @@ const makeState = (status: ForgeState["status"]): ForgeState => ({
   revision: 8,
   cycleId: status === "idle" ? null : "cycle-1",
   status,
+  mode: "mock",
   simulated: true,
   connectedToTwitch: false,
   durationSeconds: 15,

@@ -24,14 +24,17 @@ are not persisted.
 
 **Phase 3-A:** [Offline EventSub integration readiness](docs/P3-TWITCH-INTEGRATION-READINESS.md)
 was independently source-reviewed and squash-merged as PR #4. Its fixture-only
-normalizer and lifecycle harness are not yet wired to the application.
+normalizer and lifecycle harness are reused by the separately authorized P3-B
+branch; P3-A itself remains offline and mock-only.
 
 **Phase 3-B:** [Real local Twitch integration](docs/P3B-LIVE-TWITCH-INTEGRATION.md)
-is now authorized for development in a new Draft PR. The owner has registered a
-Twitch app. Secure OAuth, EventSub subscription and real voting are **not yet
-implemented or tested** at kickoff. Configure the Client ID and secret only in
-gitignored local environment after code is reviewed; no tokens in tracked files.
-Until real connectivity is verified, current chat/votes remain synthetic.
+is implemented on existing Draft PR #5, with OAuth/EventSub gated by explicit
+local configuration. Automated tests use fake HTTP and WebSocket transports;
+real Twitch consent, subscription and chat voting remain **NOT TESTED**. To
+enable a local account, review/apply the cloud environment configuration draft,
+set the registered Client ID and private Client Secret in gitignored `.env`,
+then set `TWITCH_INTEGRATION_ENABLED=true`. The server remains loopback-only.
+Until OAuth and EventSub are actually verified, use the visible SIMULATED mode.
 
 See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 [roadmap](docs/ROADMAP.md).
@@ -88,6 +91,6 @@ not yet synchronized to the OBS overlay.
 | `pnpm simulate`     | Send the deterministic local mock event sequence  |
 | `pnpm format:check` | Check repository formatting                       |
 
-Copy `.env.example` to `.env` before starting `pnpm dev`. These values are
-local-only configuration; never add Twitch credentials to the example file or
-browser environment.
+Copy `.env.example` to `.env` before starting `pnpm dev`. Twitch variables are
+empty and disabled in the example. Keep real credentials in gitignored local
+configuration and never place them in the browser environment.

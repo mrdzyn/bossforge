@@ -186,6 +186,33 @@ describe("offline injected EventSub lifecycle", () => {
     expect(h.session.status).toBe("retry-wait");
   });
 
+  it("closes an earlier pending reconnect socket when Twitch sends a newer reconnect URL", () => {
+    const h = harness();
+    h.session.start();
+    const active = h.sockets[0]!;
+    h.welcome(active, "welcome-active");
+    h.send(
+      active,
+      message("reconnect-a", "session_reconnect", {
+        session: { reconnect_url: "wss://fixtures.invalid/eventsub?attempt=a" },
+      }),
+    );
+    const orphanCandidate = h.sockets[1]!;
+    h.send(
+      active,
+      message("reconnect-b", "session_reconnect", {
+        session: { reconnect_url: "wss://fixtures.invalid/eventsub?attempt=b" },
+      }),
+    );
+    expect(orphanCandidate.closed).toBe(true);
+    expect(h.sockets).toHaveLength(3);
+    expect(h.sockets[2]?.url).toBe("wss://fixtures.invalid/eventsub?attempt=b");
+    h.welcome(h.sockets[2]!, "welcome-b", "replacement-session");
+    expect(active.closed).toBe(true);
+    expect(h.session.status).toBe("connected");
+    h.session.shutdown();
+  });
+
   it("rejects malformed and unsafe reconnect instructions", () => {
     const h = harness();
     h.session.start();

@@ -2460,6 +2460,21 @@ p {
 .arena-entry {
   text-decoration: none;
 }
+.twitch-controls {
+  margin: 0 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.twitch-controls strong {
+  color: #d9e7ed;
+  font-size: 13px;
+}
+.twitch-controls .dashboard-actions {
+  align-items: center;
+}
 @media (max-width: 650px) {
   .arena-header {
     flex-wrap: wrap;

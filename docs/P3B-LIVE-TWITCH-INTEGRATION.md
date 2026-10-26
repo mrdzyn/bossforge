@@ -1,6 +1,6 @@
 # Phase 3-B — Authenticated Local Twitch Chat + EventSub Voting
 
-**Status:** Owner-authorized kickoff; no runtime implementation or live test has been performed yet.  
+**Status:** B1–B3 implementation candidate on Draft PR #5; offline validation and Chromium regression evidence recorded in [ACCEPTANCE](ACCEPTANCE.md). Real OAuth/EventSub and channel-vote operation remain **NOT TESTED** pending owner configuration and interaction.
 **Base:** `main@5adbd71f5378666e17b805617f37c3bb000505b8` (P3-A independently audited and squash-merged via PR #4)  
 **Working branch:** `feat/phase3b-live-twitch-integration`  
 **Delivery:** One Draft PR, bounded implementation checkpoints, independent exact-head review, **separate explicit owner squash-merge decision**.  
@@ -26,14 +26,15 @@ Do not make Twitch access a prerequisite for `pnpm simulate` or for an ordinary 
 ## Verified Twitch protocol requirements
 
 Official docs (confirm before coding/activation):
+
 - https://dev.twitch.tv/docs/authentication/getting-tokens-oauth — server-side authorization-code grant, `state`, exact registered `redirect_uri`, confidential client secret server only, code exchange.
 - https://dev.twitch.tv/docs/authentication/refresh-tokens — safely refresh user access token and rotate refresh token on success.
 - https://dev.twitch.tv/docs/authentication/validate-tokens — validate third-party OAuth sessions on startup and **at least hourly**, including correct `client_id`, `user_id`, and `scopes`.
-- https://dev.twitch.tv/docs/eventsub/handling-websocket-events — outgoing server-side `wss://eventsub.wss.twitch.tv/ws`, welcome ID, create REST subscription promptly (normally within **10s**); validated keepalive; browser/WebSocket Ping does *not* reset EventSub timer; preserve supplied reconnect URL on handoff; unexpected disconnect requires resubscription, no replay guarantee.
+- https://dev.twitch.tv/docs/eventsub/handling-websocket-events — outgoing server-side `wss://eventsub.wss.twitch.tv/ws`, welcome ID, create REST subscription promptly (normally within **10s**); validated keepalive; browser/WebSocket Ping does _not_ reset EventSub timer; preserve supplied reconnect URL on handoff; unexpected disconnect requires resubscription, no replay guarantee.
 - https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelchatmessage — `channel.chat.message` v1; WebSocket **user access token** with `user:read:chat` initial scope; condition has `broadcaster_user_id` and chat-reader `user_id`.
 - https://dev.twitch.tv/docs/eventsub/manage-subscriptions/ — create via Helix REST, transport `method: websocket`, current `session_id`.
 
-Local MVP: authenticate the **broadcaster's own Twitch account** with `user:read:chat`, then set *both* condition identities to the validated account's numeric user ID for the broadcaster's own channel. Do not assume a separate bot account has identical permissions; support another reader/broadcaster pairing only after explicit authorization and tests. Do not request `user:write:chat`, moderation or posting privileges for read-only voting. Use a user access token, **not an app access token**, for a WebSocket subscription.
+Local MVP: authenticate the **broadcaster's own Twitch account** with `user:read:chat`, then set _both_ condition identities to the validated account's numeric user ID for the broadcaster's own channel. Do not assume a separate bot account has identical permissions; support another reader/broadcaster pairing only after explicit authorization and tests. Do not request `user:write:chat`, moderation or posting privileges for read-only voting. Use a user access token, **not an app access token**, for a WebSocket subscription.
 
 ## Architectural sequencing and strict boundaries
 
@@ -47,7 +48,7 @@ Local MVP: authenticate the **broadcaster's own Twitch account** with `user:read
 ## P3-B1: precise OAuth behavior
 
 - Add a development-only local operator opt-in configuration and a **local-only OAuth start and callback** route. Callback must match `TWITCH_REDIRECT_URI` literally and point at Fastify, not Vite. Treat OAuth callback as a cross-site top-level browser navigation; do not apply the unrelated same-origin POST mutation header policy to this safe GET callback.
-- Secure `state` with 128+ bits of randomness, short-lived single-use server-side storage and browser-bound `HttpOnly`, `SameSite=Lax` cookie or equivalent CSRF-safe correlation. Check expiration/replay/state mismatch, denied consent, duplicate query params, missing code, and Host mismatch. No reflected arbitrary `next` or redirect URL. Local callback HTTP is acceptable *only* on loopback in dev; use `Secure` cookies in HTTPS contexts. Cookies `Path`, TTL and appropriate host scope must be deliberate.
+- Secure `state` with 128+ bits of randomness, short-lived single-use server-side storage and browser-bound `HttpOnly`, `SameSite=Lax` cookie or equivalent CSRF-safe correlation. Check expiration/replay/state mismatch, denied consent, duplicate query params, missing code, and Host mismatch. No reflected arbitrary `next` or redirect URL. Local callback HTTP is acceptable _only_ on loopback in dev; use `Secure` cookies in HTTPS contexts. Cookies `Path`, TTL and appropriate host scope must be deliberate.
 - Code exchange server-to-server `https://id.twitch.tv/oauth2/token` with secrets never exposed to frontend; validate response shape, Twitch `/oauth2/validate`, `client_id`, scope, numeric authorized user ID, and token expiry. Bind the verified local operator to that OAuth session. Clear transient state after success/failure, and ensure browser receives no tokens/refresh token/auth code in pages, URL fragments or response JSON.
 - Store user access and rotating refresh tokens **in process memory only** for this local hackathon MVP. Restart ends login; no database. Validate hourly and before sensitive actions as needed; handle 401 refresh once under a single-flight lock; on revoked or failed refresh, disconnect EventSub, invalidate Twitch-mode voting safely, clear tokens and require explicit reauthorization. Implement explicit local disconnect/logout including cookie cleanup and preferably Twitch revocation best-effort; no persistence. Prevent refresh storms.
 - Use bounded HTTP timeouts/redirect policy, safe error mapping without leaking Twitch responses/headers, Content-Security-Policy and `Cache-Control: no-store` for auth pages and callbacks. Verify OS localhost / IPv6 and dev Vite integration with real browser.
@@ -56,7 +57,7 @@ Local MVP: authenticate the **broadcaster's own Twitch account** with `user:read
 
 ## P3-B2: verified EventSub WebSocket and subscription
 
-- Use one outbound secure WSS connection by default, with max frame size and well-defined shutdown. Prevent pending reconnect socket leak, duplicate subscription creation and repeated double-reconnect reentrancy. Honor server-provided reconnect URL *unchanged* after validating scheme/allowed host; keep old receiving until replacement session welcome. The normalizer and harness must reject malformed/wrong-channel/reader/subscription/version inputs.
+- Use one outbound secure WSS connection by default, with max frame size and well-defined shutdown. Prevent pending reconnect socket leak, duplicate subscription creation and repeated double-reconnect reentrancy. Honor server-provided reconnect URL _unchanged_ after validating scheme/allowed host; keep old receiving until replacement session welcome. The normalizer and harness must reject malformed/wrong-channel/reader/subscription/version inputs.
 - On genuine `session_welcome`, promptly POST `https://api.twitch.tv/helix/eventsub/subscriptions` with `type: channel.chat.message`, `version: 1`, `condition: {broadcaster_user_id, user_id}`, `transport: {method: websocket, session_id}` under the validated **user** Bearer token and matching Client-Id header. Handle 202/409/401/403/429/network timeout explicitly; determine when already-subscribed from Twitch response rather than silently assuming. No subscription REST call on server-directed reconnect since Twitch transfers it; unexpected disconnect requires new subscription.
 - `TWITCH CONNECTED` requires verified session + subscription activation, not merely WSS open or OAuth success. No chat forwarding until session/subscription and operator mode gate are valid. Deduplicate chat messages by trusted `message_id`, bound memory, validate event `condition.user_id` against actual authorized chat reader, sender stable Twitch `chatter_user_id` as ballot owner, and preserve real occurredAt.
 - On revocation, socket failure, token validation failure, channel mismatch or intentional logout, **stop live ballot intake immediately**, update accurate status, and apply documented fail-safe voting timer policy. Never replace failed live votes with synthetic ones without an explicit new mock cycle.
@@ -85,6 +86,6 @@ Local MVP: authenticate the **broadcaster's own Twitch account** with `user:read
 
 ## Known future hardening
 
-- Before wiring a live WebSocket, guard multiple distinct `session_reconnect` messages against orphaned pending transports (non-blocking P3-A audit note).
+- **Resolved in this P3-B implementation:** guard multiple distinct `session_reconnect` messages by closing the prior pending transport before opening its replacement; a regression test covers this.
 - Strict per-process monotonic EventSub timestamp rejection might discard legitimate cross-socket out-of-order delivery; review event ordering vs replay guarantees when real traffic becomes available.
 - Existing C5 process epoch ordering by wall clock is local-development acceptable but not a cross-machine distributed guarantee.
