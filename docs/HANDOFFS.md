@@ -203,3 +203,11 @@ only after they exist. Do not invent a Codex session ID; use the session's
   evidence, responsive behavior, and preservation of C5 approval and scope.
   Codex-run checks are not independent approval. Do not merge, deploy, publish,
   or begin Phase 2; owner approval is required before merge.
+
+## Phase 1 merge and Phase 2 kickoff
+
+- **Phase 1 merge verified:** Owner explicitly approved squash merge of [PR #2](https://github.com/mrdzyn/bossforge/pull/2) after independent C6 PASS ([comment #6417403432](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6417403432)). GitHub reports PR #2 merged into `main`; squash commit `2ca5c1ebcd0fe4f51b153faf36a8a765d66fec45`. Prior implementation head `3863a30088b82d52262e8624fb843d42f2d3595d`.
+- **P2 owner authorization:** Begin the playable boss battle milestone; no Phase 2 merge/deploy/release authorization.
+- **P2 new branch:** `feat/phase2-playable-boss-battle` created from the exact squash-merged Phase 1 `main` commit. Active spec: [P2-PLAYABLE-BOSS-BATTLE.md](P2-PLAYABLE-BOSS-BATTLE.md).
+- **P2 kickoff scope:** Specs/status/handoff documentation first. Next work is an actual Phaser 3 combat vertical slice and subsequent full P2 acceptance in the same branch and its Draft PR; retain the Phase 0/1 source authority, client reconciliation, loopback-only security and mock simulation disclosure.
+- **Review gate:** Codex implementation checks and screenshots are not independent verification. Request a new exact-HEAD audit on the Phase 2 implementation; leave its PR Draft and unmerged until the owner expressly approves squash merge. No Twitch OAuth, production endpoint, multiplayer, deployment or Phase 3 under this authority.
