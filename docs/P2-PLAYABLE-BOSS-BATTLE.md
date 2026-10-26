@@ -49,7 +49,7 @@ Prioritize a reliable 30–90 second human-playable loop over extra modes or vis
   - `frost-chain`: staggered aimed shots; optional short bounded slow on hit.
   - `thunder-dash`: wind-up line then charge.
   - `shadow-pulse`: expanding area pulse with a visible dodge interval.
-  Patterns should be mechanically distinguishable, not merely different labels or colors. All attacks must have bounded damage and reasonable avoidance windows.
+    Patterns should be mechanically distinguishable, not merely different labels or colors. All attacks must have bounded damage and reasonable avoidance windows.
 - **Weakness:** an actionable player choice. Example: 1/2/3/4 select water/light/earth/wind ammunition, with a visible damage multiplier only when it matches the boss's announced weakness. Cap multiplier, show feedback, and avoid a single-hit instant kill. UI must explain mapping.
 - **Element:** distinct attack telegraphs/effects/palette for fire, ice, storm and void; do not require four complex separate engines. If element-specific mechanics are simplified, document exact effects. Keep meaningful gameplay variation from special and weakness.
 - **Outcome:** victory triggers at boss HP 0, defeat at player HP 0; simultaneous lethal damage resolved by a documented deterministic rule. Freeze input after result, provide same-boss rematch and fresh-forge navigation.

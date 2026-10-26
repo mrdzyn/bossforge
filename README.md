@@ -15,9 +15,14 @@ session state, modular boss traits and bounded statistics, streamer controls,
 a read-only live OBS overlay, and repeatable synthetic simulation.
 
 **Phase 1:** Independently source-reviewed and squash-merged to `main` via PR #2.
-**Phase 2:** Authorized, with [active battle spec](docs/P2-PLAYABLE-BOSS-BATTLE.md);
-combat implementation is not yet delivered. Official Twitch OAuth/EventSub remains
-deferred. The mock adapter uses synthetic data and is not a Twitch connection.
+**Phase 2:** A local Phaser 3 playable battle is implemented on the existing
+feature branch and awaits independent exact-HEAD review. Run `pnpm simulate`,
+open the dashboard, and choose **Enter Arena** after the reveal. Controls:
+WASD/arrows move, click or Space fires toward the pointer, Shift dodges, and
+1–4 selects water/light/earth/wind ammunition. Matching the revealed weakness
+deals 75% bonus damage. Combat is a local browser simulation and battle results
+are not persisted. Official Twitch OAuth/EventSub remains deferred; mock events
+are synthetic and are not a Twitch connection.
 
 See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 [roadmap](docs/ROADMAP.md).
@@ -27,7 +32,7 @@ See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 - Node.js 22.13 or newer in the Node 22 LTS line, or Node.js 24 LTS.
 - pnpm 11.25.0 (Corepack can select the version pinned in `package.json`).
 
-No Twitch credentials, database, Docker, or external API is needed for the local Phase 1 demo or Phase 2 kickoff.
+No Twitch credentials, database, Docker, or external API is needed for local forge and arena demos.
 
 ## Install and run
 

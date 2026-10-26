@@ -1,5 +1,6 @@
 import { z } from "zod";
 export { ForgeStateReconciler } from "./forge-state-reconciler.js";
+export * from "./combat.js";
 
 export const ProviderSchema = z.enum(["mock", "twitch"]);
 export type Provider = z.infer<typeof ProviderSchema>;
@@ -136,6 +137,15 @@ export const ForgeStateSchema = z.object({
   boss: BossSchema.nullable(),
 });
 export type ForgeState = z.infer<typeof ForgeStateSchema>;
+
+export const RevealedForgeStateSchema = ForgeStateSchema.extend({
+  cycleId: z.string().min(1).max(100),
+  status: z.literal("revealed"),
+  activeCategory: z.null(),
+  progress: z.literal(4),
+  boss: BossSchema,
+});
+export type RevealedForgeState = z.infer<typeof RevealedForgeStateSchema>;
 
 export const ForgeStateEventSchema = z.object({
   kind: z.literal("forge.state"),
