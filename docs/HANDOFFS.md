@@ -112,9 +112,10 @@ only after they exist. Do not invent a Codex session ID; use the session's
   and rate limiting. P1 does not authenticate viewers and is not safe for public
   access.
 - **Implementation:** The implementation is committed to the existing branch
-  and pushed to the existing Draft PR #2. The PR description and delivery
-  record contain the full exact HEAD SHA. Do not amend code after that SHA
-  without updating the review target.
+  and pushed to the existing Draft PR #2. Implementation commit:
+  `b4b31d6ec47c9e50457fc0e4e1967dd5b2c7349a`. The PR description and delivery
+  record identify the current full HEAD SHA to review. Do not amend code after
+  the reported SHA without updating the review target.
 - **Validation (Codex-reported):** Frozen pnpm install, build, typecheck, lint,
   formatting check, and complete tests passed. The suite contains 44 passing
   tests (6 shared, 38 server). `pnpm simulate` completed repeated four-stage
