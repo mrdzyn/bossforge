@@ -5,7 +5,7 @@
 BossForge Live is an interactive browser game concept for Twitch streams. The
 audience will shape a monster through chat and the streamer will fight it in an
 arcade arena. Phase 1 established server-authoritative local voting and a
-broadcast-oriented OBS overlay. Phase 2 develops the playable local boss battle.
+broadcast-oriented OBS overlay. Phase 2 delivered the playable local boss battle.
 
 ## Current status
 
@@ -15,14 +15,18 @@ session state, modular boss traits and bounded statistics, streamer controls,
 a read-only live OBS overlay, and repeatable synthetic simulation.
 
 **Phase 1:** Independently source-reviewed and squash-merged to `main` via PR #2.
-**Phase 2:** A local Phaser 3 playable battle is implemented on the existing
-feature branch and awaits independent exact-HEAD review. Run `pnpm simulate`,
+**Phase 2:** Independently source-reviewed through C2 and squash-merged to `main` via PR #3. A local Phaser 3 battle is playable. Run `pnpm simulate`,
 open the dashboard, and choose **Enter Arena** after the reveal. Controls:
 WASD/arrows move, click or Space fires toward the pointer, Shift dodges, and
 1–4 selects water/light/earth/wind ammunition. Matching the revealed weakness
 deals 75% bonus damage. Combat is a local browser simulation and battle results
-are not persisted. Official Twitch OAuth/EventSub remains deferred; mock events
-are synthetic and are not a Twitch connection.
+are not persisted.
+
+**Phase 3-A:** [Offline EventSub integration readiness](docs/P3-TWITCH-INTEGRATION-READINESS.md)
+is scoped and authorized for fixture-based implementation only. Live Twitch OAuth,
+EventSub subscriptions and real voting are still blocked by the account's 2FA/developer
+registration issue and require separate approval. All current chat events are synthetic
+and must not be presented as a Twitch connection.
 
 See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 [roadmap](docs/ROADMAP.md).
@@ -63,9 +67,9 @@ default.
 
 Open <http://127.0.0.1:5173/overlay> for the broadcast presentation. It shares
 the local event stream and omits streamer administration controls. The layout is
-designed for 1920×1080 and 1280×720 safe areas. Voting and boss details show
-live simulation state; boss health is an assembly statistic and combat is not
-implemented.
+designed for 1920×1080 and 1280×720 safe areas. Voting and boss details show live simulation state; the OBS boss health is a
+forge-derived statistic, not live client-side combat health. Combat results are
+not yet synchronized to the OBS overlay.
 
 ## Development commands
 
