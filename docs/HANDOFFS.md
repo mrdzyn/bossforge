@@ -15,18 +15,18 @@
 - **Initial review head:** `8a6f456e89c68508e325588df2e25cd7feded2d0`.
   This is the branch head C1 reviewed before the bounded remediation below.
 - **PR:** Draft PR [#1](https://github.com/mrdzyn/bossforge/pull/1) exists and
-  was created through the owner's connected GitHub account. The current local
-  C1 remediation is validated and awaiting push; request C2 independent review
-  after it is pushed. The C2 review target is the pushed branch tip, distinct
-  from both the original implementation commit and the pre-C1 review head.
+  was created through the owner's connected GitHub account. The C1 remediation
+  commit `7f69d9fd289ff34ccdba560eeb2dfa881ee0e12c` was pushed successfully; the
+  current branch tip includes the follow-up documentation status update.
+  Request C2 independent review of the pushed branch tip, distinct from both the
+  original implementation commit and the pre-C1 review head.
 - **C1 remediation:** WebSocket upgrades now accept only explicit local Vite
   development origins (or no Origin from a loopback client); simulation routes
   require development mode and a loopback peer even if the server bind host is
   changed; synthetic event submissions must use provider `mock`. Production
   WebSocket access still requires authentication and event authorization.
-- **Visual QA:** Chromium captures and observations are present in the validated
-  remediation worktree in `docs/visual-qa/` and `ACCEPTANCE.md`; they will be
-  part of the push.
+- **Visual QA:** Chromium screenshots and observations are committed in
+  `docs/visual-qa/` and `ACCEPTANCE.md`.
 - **Validation:** On the C1 remediation worktree, `pnpm install
 --frozen-lockfile --store-dir /workspace/.pnpm-store`, `pnpm build`,
   `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `pnpm test` all passed.

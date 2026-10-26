@@ -20,14 +20,14 @@ actual outcomes; do not infer a pass from a configured script.
 | Dashboard and overlay browser rendering          | Chromium at requested viewports                                     | PASS — see Visual QA                  |
 | Secret review                                    | Credential-pattern scan of project files                            | PASS — no matches                     |
 | Patch whitespace                                 | `git diff --check`                                                  | PASS                                  |
-| Feature branch commit and push                   | Initial implementation commit and remediation head on origin        | Pending push                          |
+| Feature branch commit and push                   | Initial implementation commit and C1 remediation on origin          | PASS — pushed to existing branch      |
 | Draft PR                                         | Draft PR #1                                                         | PASS — owner connected GitHub account |
 
 ## Visual QA
 
 Chromium 154.0.8037.57 headless was launched with Playwright against the running
-local Vite development app. Real screenshots are included in the validated
-remediation worktree and will be pushed alongside this document:
+local Vite development app. Real screenshots are committed alongside this
+document:
 
 - Dashboard: [`dashboard-1440x900.png`](visual-qa/dashboard-1440x900.png) and
   [`dashboard-390x844.png`](visual-qa/dashboard-390x844.png).
