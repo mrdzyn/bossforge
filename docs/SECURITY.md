@@ -80,3 +80,15 @@ or coding agent.
 No payments, unsolicited chat posting, user tracking, production deployment,
 production account storage, Twitch authentication, or playable combat is
 introduced in Phase 1.
+
+## Phase 3-B — authorized local live integration security gates
+
+- Owner has explicitly authorized **development** of server-side OAuth and actual Twitch chat connection; this does **not** authorize production exposure, merge or deployment. P3-A remains offline until the P3-B implementation is complete and tested.
+- Twitch app Client ID must be environment-configurable, not hardcoded; Client Secret, user access/refresh tokens, OAuth code and state must never enter GitHub, browser bundles, logs, screenshots or chat. Local MVP tokens are process-memory only and logout/restart must clear them.
+- Registered/intended redirect `http://localhost:3001/auth/twitch/callback`; exact match and loopback/Host validation are required. Browser callback is a top-level cross-site GET, so bind a high-entropy single-use `state` to the initiating browser, short expiry, cookie `HttpOnly; SameSite=Lax` or equivalent, and reject callback spoofing, replay, denial and mismatches.
+- Twitch `/oauth2/validate` is required at startup and at least hourly; only accept the right Client ID, numeric user identity and `user:read:chat` scope. Refresh/rotate tokens securely and fail closed on 401/revocation. Twitch WS subscriptions require **user** access tokens and verified `session_id`; create `channel.chat.message` v1 using `broadcaster_user_id` and authenticated `user_id`. Outbound WSS only, no public webhook.
+- OAuth/session/forge mode operations are authorized **local streamer controls**, not unprotected loopback mutations. Apply browser-bound owner session controls plus CSRF/Origin protection; do not bypass Phase 0 effective-host, socket-peer, Origin, rate limit and production restrictions. OBS must have no auth controls or tokens.
+- Real-mode votes and mock-mode votes must be mutually exclusive per forge cycle and marked accurately. Current mock-only `ForgeState` literals and `ForgeSession` rejection remain in force until an explicit, reviewed source-aware contract migration.
+- Before attaching a real WebSocket to P3-A harness, fix repeated distinct reconnect instructions that could orphan pending sockets. Control Ping/Pong must not reset application keepalive; no real notification may be forwarded until verified welcome and active Helix subscription. Never infer `connectedToTwitch` from a local browser socket.
+- Owner must opt in to local OAuth authorization and provide the secret through private local configuration. Never force browser login or make real Twitch API calls in tests. Real operational QA is **NOT TESTED** until executed against the account.
+- Full [active implementation and test gates](P3B-LIVE-TWITCH-INTEGRATION.md).
