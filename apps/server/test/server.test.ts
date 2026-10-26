@@ -30,6 +30,63 @@ describe("BossForge server", () => {
     });
   });
 
+  it("returns an idle revision-zero snapshot after a backend process restart", async () => {
+    let scheduled: (() => void) | undefined;
+    const oldProcess = await createBossForgeApp({
+      mode: "development",
+      serverInstanceId: "old-process",
+      serverStartedAt: "2026-10-26T12:00:00.000Z",
+      now: () => new Date("2026-10-26T12:00:00.000Z"),
+      forgeScheduler: {
+        schedule(callback) {
+          scheduled = callback;
+          return () => undefined;
+        },
+      },
+    });
+    const started = await oldProcess.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      payload: { durationSeconds: 15 },
+    });
+    expect(started.statusCode).toBe(200);
+    for (let category = 0; category < 4; category += 1) scheduled?.();
+    const revealed = await oldProcess.app.inject({ method: "GET", url: "/forge/state" });
+    expect(revealed.json()).toMatchObject({
+      serverInstanceId: "old-process",
+      status: "revealed",
+      revision: 5,
+      boss: { name: expect.any(String) },
+    });
+    await oldProcess.close();
+
+    const restarted = await createBossForgeApp({
+      mode: "development",
+      serverInstanceId: "new-process",
+      serverStartedAt: "2026-10-26T12:01:00.000Z",
+    });
+    const idle = await restarted.app.inject({ method: "GET", url: "/forge/state" });
+    expect(idle.statusCode).toBe(200);
+    expect(idle.json()).toMatchObject({
+      serverInstanceId: "new-process",
+      status: "idle",
+      revision: 0,
+      boss: null,
+    });
+    const freshCycle = await restarted.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      payload: { durationSeconds: 15 },
+    });
+    expect(freshCycle.json()).toMatchObject({
+      serverInstanceId: "new-process",
+      status: "voting",
+      revision: 1,
+      activeCategory: "body",
+    });
+    await restarted.close();
+  });
+
   it("returns a not-found failure for unsupported health methods", async () => {
     const response = await server.app.inject({ method: "POST", url: "/health" });
     expect(response.statusCode).toBe(404);

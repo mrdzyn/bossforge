@@ -31,6 +31,7 @@ if (current.status !== "idle") {
 }
 const started = await request("/dev/forge/start", { durationSeconds });
 if (!started.ok) throw new Error(`Could not start forge cycle: HTTP ${started.status}`);
+current = ForgeStateSchema.parse(await started.json());
 process.stdout.write(`Started ${durationSeconds}s four-category local voting cycle.\n`);
 
 const picks: Record<VoteCategory, string> = {

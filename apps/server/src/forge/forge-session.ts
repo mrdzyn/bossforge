@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   FORGE_VOTE_CHOICES,
   ForgeStateSchema,
@@ -47,6 +48,8 @@ export class ForgeSession {
     private readonly now: () => Date = () => new Date(),
     private readonly scheduler: ForgeScheduler = realScheduler,
     private readonly onChange: (state: ForgeState) => void = () => undefined,
+    private readonly serverInstanceId: string = randomUUID(),
+    private readonly serverStartedAt: string = new Date().toISOString(),
   ) {}
 
   start(durationSeconds = 15): ForgeState {
@@ -153,6 +156,8 @@ export class ForgeSession {
       };
     });
     return ForgeStateSchema.parse({
+      serverInstanceId: this.serverInstanceId,
+      serverStartedAt: this.serverStartedAt,
       revision: this.revision,
       cycleId: this.cycleId,
       status: this.status,

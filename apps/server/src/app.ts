@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { ForgeStartRequestSchema, NormalizedChatEventSchema } from "@bossforge/shared";
@@ -25,6 +26,8 @@ export interface AppOptions {
   simulationEnabled?: boolean;
   now?: () => Date;
   forgeScheduler?: ForgeScheduler;
+  serverInstanceId?: string;
+  serverStartedAt?: string;
 }
 
 export interface BossForgeApp {
@@ -39,8 +42,12 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
   const now = options.now ?? (() => new Date());
   const mockAdapter = new MockChatAdapter(now);
   const hub = new EventHub();
-  const forge = new ForgeSession(now, options.forgeScheduler, (state) =>
-    hub.publish({ kind: "forge.state", source: "mock", state }),
+  const forge = new ForgeSession(
+    now,
+    options.forgeScheduler,
+    (state) => hub.publish({ kind: "forge.state", source: "mock", state }),
+    options.serverInstanceId ?? randomUUID(),
+    options.serverStartedAt ?? new Date().toISOString(),
   );
   const app = Fastify({ logger: false, bodyLimit: bodyLimitBytes });
   const allowedViteOrigins = getAllowedViteOrigins();

@@ -1,4 +1,5 @@
 import { z } from "zod";
+export { ForgeStateReconciler } from "./forge-state-reconciler.js";
 
 export const ProviderSchema = z.enum(["mock", "twitch"]);
 export type Provider = z.infer<typeof ProviderSchema>;
@@ -120,6 +121,8 @@ export const ForgeCategoryStateSchema = z.object({
 export type ForgeCategoryState = z.infer<typeof ForgeCategoryStateSchema>;
 
 export const ForgeStateSchema = z.object({
+  serverInstanceId: z.string().min(1).max(100),
+  serverStartedAt: z.string().datetime(),
   revision: z.number().int().min(0),
   cycleId: z.string().min(1).max(100).nullable(),
   status: z.enum(["idle", "voting", "revealed"]),
