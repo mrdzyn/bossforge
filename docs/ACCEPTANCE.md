@@ -6,21 +6,21 @@ actual outcomes; do not infer a pass from a configured script.
 
 ## Required checks
 
-| Criterion                                        | Verification                                                        | Result                               |
-| ------------------------------------------------ | ------------------------------------------------------------------- | ------------------------------------ |
-| pnpm workspace and frozen dependency install     | `pnpm install --frozen-lockfile --store-dir /workspace/.pnpm-store` | PASS                                 |
-| Production web and server builds                 | `pnpm build`                                                        | PASS                                 |
-| TypeScript checks                                | `pnpm typecheck`                                                    | PASS                                 |
-| ESLint checks                                    | `pnpm lint`                                                         | PASS                                 |
-| Unit/integration suite                           | `pnpm test`                                                         | PASS — 16 tests                      |
-| Server health response                           | `GET /health`                                                       | PASS — direct and through Vite proxy |
-| WebSocket delivers mock events                   | Server integration test; `pnpm simulate`                            | PASS — 4 synthetic events            |
-| Dashboard and overlay routes serve the app shell | HTTP requests to `/` and `/overlay`                                 | PASS                                 |
-| Dashboard and overlay browser rendering          | Chromium headless smoke check                                       | NOT TESTED                           |
-| Secret review                                    | Credential-pattern scan of project files                            | PASS — no matches                    |
-| Patch whitespace                                 | `git diff --check`                                                  | PASS                                 |
-| Feature branch commit and push                   | Git evidence                                                        | PENDING                              |
-| Draft PR                                         | GitHub CLI                                                          | PENDING — see `HANDOFFS.md`          |
+| Criterion                                        | Verification                                                        | Result                                  |
+| ------------------------------------------------ | ------------------------------------------------------------------- | --------------------------------------- |
+| pnpm workspace and frozen dependency install     | `pnpm install --frozen-lockfile --store-dir /workspace/.pnpm-store` | PASS                                    |
+| Production web and server builds                 | `pnpm build`                                                        | PASS                                    |
+| TypeScript checks                                | `pnpm typecheck`                                                    | PASS                                    |
+| ESLint checks                                    | `pnpm lint`                                                         | PASS                                    |
+| Unit/integration suite                           | `pnpm test`                                                         | PASS — 16 tests                         |
+| Server health response                           | `GET /health`                                                       | PASS — direct and through Vite proxy    |
+| WebSocket delivers mock events                   | Server integration test; `pnpm simulate`                            | PASS — 4 synthetic events               |
+| Dashboard and overlay routes serve the app shell | HTTP requests to `/` and `/overlay`                                 | PASS                                    |
+| Dashboard and overlay browser rendering          | Chromium headless smoke check                                       | NOT TESTED                              |
+| Secret review                                    | Credential-pattern scan of project files                            | PASS — no matches                       |
+| Patch whitespace                                 | `git diff --check`                                                  | PASS                                    |
+| Feature branch commit and push                   | Commit `94506e09205f9aff27a5da29f8bdde9a90f6dc4c` on origin         | PASS                                    |
+| Draft PR                                         | `gh pr create --draft --base main`                                  | BLOCKED — GitHub API returned Forbidden |
 
 ## Visual QA
 

@@ -5,18 +5,23 @@
 - **Bootstrap:** Confirmed that the remote had no refs before creating the
   authorized initial `main` commit. Bootstrap commit: `4190db4`.
 - **Implementation branch:** `feat/phase0-foundation`.
+- **Implementation commit:** `94506e09205f9aff27a5da29f8bdde9a90f6dc4c`, pushed
+  successfully to `origin/feat/phase0-foundation`.
 - **Scope:** Repository foundation and architecture only. No Phase 1 gameplay,
   real Twitch OAuth, EventSub, merge, deployment, release, or package publishing.
 - **Validation:** Build, install, typecheck, lint, formatting, 16 automated tests,
   health checks, WebSocket delivery, and four mock events passed. Chromium visual
   rendering is NOT TESTED; see `ACCEPTANCE.md`.
-- **Review:** GitHub CLI reports that the configured `GH_TOKEN` is invalid.
-  `gh auth status -h github.com` returned: `Failed to log in to github.com using
-token (GH_TOKEN) — The token in GH_TOKEN is invalid.` Git HTTPS read access
-  succeeds, but GitHub API access and Draft PR creation remain unverified.
-  Retry `gh pr create --draft --base main` after restoring authorized GitHub CLI
-  API access, or create a Draft PR manually from `feat/phase0-foundation` into
-  `main`. Do not merge.
+- **Review:** Git HTTPS push succeeded. `gh pr create --draft --base main
+--head feat/phase0-foundation` failed with `Post
+"https://api.github.com/graphql": Forbidden`. `gh auth status -h github.com`
+  also reports `The token in GH_TOKEN is invalid.` The current environment has
+  no GH token binding and does not allow `api.github.com`. The environment draft
+  is being updated to add that domain and a secure `GH_TOKEN` requirement. After
+  entering an authorized value in environment settings and publishing, retry
+  PR creation. As a manual alternative, open
+  <https://github.com/mrdzyn/bossforge/pull/new/feat/phase0-foundation>, set the
+  base to `main`, and mark the PR as Draft. Do not merge.
 
 ## Owner decisions and external dependencies
 

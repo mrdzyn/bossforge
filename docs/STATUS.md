@@ -31,12 +31,13 @@ as real gameplay or Twitch connectivity.
   controls are not functional gameplay.
 - The available Chromium binary timed out even on a local static data page, so
   dashboard and overlay rendering remain visually unverified.
-- Draft PR creation is pending the GitHub API credential problem recorded in
-  [HANDOFFS.md](HANDOFFS.md); Git HTTPS read access works. Merge remains
-  owner-controlled.
+- Draft PR creation is blocked by GitHub API access in the current instance;
+  Git HTTPS push succeeded. The exact API result and required settings are
+  recorded in [HANDOFFS.md](HANDOFFS.md). Merge remains owner-controlled.
 
 ## Next authorized work
 
-Review the Phase 0 branch, retry Draft PR creation after GitHub CLI API access is
-restored, and visually smoke-test the dashboard and overlay in a working browser.
-Do not start Phase 1 without separate owner authorization.
+Restore GitHub CLI API access through environment settings, publish the updated
+environment, retry Draft PR creation, and visually smoke-test the dashboard and
+overlay in a working browser. Do not start Phase 1 without separate owner
+authorization.
