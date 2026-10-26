@@ -2,12 +2,16 @@ import { once } from "node:events";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { createBossForgeApp, type BossForgeApp } from "../src/app.js";
+import { getAllowedViteOrigins } from "../src/security/local-access.js";
 
 describe("BossForge server", () => {
   let server: BossForgeApp;
 
   beforeEach(async () => {
-    server = await createBossForgeApp({ now: () => new Date("2026-10-26T12:00:00.000Z") });
+    server = await createBossForgeApp({
+      mode: "development",
+      now: () => new Date("2026-10-26T12:00:00.000Z"),
+    });
   });
 
   afterEach(async () => {
@@ -47,7 +51,11 @@ describe("BossForge server", () => {
 
   it("delivers validated mock events to a browser websocket client", async () => {
     const address = await server.app.listen({ host: "127.0.0.1", port: 0 });
-    const client = new WebSocket(address.replace("http", "ws") + "/events");
+    const allowedOrigin = `http://127.0.0.1:${process.env.VITE_PORT ?? "5173"}`;
+    expect(getAllowedViteOrigins().has(allowedOrigin)).toBe(true);
+    const client = new WebSocket(address.replace("http", "ws") + "/events", {
+      headers: { origin: allowedOrigin },
+    });
     const connectionMessagePromise = once(client, "message");
     await once(client, "open");
     const connectionMessage = await connectionMessagePromise;
@@ -70,14 +78,87 @@ describe("BossForge server", () => {
     await once(client, "close");
   });
 
+  it("rejects websocket subscriptions from foreign browser origins", async () => {
+    const address = await server.app.listen({ host: "127.0.0.1", port: 0 });
+    const client = new WebSocket(address.replace("http", "ws") + "/events", {
+      headers: { origin: "https://foreign.example" },
+    });
+    const statusCode = await new Promise<number>((resolve, reject) => {
+      client.once("unexpected-response", (_request, response) => {
+        response.resume();
+        resolve(response.statusCode ?? 0);
+      });
+      client.once("open", () => {
+        client.close();
+        reject(new Error("Foreign origin unexpectedly opened a websocket"));
+      });
+      client.once("error", reject);
+    });
+    expect(statusCode).toBe(403);
+    const health = await server.app.inject({ method: "GET", url: "/health" });
+    expect(health.json().connections.websocketClients).toBe(0);
+  });
+
   it("rejects invalid simulation events", async () => {
     const response = await server.app.inject({
       method: "POST",
       url: "/dev/simulation/events",
-      payload: { kind: "chat.message", provider: "twitch", message: { text: "bad" } },
+      payload: {
+        kind: "viewer.connected",
+        provider: "twitch",
+        viewer: { id: "twitch-viewer", displayName: "TwitchViewer" },
+        occurredAt: "2026-10-26T12:00:00.000Z",
+      },
     });
     expect(response.statusCode).toBe(400);
-    expect(response.json()).toEqual({ error: "Invalid simulation event" });
+    expect(response.json()).toEqual({ error: "Invalid mock simulation event" });
+  });
+
+  it("accepts valid loopback mock events in development", async () => {
+    const response = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/events",
+      payload: {
+        kind: "viewer.connected",
+        provider: "mock",
+        viewer: { id: "mock-viewer", displayName: "MockViewer" },
+        occurredAt: "2026-10-26T12:00:00.000Z",
+      },
+    });
+    expect(response.statusCode).toBe(202);
+    expect(response.json()).toEqual({ accepted: true, kind: "viewer.connected" });
+  });
+
+  it("rejects simulation requests from non-loopback clients", async () => {
+    const next = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/next",
+      remoteAddress: "203.0.113.20",
+    });
+    const custom = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/events",
+      remoteAddress: "203.0.113.20",
+      payload: {
+        kind: "viewer.connected",
+        provider: "mock",
+        viewer: { id: "mock-viewer", displayName: "MockViewer" },
+        occurredAt: "2026-10-26T12:00:00.000Z",
+      },
+    });
+    expect(next.statusCode).toBe(403);
+    expect(custom.statusCode).toBe(403);
+  });
+
+  it("rejects websocket subscriptions outside development mode", async () => {
+    const production = await createBossForgeApp({ mode: "production" });
+    const response = await production.app.inject({
+      method: "GET",
+      url: "/events",
+      headers: { origin: "http://127.0.0.1:5173" },
+    });
+    expect(response.statusCode).toBe(403);
+    await production.close();
   });
 
   it("rejects oversized request payloads", async () => {
@@ -100,7 +181,7 @@ describe("BossForge server", () => {
   });
 
   it("does not expose simulation routes when production mode is selected", async () => {
-    const production = await createBossForgeApp({ simulationEnabled: false });
+    const production = await createBossForgeApp({ mode: "production", simulationEnabled: true });
     const response = await production.app.inject({ method: "POST", url: "/dev/simulation/next" });
     expect(response.statusCode).toBe(404);
     await production.close();

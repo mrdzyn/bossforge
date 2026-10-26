@@ -48,8 +48,13 @@ future implementation. Twitch formats must not leak into game services.
 ## Security boundaries
 
 - The default dev server binds to loopback. Simulation routes are registered
-  only outside production mode, limited to 20 requests per minute per client IP,
-  and intended for local development.
+  only in explicit development mode, require a loopback peer address regardless
+  of the configured bind host, are limited to 20 requests per minute per client
+  IP, and accept only `mock` provider events.
+- WebSocket subscriptions are development-only until production authentication
+  and event authorization exist. Development browser Origins must exactly match
+  localhost, 127.0.0.1, or IPv6 loopback at the configured Vite development
+  port. Clients without an Origin are accepted only from loopback peers.
 - Request bodies and WebSocket frames have an 8 KiB limit. Synthetic event
   payloads are schema validated before publication.
 - The overlay is a separate read-only presentation surface. It does not receive

@@ -9,8 +9,14 @@
   inputs, enforce bounded payloads, and render messages as plain text.
 - Do not let chat content run commands, HTML, or code.
 - Keep the local development service bound to loopback by default. Simulation
-  routes must remain disabled when `NODE_ENV=production` and limited to 20
-  requests per minute per client IP.
+  routes exist only in explicit development mode, require a loopback peer even
+  if the bind host changes, accept only `mock` provider events, and are limited
+  to 20 requests per minute per client IP. They must remain absent in
+  `NODE_ENV=production`.
+- Development WebSocket subscriptions must restrict browser Origins to the
+  explicit local Vite origin allowlist and require a loopback peer. Production
+  WebSocket access requires authentication and appropriate event authorization
+  before it is enabled.
 - The overlay is read-only and must not include streamer administration or
   secret values.
 
