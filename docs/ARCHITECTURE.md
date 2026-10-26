@@ -109,3 +109,10 @@ introduced. SQLite may be considered only if a later milestone needs persistence
 - `ArenaGame` uses procedural shapes, closes by destroying the Phaser game on
   unmount or identity change, and pauses when the tab is hidden. No combat
   endpoint, networked player input, Twitch credential, or new service was added.
+
+## Phase 3-A offline EventSub integration preparation
+
+- Plan a future **server-side outbound Twitch EventSub WebSocket** for `channel.chat.message` v1. Local hosted bots use WebSocket transport and must use a user access token; OAuth scope/authorized broadcaster and chat-reader pairing require official verification at activation.
+- Offline readiness uses synthetic official-shaped messages, a pure EventSub chat normalizer into `NormalizedChatEvent(provider: "twitch")`, a deterministic session state-machine test harness and no real Twitch connection.
+- Production Twitch votes **cannot** enter current `ForgeSession` as implemented because it accepts only `mock`. Similarly `ForgeState` is tagged `simulated: true`/`connectedToTwitch: false`, and `forge.state` envelopes have `source: "mock"`. P3-A preserves these invariants. A separate versioned, authenticated provider-mode migration in P3-B is required before live ingestion, to protect identity, session isolation and honest UI labels.
+- P3-B is blocked by Twitch account 2FA/developer registration and requires an independent owner authorization. No OAuth secrets, tokens, subscription requests or public inbound endpoint are introduced in P3-A. Details and acceptance gates: [P3 readiness specification](P3-TWITCH-INTEGRATION-READINESS.md).
