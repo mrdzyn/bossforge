@@ -13,14 +13,14 @@ actual outcomes; do not infer a pass from a configured script.
 | TypeScript checks                                | `pnpm typecheck`                                                    | PASS                                  |
 | ESLint checks                                    | `pnpm lint`                                                         | PASS                                  |
 | Formatting                                       | `pnpm format:check`                                                 | PASS                                  |
-| Unit/integration suite                           | `pnpm test`                                                         | PASS — 35 tests (6 shared, 29 server) |
+| Unit/integration suite                           | `pnpm test`                                                         | PASS — 36 tests (6 shared, 30 server) |
 | Server health response                           | `GET /health`                                                       | PASS — direct and through Vite proxy  |
 | WebSocket delivers mock events                   | Server integration test; `pnpm simulate`                            | PASS — 4 synthetic events             |
 | Dashboard and overlay routes serve the app shell | HTTP requests to `/` and `/overlay`                                 | PASS                                  |
 | Dashboard and overlay browser rendering          | Chromium at requested viewports                                     | PASS — see Visual QA                  |
 | Secret review                                    | Credential-pattern scan of project files                            | PASS — no matches                     |
 | Patch whitespace                                 | `git diff --check`                                                  | PASS                                  |
-| Feature branch commit and push                   | C2 remediation on `origin/feat/phase0-foundation`                   | PASS — commit `c6ab2c7`               |
+| Feature branch commit and push                   | C3 remediation on `origin/feat/phase0-foundation`                   | PASS — pushed to existing branch      |
 | Draft PR                                         | Draft PR #1                                                         | PASS — owner connected GitHub account |
 
 ## Visual QA
@@ -76,7 +76,10 @@ mock-provider events are accepted.
 ## C2-01 development-proxy regression coverage
 
 Tests verify Vite's host resolver defaults to loopback and fails closed for
-wildcard, remote, and ambiguous bind hosts; local dashboard Origin plus
+wildcard, remote, and ambiguous bind hosts. A process-level test runs real Vite
+with a safe `VITE_HOST=127.0.0.1` and CLI `--host 0.0.0.0`, checks the nonzero
+exit and guard diagnostic, then binds the same port to confirm Vite established
+no listener. Local dashboard Origin plus
 `Sec-Fetch-Site: same-origin` is accepted; foreign Origins and cross-site Fetch
 Metadata are rejected; and an originless loopback CLI request is accepted.
 Remote socket authorization remains based on `request.raw.socket.remoteAddress`;
@@ -86,3 +89,18 @@ before binding. Live Vite proxy requests with allowed Origin and same-origin
 metadata returned `202`; foreign-Origin and cross-site requests returned
 `403`. `pnpm simulate` sent the remaining mock sequence over originless local
 requests and completed normally.
+
+## C3-01 effective-host regression
+
+The Vite plugin validates `config.server.host` in `configResolved` for the
+`serve` command, after Vite merges CLI options and before the dev server binds.
+The process-level regression proves `--host 0.0.0.0` cannot establish a listener.
+Local `localhost`, IPv4 127/8, and IPv6 `::1` values remain accepted by the host
+policy tests. The normal local dev server and proxy smoke passed after this
+change.
+
+The process-level regression uses an otherwise valid local
+`VITE_HOST=127.0.0.1`, invokes the real Vite CLI with `--host 0.0.0.0` and a
+reserved test port, expects a nonzero exit with the host-guard diagnostic, then
+successfully binds the same port on `0.0.0.0` to prove no network listener was
+left behind.

@@ -1,11 +1,10 @@
 # Project status
 
 - **Active milestone:** Phase 0 — Repository Foundation and Architecture
-- **Current state:** Phase 0 C2-01 bounded remediation is validated and pushed
+- **Current state:** Phase 0 C3-01 bounded remediation is validated and pushed
   to `feat/phase0-foundation` on Draft PR
-  [#1](https://github.com/mrdzyn/bossforge/pull/1). PR #1 was created through the
-  owner's connected GitHub account and remains Draft. The branch is ready for
-  C3 independent review.
+  [#1](https://github.com/mrdzyn/bossforge/pull/1). PR #1 remains Draft. The
+  branch is ready for C4 independent review.
 - **Twitch status:** No real Twitch authentication or EventSub connection is
   implemented or claimed. The owner-reported Twitch two-factor setup issue
   remains an external blocker for the later real integration phase.
@@ -19,12 +18,13 @@ Voting, procedural boss assembly, and playable combat remain planned work.
 
 ## Current validation
 
-The C1 protections remain in place. C2-01 now also fails Vite startup for
-non-loopback `VITE_HOST` values and checks simulation POST Origin and Fetch
-Metadata while preserving originless loopback CLI calls. The reported browser
-404 was traced to `/favicon.ico`; the app now serves an SVG favicon, and a fresh
-Chromium load completed without resource errors. A settled feed screenshot and
-results are recorded in [ACCEPTANCE.md](ACCEPTANCE.md).
+The C1 and C2 protections remain in place. C3-01 validates Vite's final
+resolved development host after CLI options are merged and before bind, so
+`--host 0.0.0.0` fails closed. The process test verifies startup failure and
+that no listener remains. Simulation POST Origin and Fetch Metadata checks
+still preserve local dashboard and originless loopback CLI requests. The
+reported browser 404 is fixed; current checks and the settled feed screenshot
+are recorded in [ACCEPTANCE.md](ACCEPTANCE.md).
 
 ## Known limitations
 
@@ -41,5 +41,5 @@ results are recorded in [ACCEPTANCE.md](ACCEPTANCE.md).
 
 ## Next handoff
 
-Request a C3 independent review of the exact pushed branch head on Draft PR #1.
+Provide the exact pushed branch head on Draft PR #1 for C4 independent review.
 Do not start Phase 1 without separate owner authorization.

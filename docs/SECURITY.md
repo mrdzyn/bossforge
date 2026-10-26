@@ -13,9 +13,11 @@
   if the bind host changes, accept only `mock` provider events, and are limited
   to 20 requests per minute per client IP. They must remain absent in
   `NODE_ENV=production`.
-- Vite's development server must bind only to a loopback address. Invalid or
-  externally reachable `VITE_HOST` values must fail startup. Simulation POSTs
-  must have either no Origin from a loopback CLI client or an exact permitted
+- Vite's development server must bind only to a loopback address. Validate the
+  final resolved server host after config, environment, and CLI options are
+  merged, before binding. Reject wildcard and other externally reachable hosts,
+  including CLI `--host` overrides. Simulation POSTs must have either no Origin
+  from a loopback CLI client or an exact permitted
   local Vite Origin. When `Sec-Fetch-Site` is present, accept only
   `same-origin`. Determine locality from the socket peer address; never use
   `X-Forwarded-For` or another client-supplied forwarding header for access

@@ -1,9 +1,17 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { getLoopbackViteHost } from "./src/dev-server-host.js";
+import { assertLoopbackViteHost, getLoopbackViteHost } from "./src/dev-server-host.js";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: "bossforge-loopback-dev-host",
+      configResolved(config) {
+        if (config.command === "serve") assertLoopbackViteHost(config.server.host);
+      },
+    },
+  ],
   server: {
     host: getLoopbackViteHost(),
     port: Number(process.env.VITE_PORT ?? 5173),
