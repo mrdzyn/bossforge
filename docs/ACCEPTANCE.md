@@ -65,6 +65,58 @@ oversized payload rejection, rate limiting, and connection-state reporting.
 Firefox testing is out of scope. Browser automation should use Chromium if
 available; otherwise mark browser testing NOT TESTED and report that limitation.
 
+## Phase 1 — Audience voting and boss assembly
+
+Status is recorded for the exact Phase 1 branch head in the handoff. These
+results are Codex-run evidence, not independent audit approval.
+
+| Criterion                                                                 | Verification                        | Result                                                                                                                              |
+| ------------------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Frozen install, build, typecheck, lint, formatting, complete suite        | Workspace commands                  | PASS — frozen install, build, typecheck, lint, format, and test completed; 44 tests passed (6 shared, 38 server)                    |
+| Timed four-stage server-authoritative voting                              | Forge session and integration tests | PASS — injectable scheduler transitions; real simulation completed four 5-second windows                                            |
+| Mutable ballot, deterministic tie/fallback, replay/invalid/late rejection | Focused session tests               | PASS — 6 forge tests cover vote changes, ties, fallback, replay, invalid/non-mock/wrong/stale/future/late votes, and timer disposal |
+| HTTP/WebSocket snapshots, two-client updates and reconnect                | Server integration tests            | PASS — two clients receive versioned state and reconnect reads the current snapshot                                                 |
+| Local-only simulation and retained Phase 0 security                       | Existing plus targeted route tests  | PASS — remote/foreign-origin mutations rejected; local dashboard and originless CLI accepted; production routes absent              |
+| Repeatable end-to-end synthetic forge cycle                               | `pnpm simulate`                     | PASS — multiple cycles completed; deterministic `Thunder Tempest` reveal after reset                                                |
+| Desktop/mobile dashboard and two OBS sizes                                | Chromium visual QA and screenshots  | PASS — real captures and viewport checks at all four required sizes                                                                 |
+| Independent review                                                        | C4 review handoff on Draft PR #2    | PENDING — exact pushed head awaits independent review                                                                               |
+
+Phase 1 QA screenshots use the requested viewport paths; the original Phase 0
+captures are preserved under `p0-` filenames. Only real Chromium captures are
+recorded. Screenshots show local synthetic data and do not demonstrate Twitch
+connection or combat.
+
+Chromium 154.0.8037.57 ran through the environment Playwright runtime against
+the local Vite/Fastify app after a complete forge reveal. Captures: [dashboard
+1440×900](visual-qa/dashboard-1440x900.png), [dashboard
+390×844](visual-qa/dashboard-390x844.png), [settled chat
+feed](visual-qa/dashboard-chat-settled.png), [overlay
+1920×1080](visual-qa/overlay-1920x1080.png), and [overlay
+1280×720](visual-qa/overlay-1280x720.png). All captured pages reported no
+failed browser requests or console errors. Dashboard labels showed `LOCAL
+SIMULATION` and `LIVE LINK`; reset/start controls were exercised, `Voting ·
+BODY` appeared, and Start disabled while voting. The 1440×900 document measured
+1440×1519 with vertical scrolling and no horizontal overflow. At 390×844 it
+measured 390×1952; scrolling reached 1108 px with no horizontal overflow. After
+an 800 ms settle, the synthetic feed row opacity was 1 and its viewer/message
+text was readable. Both overlay documents matched their viewport dimensions,
+showed the complete boss reveal and `SIMULATED / NOT CONNECTED TO TWITCH`, and
+had no clipping. The safe-layout label bounds were x=1654–1868, y=1039–1050 at
+1920×1080 and x=1014–1228, y=679–690 at 1280×720. Primary text and vote bars
+were legible; small metadata remained lower contrast. The dashboard is
+vertically scrollable and its controls and results remain reachable. A first
+1280×720 pass exposed cropped art; the final capture follows the CSS correction.
+The active overlay was also checked in Chromium: it displayed the server
+category countdown (`VOTE: BODY · 15s`) and per-option percentages. The
+dashboard `Forge again` action was exercised after a reveal and successfully
+reset and opened the next body vote.
+
+Focused tests cover malformed and spoofed command fields, mock-provider
+enforcement, session lifecycle, mutable ballots, deterministic results,
+event delivery to two clients, snapshot recovery after reconnect, loopback and
+Origin protection, forwarded-IP spoofing, and production route absence. The
+normal Vite proxy and originless CLI simulation path were exercised.
+
 ## C1 security regression coverage
 
 Focused server tests verify that local Vite origins and local no-Origin clients

@@ -1,6 +1,6 @@
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
-import { NormalizedChatEventSchema } from "@bossforge/shared";
+import { ForgeStartRequestSchema, NormalizedChatEventSchema } from "@bossforge/shared";
 import { MockChatAdapter } from "./adapters/mock-chat-adapter.js";
 import { EventHub } from "./events/event-hub.js";
 import {
@@ -10,6 +10,7 @@ import {
   isLoopbackAddress,
 } from "./security/local-access.js";
 import { createRateLimit } from "./security/rate-limit.js";
+import { ForgeSession, type ForgeScheduler } from "./forge/forge-session.js";
 
 const packageVersion = "0.1.0";
 const bodyLimitBytes = 8 * 1024;
@@ -23,6 +24,7 @@ export interface AppOptions {
   mode?: "development" | "production" | "test";
   simulationEnabled?: boolean;
   now?: () => Date;
+  forgeScheduler?: ForgeScheduler;
 }
 
 export interface BossForgeApp {
@@ -37,6 +39,9 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
   const now = options.now ?? (() => new Date());
   const mockAdapter = new MockChatAdapter(now);
   const hub = new EventHub();
+  const forge = new ForgeSession(now, options.forgeScheduler, (state) =>
+    hub.publish({ kind: "forge.state", source: "mock", state }),
+  );
   const app = Fastify({ logger: false, bodyLimit: bodyLimitBytes });
   const allowedViteOrigins = getAllowedViteOrigins();
 
@@ -114,6 +119,31 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       windowMs: 60_000,
       now: () => now().getTime(),
     });
+    app.get("/forge/state", { onRequest: requireLocalDevelopmentRequest }, async () =>
+      forge.getState(),
+    );
+    app.post(
+      "/dev/forge/start",
+      { onRequest: requireLocalDevelopmentRequest, preHandler: simulationRateLimit },
+      async (request, reply) => {
+        const parsed = ForgeStartRequestSchema.safeParse(request.body ?? {});
+        if (!parsed.success) return reply.status(400).send({ error: "Invalid forge settings" });
+        try {
+          return forge.start(parsed.data.durationSeconds);
+        } catch {
+          return reply.status(409).send({ error: "A forge cycle is already active" });
+        }
+      },
+    );
+    app.post(
+      "/dev/forge/reset",
+      { onRequest: requireLocalDevelopmentRequest, preHandler: simulationRateLimit },
+      async (_request, reply) => {
+        if (forge.getState().status === "idle")
+          return reply.status(409).send({ error: "No active forge cycle" });
+        return forge.reset();
+      },
+    );
     app.post(
       "/dev/simulation/next",
       { onRequest: requireLocalDevelopmentRequest, preHandler: simulationRateLimit },
@@ -121,6 +151,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         const event = mockAdapter.nextEvent();
         if (!event) return reply.status(204).send();
         hub.publish(event);
+        forge.handleEvent(event);
         return reply.status(202).send({ accepted: true, kind: event.kind });
       },
     );
@@ -134,6 +165,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
           return reply.status(400).send({ error: "Invalid mock simulation event" });
         }
         hub.publish(parsed.data);
+        forge.handleEvent(parsed.data);
         return reply.status(202).send({ accepted: true, kind: parsed.data.kind });
       },
     );
@@ -143,6 +175,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
     app,
     close: async () => {
       await mockAdapter.disconnect();
+      forge.close();
       await app.close();
     },
   };

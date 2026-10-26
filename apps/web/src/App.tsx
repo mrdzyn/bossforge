@@ -1,71 +1,93 @@
 import { useCallback, useEffect, useState } from "react";
-import { AppEventEnvelopeSchema, type AppEventEnvelope } from "@bossforge/shared";
-
-type Health = {
-  status: string;
-  service: string;
-  version: string;
-  connections: { websocketClients: number; mockAdapter: string };
-};
+import {
+  AppEventEnvelopeSchema,
+  ForgeStateSchema,
+  type AppEventEnvelope,
+  type ForgeState,
+} from "@bossforge/shared";
 
 function useLiveEvents() {
   const [events, setEvents] = useState<AppEventEnvelope[]>([]);
+  const [forge, setForge] = useState<ForgeState | null>(null);
   const [connection, setConnection] = useState("connecting");
-  const [health, setHealth] = useState<Health | null>(null);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-    void fetch("/health")
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`Health check returned ${response.status}`);
-        return (await response.json()) as Health;
-      })
-      .then((data) => {
-        if (active) setHealth(data);
-      })
-      .catch(() => {
-        if (active) setError("Server health check is unavailable.");
-      });
-
-    const socket = new WebSocket(
-      `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/events`,
-    );
-    socket.addEventListener("open", () => {
-      if (active) setConnection("connected");
-    });
-    socket.addEventListener("close", () => {
-      if (active) setConnection("disconnected");
-    });
-    socket.addEventListener("error", () => {
-      if (active) setConnection("error");
-    });
-    socket.addEventListener("message", (message) => {
-      try {
-        const envelope = AppEventEnvelopeSchema.parse(JSON.parse(String(message.data)));
-        setEvents((current) => [envelope, ...current].slice(0, 8));
-      } catch {
-        setError("An invalid event was rejected by the browser.");
-      }
-    });
-    return () => {
-      active = false;
-      socket.close();
-    };
-  }, []);
-
-  const triggerSimulation = useCallback(async () => {
-    setError("");
+  const refresh = useCallback(async () => {
     try {
-      const response = await fetch("/api/dev/simulation/next", { method: "POST" });
-      if (!response.ok && response.status !== 204)
-        throw new Error(`Simulation returned ${response.status}`);
+      const response = await fetch("/api/forge/state");
+      if (response.ok) {
+        const next = ForgeStateSchema.parse(await response.json());
+        setForge((current) => (!current || next.revision >= current.revision ? next : current));
+      }
     } catch {
-      setError("Could not reach the local simulation service.");
+      /* reconnect will retry the snapshot */
     }
   }, []);
-
-  return { events, connection, health, error, triggerSimulation };
+  useEffect(() => {
+    let active = true;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let socket: WebSocket | undefined;
+    const connect = () => {
+      if (!active) return;
+      socket = new WebSocket(
+        `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/events`,
+      );
+      socket.addEventListener("open", () => {
+        if (active) {
+          setConnection("connected");
+          void refresh();
+        }
+      });
+      socket.addEventListener("close", () => {
+        if (active) {
+          setConnection("disconnected");
+          retry = setTimeout(connect, 1200);
+        }
+      });
+      socket.addEventListener("error", () => {
+        if (active) setConnection("error");
+      });
+      socket.addEventListener("message", (message) => {
+        try {
+          const envelope = AppEventEnvelopeSchema.parse(JSON.parse(String(message.data)));
+          setEvents((current) => [envelope, ...current].slice(0, 16));
+          if (envelope.type === "forge.state" && envelope.payload.kind === "forge.state")
+            setForge((current) =>
+              !current || envelope.payload.state.revision >= current.revision
+                ? envelope.payload.state
+                : current,
+            );
+        } catch {
+          setError("An invalid event was rejected by the browser.");
+        }
+      });
+    };
+    void refresh();
+    connect();
+    return () => {
+      active = false;
+      if (retry) clearTimeout(retry);
+      socket?.close();
+    };
+  }, [refresh]);
+  const post = useCallback(async (path: string, body?: unknown): Promise<boolean> => {
+    setError("");
+    try {
+      const response = await fetch(path, {
+        method: "POST",
+        ...(body
+          ? { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }
+          : {}),
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      const result = ForgeStateSchema.safeParse(await response.json());
+      if (result.success) setForge(result.data);
+      return result.success;
+    } catch {
+      setError("Local forge request failed. Confirm the development server is running.");
+      return false;
+    }
+  }, []);
+  return { events, forge, connection, error, post };
 }
 
 function Brand() {
@@ -80,61 +102,16 @@ function Brand() {
     </a>
   );
 }
-
-function ConnectionPill({ status }: { status: string }) {
-  const label = status === "connected" ? "LIVE LINK" : status.toUpperCase();
-  return (
-    <span className={`connection-pill ${status}`}>
-      <i />
-      {label}
-    </span>
-  );
-}
-
-function BossArt() {
-  return (
-    <div
-      className="boss-art"
-      aria-label="Original placeholder illustration of a fire golem"
-      role="img"
-    >
-      <div className="art-orbit orbit-one" />
-      <div className="art-orbit orbit-two" />
-      <div className="boss-shadow" />
-      <div className="boss-shape">
-        <div className="horn horn-left" />
-        <div className="horn horn-right" />
-        <div className="boss-head">
-          <i />
-          <i />
-          <b />
-        </div>
-        <div className="boss-body">
-          <span />
-          <span />
-          <b />
-        </div>
-        <div className="boss-arm arm-left" />
-        <div className="boss-arm arm-right" />
-        <div className="boss-leg leg-left" />
-        <div className="boss-leg leg-right" />
-      </div>
-      <span className="art-tag tag-top">FORGE ENTITY / 001</span>
-      <span className="art-tag tag-bottom">DESIGN IN PROGRESS</span>
-    </div>
-  );
-}
-
 function Sidebar({ overlay = false }: { overlay?: boolean }) {
   return (
     <aside className="sidebar">
       <Brand />
       <div className="nav-label">WORKSPACE</div>
       <a className={`nav-item ${overlay ? "" : "active"}`} href="/">
-        <span>◈</span> Control room
+        ◈ &nbsp; Control room
       </a>
       <a className={`nav-item ${overlay ? "active" : ""}`} href="/overlay">
-        <span>▧</span> OBS overlay <small>PREVIEW</small>
+        ▧ &nbsp; OBS overlay
       </a>
       <div className="sidebar-bottom">
         <div className="avatar">M</div>
@@ -146,9 +123,164 @@ function Sidebar({ overlay = false }: { overlay?: boolean }) {
     </aside>
   );
 }
+function Connection({ status }: { status: string }) {
+  return (
+    <span className={`connection-pill ${status}`}>
+      <i />
+      {status === "connected" ? "LIVE LINK" : status.toUpperCase()}
+    </span>
+  );
+}
+const title = (value: string) => value.replaceAll("-", " ").toUpperCase();
+
+function BossArt({ state }: { state: ForgeState | null }) {
+  const attrs = state?.boss?.attributes;
+  const body =
+    attrs?.body ?? state?.categories.find((item) => item.category === "body")?.winner ?? "golem";
+  const element =
+    attrs?.element ??
+    state?.categories.find((item) => item.category === "element")?.winner ??
+    "fire";
+  const special =
+    attrs?.special ??
+    state?.categories.find((item) => item.category === "special")?.winner ??
+    "ember-burst";
+  const weakness =
+    attrs?.weakness ??
+    state?.categories.find((item) => item.category === "weakness")?.winner ??
+    "water";
+  const specialStyle =
+    special === "frost-chain"
+      ? "chain"
+      : special === "thunder-dash"
+        ? "thunder"
+        : special === "shadow-pulse"
+          ? "shadow"
+          : "ember";
+  const specialGlyph =
+    special === "frost-chain"
+      ? "⛓"
+      : special === "thunder-dash"
+        ? "ϟ"
+        : special === "shadow-pulse"
+          ? "◉"
+          : "✹";
+  const weaknessGlyph =
+    weakness === "water" ? "◉" : weakness === "light" ? "✧" : weakness === "earth" ? "⬟" : "〰";
+  return (
+    <div
+      className={`boss-art body-${body} element-${element} special-${specialStyle} weakness-${weakness}`}
+      role="img"
+      aria-label={`${title(body)} ${title(element)} boss, ${title(special)} special, weak to ${title(weakness)}`}
+    >
+      <div className="art-aura" />
+      <div className="boss-figure">
+        <div className="boss-horns">
+          <i />
+          <i />
+        </div>
+        <div className="boss-head">
+          <i />
+          <i />
+          <b />
+        </div>
+        <div className="boss-torso">
+          <i />
+          <i />
+          <b />
+        </div>
+        <div className="boss-limbs">
+          <i />
+          <i />
+          <b />
+          <b />
+        </div>
+      </div>
+      <span className="art-tag tag-top">FORGE ENTITY / {state?.cycleId ?? "AWAITING VOTES"}</span>
+      <span className="art-tag tag-bottom">
+        {title(body)} · {title(element)}
+      </span>
+      <span className="special-mark" aria-hidden="true">
+        {specialGlyph}
+      </span>
+      <span className="weakness-mark" aria-hidden="true">
+        {weaknessGlyph}
+      </span>
+    </div>
+  );
+}
+
+function CategoryResults({ state }: { state: ForgeState }) {
+  return (
+    <div className="category-list">
+      {state.categories.map((category, index) => (
+        <section className={`category-result ${category.status}`} key={category.category}>
+          <div className="category-heading">
+            <div>
+              <span className="category-index">0{index + 1}</span>
+              <strong>{title(category.category)}</strong>
+            </div>
+            <span className="category-state">
+              {category.status === "open" ? "VOTING NOW" : category.status.toUpperCase()}
+            </span>
+          </div>
+          {category.status === "open" || category.status === "closed" ? (
+            <div className="result-options">
+              {category.options.map((option) => (
+                <div
+                  className={`result-option ${category.winner === option.choice ? "winner" : ""}`}
+                  key={option.choice}
+                >
+                  <span>{title(option.choice)}</span>
+                  <div className="result-track">
+                    <i style={{ width: `${option.percentage}%` }} />
+                  </div>
+                  <b>{option.percentage}%</b>
+                  <b>{option.count}</b>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">Waiting for this vote category.</p>
+          )}
+          {category.noVoteFallback && (
+            <small className="fallback-note">
+              No votes received · first option selected by default
+            </small>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
 
 function Dashboard() {
-  const { events, connection, health, error, triggerSimulation } = useLiveEvents();
+  const { events, forge, connection, error, post } = useLiveEvents();
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(
+      () =>
+        setSeconds(
+          forge?.categories.find((item) => item.category === forge.activeCategory)?.closesAt
+            ? Math.max(
+                0,
+                Math.ceil(
+                  (Date.parse(
+                    forge.categories.find((item) => item.category === forge.activeCategory)!
+                      .closesAt!,
+                  ) -
+                    Date.now()) /
+                    1000,
+                ),
+              )
+            : 0,
+        ),
+      250,
+    );
+    return () => clearInterval(timer);
+  }, [forge]);
+  const activeCategory = forge?.categories.find((item) => item.category === forge.activeCategory);
+  const isRevealed = forge?.status === "revealed";
   return (
     <div className="app-shell">
       <Sidebar />
@@ -161,168 +293,210 @@ function Dashboard() {
             <span className="local-badge">
               <i /> LOCAL SIMULATION
             </span>
-            <ConnectionPill status={connection} />
+            <Connection status={connection} />
           </div>
         </header>
         <div className="page-wrap">
           <section className="welcome-row">
             <div>
               <p className="eyebrow">
-                STREAMER DASHBOARD <span>•</span> PHASE 0
+                STREAMER DASHBOARD <span>•</span> PHASE 1
               </p>
               <h1>
                 Make something <em>monstrous.</em>
               </h1>
-              <p className="subheading">Your chat has the forge. You have the arena.</p>
+              <p className="subheading">Four timed votes. One boss forged by chat.</p>
             </div>
-            <button className="primary-button" onClick={() => void triggerSimulation()}>
-              <span>✦</span> Generate chat event
-            </button>
+            <div className="dashboard-actions">
+              <button
+                className="primary-button"
+                disabled={forge?.status === "voting"}
+                onClick={async () => {
+                  if (isRevealed && !(await post("/api/dev/forge/reset"))) return;
+                  await post("/api/dev/forge/start", { durationSeconds: 15 });
+                }}
+              >
+                {isRevealed ? "✦ Forge again" : "✦ Start the forge"}
+              </button>
+              {forge?.status !== "idle" && (
+                <button
+                  className="secondary-button"
+                  onClick={() => void post("/api/dev/forge/reset")}
+                >
+                  Reset cycle
+                </button>
+              )}
+            </div>
           </section>
-
           {error && (
             <div className="inline-error" role="status">
               {error}
             </div>
           )}
-
-          <section className="stat-strip" aria-label="Connection status">
+          <section className="stat-strip">
             <div className="stat-card">
               <span className="stat-icon cyan">◎</span>
               <div>
                 <span className="stat-label">CHAT CONNECTION</span>
-                <strong>{connection === "connected" ? "Connected" : "Waiting for server"}</strong>
+                <strong>{connection === "connected" ? "Local stream" : "Reconnecting"}</strong>
               </div>
-              <span className="stat-dot" />
+              <Connection status={connection} />
             </div>
             <div className="stat-card">
               <span className="stat-icon lime">⌁</span>
               <div>
-                <span className="stat-label">SIMULATION</span>
-                <strong>Ready to forge</strong>
+                <span className="stat-label">FORGE STATUS</span>
+                <strong>
+                  {forge?.status === "voting"
+                    ? `Voting · ${title(forge.activeCategory ?? "")}`
+                    : isRevealed
+                      ? "Boss revealed"
+                      : "Ready to forge"}
+                </strong>
               </div>
-              <span className="stat-value">LOCAL</span>
+              <span className="stat-value">{forge?.progress ?? 0} / 4</span>
             </div>
             <div className="stat-card">
               <span className="stat-icon violet">◷</span>
               <div>
-                <span className="stat-label">EVENT STREAM</span>
+                <span className="stat-label">ACTIVE VOTES</span>
                 <strong>
-                  {events.filter((event) => event.type === "chat.event").length} recent events
+                  {activeCategory?.totalVotes ??
+                    forge?.categories.reduce((total, item) => total + item.totalVotes, 0) ??
+                    0}{" "}
+                  votes cast
                 </strong>
               </div>
-              <span className="stat-value">{health?.service ? "ONLINE" : "—"}</span>
+              <span className="stat-value">{activeCategory ? `${seconds}s` : "—"}</span>
             </div>
           </section>
-
           <section className="workspace-grid">
             <article className="panel boss-panel">
               <div className="panel-heading">
                 <div>
-                  <p className="eyebrow">THE NEXT CHALLENGER</p>
-                  <h2>Boss blueprint</h2>
+                  <p className="eyebrow">
+                    {isRevealed ? "THE CHAT HAS FORGED" : "THE NEXT CHALLENGER"}
+                  </p>
+                  <h2>{isRevealed ? forge?.boss?.name : "Boss blueprint"}</h2>
                 </div>
-                <span className="draft-badge">
-                  DRAFT <i />
+                <span className={`draft-badge ${isRevealed ? "revealed" : ""}`}>
+                  {isRevealed ? "REVEALED" : forge?.status === "voting" ? "IN PROGRESS" : "READY"}{" "}
+                  <i />
                 </span>
               </div>
-              <BossArt />
-              <div className="boss-details">
-                <div>
-                  <span className="detail-label">WORKING NAME</span>
-                  <h3>THE CINDER WARDEN</h3>
+              <BossArt state={forge} />
+              {forge?.boss && (
+                <div className="boss-details">
+                  <div>
+                    <span className="detail-label">FORGED NAME</span>
+                    <h3>{forge.boss.name}</h3>
+                  </div>
+                  <div className="level-mark">
+                    HP <b>{forge.boss.stats.health}</b>
+                  </div>
                 </div>
-                <div className="level-mark">
-                  LVL <b>01</b>
-                </div>
-              </div>
+              )}
               <div className="attribute-row">
                 <span>
-                  ARCHETYPE <b>GOLEM</b>
+                  BODY{" "}
+                  <b>
+                    {title(forge?.boss?.attributes.body ?? forge?.categories[0]?.winner ?? "TBD")}
+                  </b>
                 </span>
                 <span>
-                  ELEMENT <b className="fire-text">FIRE</b>
+                  ELEMENT{" "}
+                  <b className="fire-text">
+                    {title(
+                      forge?.boss?.attributes.element ?? forge?.categories[1]?.winner ?? "TBD",
+                    )}
+                  </b>
                 </span>
                 <span>
-                  FORMED BY <b>CHAT</b>
+                  WEAKNESS{" "}
+                  <b>
+                    {title(
+                      forge?.boss?.attributes.weakness ?? forge?.categories[3]?.winner ?? "TBD",
+                    )}
+                  </b>
                 </span>
               </div>
               <div className="progress-label">
-                <span>FORGE READINESS</span>
-                <span>01 / 04</span>
+                <span>FORGE PROGRESS</span>
+                <span>{forge?.progress ?? 0} / 4</span>
               </div>
               <div className="progress-track">
-                <i />
+                <i style={{ width: `${((forge?.progress ?? 0) / 4) * 100}%` }} />
               </div>
-              <p className="placeholder-note">
-                Audience voting and boss assembly arrive in Phase 1.
-              </p>
+              {forge?.boss && (
+                <p className="boss-stats">
+                  {forge.boss.attributes.special.toUpperCase()} · {forge.boss.stats.damage} DMG ·{" "}
+                  {forge.boss.stats.attackIntervalMs} MS ATTACK
+                </p>
+              )}
             </article>
-
             <div className="right-stack">
               <article className="panel vote-panel">
                 <div className="panel-heading">
                   <div>
                     <p className="eyebrow">COMMUNITY FORGE</p>
-                    <h2>Chat activity</h2>
+                    <h2>Audience votes</h2>
                   </div>
                   <span className="live-indicator">
-                    <i /> LIVE
+                    <i />
+                    {forge?.status === "voting" ? `${seconds}s` : isRevealed ? "COMPLETE" : "READY"}
                   </span>
                 </div>
-                <div className="event-feed">
-                  {events.filter((event) => event.type === "chat.event").length === 0 ? (
-                    <div className="feed-empty">
-                      <span className="empty-sigil">⌁</span>
-                      <strong>Waiting for the first spark</strong>
-                      <p>Trigger a local event to see the feed come alive.</p>
-                    </div>
-                  ) : (
-                    events
-                      .filter((event) => event.type === "chat.event")
-                      .map((event) => <EventRow key={event.id} event={event} />)
-                  )}
-                </div>
-                <div className="feed-footer">
-                  <span>LOCAL SIMULATION FEED</span>
-                  <span>{connection === "connected" ? "STREAMING" : "RECONNECTING"}</span>
-                </div>
+                {forge ? (
+                  <CategoryResults state={forge} />
+                ) : (
+                  <p className="muted">Connecting to local forge state…</p>
+                )}
               </article>
-
               <article className="panel controls-panel">
                 <div className="panel-heading">
                   <div>
-                    <p className="eyebrow">BATTLE SYSTEM</p>
-                    <h2>Ready when you are</h2>
+                    <p className="eyebrow">SIMULATION FEED</p>
+                    <h2>Recent chat</h2>
                   </div>
-                  <span className="lock-mark">◌</span>
+                  <button
+                    className="text-button"
+                    onClick={() => void post("/api/dev/simulation/next")}
+                  >
+                    Generate event
+                  </button>
                 </div>
-                <p className="controls-copy">
-                  The arena is being prepared. Your streamer controls will appear here when combat
-                  is implemented.
-                </p>
-                <div className="control-row">
-                  <span className="keycap">W</span>
-                  <span className="keycap">A</span>
-                  <span className="keycap">S</span>
-                  <span className="keycap">D</span>
-                  <span className="key-description">MOVEMENT</span>
-                  <span className="keycap key-wide">SPACE</span>
-                  <span className="key-description">ATTACK</span>
+                <div className="event-feed">
+                  {events
+                    .filter((event) => event.type === "chat.event")
+                    .slice(0, 4)
+                    .map((event) => {
+                      const p = event.payload;
+                      return (
+                        <div className="event-row" key={event.id}>
+                          <span className="event-avatar">
+                            {p.kind === "chat.message" ? p.message.viewer.displayName[0] : "•"}
+                          </span>
+                          <div className="event-copy">
+                            <strong>
+                              {p.kind === "chat.message"
+                                ? p.message.viewer.displayName
+                                : "Mock viewer"}
+                            </strong>
+                            <span>{p.kind === "chat.message" ? p.message.text : p.kind}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
-                <button className="secondary-button" disabled>
-                  ENTER ARENA <span>↗</span>
-                </button>
               </article>
             </div>
           </section>
-
           <footer className="page-footer">
             <span>
-              BOSSFORGE LIVE <b>•</b> CHAT CREATES THE BOSS. THE STREAMER FIGHTS IT.
+              BOSSFORGE LIVE <b>•</b> CHAT CREATES THE BOSS.
             </span>
             <span>
-              BUILD 0.1.0 <b>•</b> {health?.status === "ok" ? "SERVER ONLINE" : "SERVER STARTING"}
+              SIMULATED <b>•</b> NOT CONNECTED TO TWITCH
             </span>
           </footer>
         </div>
@@ -331,41 +505,24 @@ function Dashboard() {
   );
 }
 
-function EventRow({ event }: { event: AppEventEnvelope }) {
-  const payload = event.payload;
-  const isMessage = payload.kind === "chat.message";
-  const name = isMessage ? payload.message.viewer.displayName : "EmberFan";
-  const text = isMessage
-    ? payload.message.text
-    : payload.kind === "viewer.connected"
-      ? "joined the forge"
-      : "left the forge";
-  const isVote = isMessage && Boolean(payload.message.command);
-  return (
-    <div className="event-row">
-      <span className={`event-avatar ${isVote ? "vote" : ""}`}>
-        {name.slice(0, 1).toUpperCase()}
-      </span>
-      <div className="event-copy">
-        <strong>{name}</strong>
-        <span>{text}</span>
-      </div>
-      {isVote && <span className="vote-tag">VOTE</span>}
-      <time>
-        {new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-      </time>
-    </div>
-  );
-}
-
 function OverlayPreview() {
-  const { events, connection } = useLiveEvents();
-  const latest = events.find((event) => event.payload.kind === "chat.message");
-  const latestMessage =
-    latest?.payload.kind === "chat.message" ? latest.payload.message : undefined;
+  const { forge, connection } = useLiveEvents();
+  const category = forge?.categories.find((item) => item.category === forge.activeCategory);
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const update = () =>
+      setSeconds(
+        category?.closesAt
+          ? Math.max(0, Math.ceil((Date.parse(category.closesAt) - Date.now()) / 1000))
+          : 0,
+      );
+    update();
+    const timer = setInterval(update, 250);
+    return () => clearInterval(timer);
+  }, [category?.closesAt]);
   return (
-    <div className="overlay-page">
-      <div className="overlay-topline">
+    <main className="overlay-page">
+      <header className="overlay-topline">
         <div className="overlay-brand">
           <span className="brand-mark">
             B<span>F</span>
@@ -376,81 +533,93 @@ function OverlayPreview() {
         </div>
         <div className="overlay-round">
           <span className="round-live">
-            <i /> SIMULATION
+            <i /> SIMULATED / NOT CONNECTED TO TWITCH
           </span>
           <span>
-            ROUND 01 <b>•</b> THE FORGE AWAKENS
+            {forge?.cycleId?.toUpperCase() ?? "AWAITING FORGE"} <b>•</b> {connection.toUpperCase()}
           </span>
         </div>
-      </div>
-      <div className="overlay-boss-card">
+      </header>
+      <section className="overlay-boss-card">
         <div className="overlay-boss-art">
-          <div className="mini-golem">
-            <i />
-            <i />
-            <b />
-          </div>
+          <BossArt state={forge} />
         </div>
         <div className="overlay-boss-info">
-          <span className="eyebrow">THE CHAT HAS FORGED</span>
-          <h1>THE CINDER WARDEN</h1>
+          <span className="eyebrow">
+            {forge?.status === "revealed" ? "THE COMMUNITY FORGED" : "THE CHAT IS FORGING"}
+          </span>
+          <h1>{forge?.boss?.name ?? "A NEW BOSS AWAITS"}</h1>
           <div className="boss-tags">
-            <span>GOLEM</span>
-            <span className="fire-text">FIREBOUND</span>
+            <span>{title(forge?.boss?.attributes.body ?? "BODY TBD")}</span>
+            <span>{title(forge?.boss?.attributes.element ?? "ELEMENT TBD")}</span>
           </div>
-          <div className="health-label">
-            <span>BOSS VITALITY</span>
-            <b>100%</b>
-          </div>
-          <div className="health-track">
-            <i />
-          </div>
+          {forge?.boss && (
+            <div className="overlay-stats">
+              {forge.boss.stats.health} HP <b>·</b> {forge.boss.stats.damage} DMG
+            </div>
+          )}
         </div>
-      </div>
-      <div className="overlay-vote-card">
+      </section>
+      <section className="overlay-vote-card">
         <div className="overlay-vote-heading">
-          <span className="eyebrow">THE FORGE IS LISTENING</span>
+          <span className="eyebrow">
+            {forge?.status === "revealed" ? "FORGE COMPLETE" : "THE FORGE IS LISTENING"}
+          </span>
           <span className="vote-open">
-            <i /> VOTING OPENS IN PHASE 1
+            <i />
+            {category
+              ? `VOTE: ${title(category.category)} · ${seconds}s`
+              : forge?.status === "revealed"
+                ? "BOSS REVEALED"
+                : "WAITING TO BEGIN"}
           </span>
         </div>
-        <h2>What should the boss wield?</h2>
-        <div className="vote-options">
-          <div>
-            <span className="option-glyph fire-text">✦</span>
-            <span>EMBER</span>
-            <b>—</b>
+        <h2>
+          {category
+            ? `Choose the boss ${category.category === "weakness" ? "weakness" : category.category}`
+            : "A boss built by the whole chat"}
+        </h2>
+        {category ? (
+          <div className="vote-options">
+            {category.options.map((option) => (
+              <div
+                className={category.winner === option.choice ? "winner" : ""}
+                key={option.choice}
+              >
+                <span className="option-glyph">✦</span>
+                <span>{title(option.choice)}</span>
+                <b>
+                  {option.percentage}% · {option.count}
+                </b>
+                <i style={{ width: `${option.percentage}%` }} />
+              </div>
+            ))}
           </div>
-          <div>
-            <span className="option-glyph">❄</span>
-            <span>FROST</span>
-            <b>—</b>
+        ) : forge ? (
+          <div className="overlay-reveal-row">
+            {forge.categories.map((item) => (
+              <span key={item.category}>
+                {title(item.category)} <b>{title(item.winner ?? "NONE")}</b>
+                {item.noVoteFallback && " · DEFAULT"}
+              </span>
+            ))}
           </div>
-          <div>
-            <span className="option-glyph">ϟ</span>
-            <span>STORM</span>
-            <b>—</b>
-          </div>
-        </div>
-      </div>
+        ) : (
+          <p>Connect to the local development server to see votes.</p>
+        )}
+      </section>
       <div className="overlay-activity">
         <span className="activity-dot" />
-        <span>
-          {latestMessage
-            ? `${latestMessage.viewer.displayName}: ${latestMessage.text}`
-            : connection === "connected"
-              ? "Chat is connected to the local simulation"
-              : "Waiting for local event stream"}
-        </span>
+        {forge?.simulated
+          ? "LOCAL SYNTHETIC CHAT · VOTES ARE SERVER AUTHORITATIVE"
+          : "WAITING FOR LOCAL SIMULATION"}
       </div>
       <div className="overlay-safe-label">
-        BROADCAST OVERLAY PREVIEW <b>•</b> 1920 × 1080 SAFE LAYOUT
+        BROADCAST OVERLAY <b>•</b> SAFE AREA
       </div>
-    </div>
+    </main>
   );
 }
-
 export default function App() {
-  const isOverlay = window.location.pathname.startsWith("/overlay");
-  return isOverlay ? <OverlayPreview /> : <Dashboard />;
+  return window.location.pathname.startsWith("/overlay") ? <OverlayPreview /> : <Dashboard />;
 }

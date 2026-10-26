@@ -95,3 +95,37 @@ main --head feat/phase0-foundation` failed with `Post
 Record actual commit SHAs, PR references, validation outcomes, and screenshots
 only after they exist. Do not invent a Codex session ID; use the session's
 `/status` command at handoff time if the identifier is not available here.
+
+## Phase 1 — Audience voting and modular boss assembly
+
+- **Authorized branch:** `feat/phase1-voting-boss-assembly`, based on kickoff
+  HEAD `e40038f402985a92f496864dde62ef7d17124f18`. Draft PR #2 already exists;
+  update that branch and PR rather than creating another.
+- **Scope:** Four timed mock-only vote categories, mutable per-viewer ballots,
+  deterministic results/fallbacks, server state snapshots and WebSocket
+  updates, dashboard controls, read-only OBS voting/reveal, modular art,
+  bounded deterministic stats, and repeatable local simulation. No combat,
+  Twitch auth, merge, deploy, or Phase 2.
+- **Security:** Preserve Phase 0 Vite effective-host checks, WebSocket Origin
+  policy, local-only mutation Origin and Fetch Metadata checks, loopback peer
+  checks, no forwarded-IP trust, mock-only events, production route absence,
+  and rate limiting. P1 does not authenticate viewers and is not safe for public
+  access.
+- **Implementation:** The implementation is committed to the existing branch
+  and pushed to the existing Draft PR #2. The PR description and delivery
+  record contain the full exact HEAD SHA. Do not amend code after that SHA
+  without updating the review target.
+- **Validation (Codex-reported):** Frozen pnpm install, build, typecheck, lint,
+  formatting check, and complete tests passed. The suite contains 44 passing
+  tests (6 shared, 38 server). `pnpm simulate` completed repeated four-stage
+  cycles, and Chromium exercised dashboard reset/restart plus the live overlay
+  countdown and percentages. These results are not independent audit approval.
+- **Browser evidence:** Real Chromium screenshots are in `docs/visual-qa/` at
+  dashboard 1440×900 and 390×844, settled chat feed, and overlay 1920×1080 and
+  1280×720. `docs/ACCEPTANCE.md` records scroll, overflow, labels, safe-area,
+  readability, and the initial 1280 art-crop fix confirmed by the final capture.
+- **C4 handoff:** Independently review Draft PR #2 at its current exact pushed
+  branch head for voting correctness, event lifecycle/reconnection, visual
+  assembly differences, complete local workflow, and preservation of all Phase
+  0 security controls. Independent approval remains pending; do not merge,
+  deploy, implement Twitch authentication, or start Phase 2.

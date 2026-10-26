@@ -142,6 +142,160 @@ describe("BossForge server", () => {
     expect(response.statusCode).toBe(202);
   });
 
+  it("runs a server-authoritative forge cycle and broadcasts versioned state to connected clients", async () => {
+    const snapshot = await server.app.inject({ method: "GET", url: "/forge/state" });
+    expect(snapshot.statusCode).toBe(200);
+    expect(snapshot.json()).toMatchObject({
+      status: "idle",
+      simulated: true,
+      connectedToTwitch: false,
+    });
+    const address = await server.app.listen({ host: "127.0.0.1", port: 0 });
+    const origin = `http://127.0.0.1:${process.env.VITE_PORT ?? "5173"}`;
+    const clients = [0, 1].map(
+      () => new WebSocket(address.replace("http", "ws") + "/events", { headers: { origin } }),
+    );
+    await Promise.all(clients.map((client) => once(client, "open")));
+    const waitForForge = (client: WebSocket) =>
+      new Promise<unknown>((resolve) => {
+        const handler = (data: WebSocket.RawData) => {
+          const envelope = JSON.parse(data.toString()) as { type?: string };
+          if (envelope.type === "forge.state") {
+            client.off("message", handler);
+            resolve(envelope);
+          }
+        };
+        client.on("message", handler);
+      });
+    const updates = clients.map(waitForForge);
+    const started = await server.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      payload: { durationSeconds: 5 },
+    });
+    expect(started.statusCode).toBe(200);
+    expect(started.json()).toMatchObject({ status: "voting", activeCategory: "body" });
+    expect(await Promise.all(updates)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "forge.state" }),
+        expect.objectContaining({ type: "forge.state" }),
+      ]),
+    );
+    const invalid = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/events",
+      payload: {
+        kind: "chat.message",
+        provider: "twitch",
+        message: {
+          id: "x",
+          viewer: { id: "viewer", displayName: "Viewer" },
+          text: "!vote body drake",
+          occurredAt: "2026-10-26T12:00:00.000Z",
+        },
+      },
+    });
+    expect(invalid.statusCode).toBe(400);
+    const voteUpdate = clients.map(waitForForge);
+    const vote = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/events",
+      payload: {
+        kind: "chat.message",
+        provider: "mock",
+        message: {
+          id: "phase1-vote-1",
+          viewer: { id: "viewer", displayName: "Viewer" },
+          text: "!vote body drake",
+          occurredAt: "2026-10-26T12:00:00.000Z",
+        },
+      },
+    });
+    expect(vote.statusCode).toBe(202);
+    expect(await Promise.all(voteUpdate)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "forge.state" }),
+        expect.objectContaining({ type: "forge.state" }),
+      ]),
+    );
+    const state = await server.app.inject({ method: "GET", url: "/forge/state" });
+    expect(state.json().categories[0]).toMatchObject({
+      totalVotes: 1,
+      options: expect.arrayContaining([expect.objectContaining({ choice: "drake", count: 1 })]),
+    });
+    for (const client of clients) {
+      client.close();
+      await once(client, "close");
+    }
+    const reconnected = new WebSocket(address.replace("http", "ws") + "/events", {
+      headers: { origin },
+    });
+    await once(reconnected, "open");
+    const reconnectSnapshot = await server.app.inject({ method: "GET", url: "/forge/state" });
+    expect(reconnectSnapshot.json()).toMatchObject({
+      status: "voting",
+      revision: expect.any(Number),
+    });
+    expect(reconnectSnapshot.json().categories[0]).toMatchObject({ totalVotes: 1 });
+    reconnected.close();
+    await once(reconnected, "close");
+  });
+
+  it("protects forge mutations from remote and foreign-origin callers", async () => {
+    const remote = await server.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      remoteAddress: "203.0.113.9",
+      payload: {},
+    });
+    const foreign = await server.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      remoteAddress: "127.0.0.1",
+      headers: { origin: "https://foreign.example", "sec-fetch-site": "cross-site" },
+      payload: {},
+    });
+    const local = await server.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      remoteAddress: "127.0.0.1",
+      headers: {
+        origin: `http://127.0.0.1:${process.env.VITE_PORT ?? "5173"}`,
+        "sec-fetch-site": "same-origin",
+      },
+      payload: { durationSeconds: 5 },
+    });
+    expect(remote.statusCode).toBe(403);
+    expect(foreign.statusCode).toBe(403);
+    expect(local.statusCode).toBe(200);
+    const duplicateStart = await server.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      remoteAddress: "127.0.0.1",
+      payload: { durationSeconds: 5 },
+    });
+    const reset = await server.app.inject({
+      method: "POST",
+      url: "/dev/forge/reset",
+      remoteAddress: "127.0.0.1",
+    });
+    const repeatedReset = await server.app.inject({
+      method: "POST",
+      url: "/dev/forge/reset",
+      remoteAddress: "127.0.0.1",
+    });
+    const invalidDuration = await server.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      remoteAddress: "127.0.0.1",
+      payload: { durationSeconds: 4 },
+    });
+    expect(duplicateStart.statusCode).toBe(409);
+    expect(reset.statusCode).toBe(200);
+    expect(repeatedReset.statusCode).toBe(409);
+    expect(invalidDuration.statusCode).toBe(400);
+  });
+
   it("rejects foreign-origin and cross-site simulation requests", async () => {
     const foreignOrigin = await server.app.inject({
       method: "POST",
@@ -234,6 +388,10 @@ describe("BossForge server", () => {
     const production = await createBossForgeApp({ mode: "production", simulationEnabled: true });
     const response = await production.app.inject({ method: "POST", url: "/dev/simulation/next" });
     expect(response.statusCode).toBe(404);
+    const startForge = await production.app.inject({ method: "POST", url: "/dev/forge/start" });
+    const forgeSnapshot = await production.app.inject({ method: "GET", url: "/forge/state" });
+    expect(startForge.statusCode).toBe(404);
+    expect(forgeSnapshot.statusCode).toBe(404);
     await production.close();
   });
 });
