@@ -1,24 +1,24 @@
 # Project status
 
-- **Active milestone:** P2 — Playable Boss Battle (**implementation complete on the feature branch; exact-head independent review pending**).
-- **Phase 0:** Completed and squash-merged through [PR #1](https://github.com/mrdzyn/bossforge/pull/1) at `1fc0d8b8f8d3665266a4a5092f6da240bbddf7b1`.
-- **Phase 1:** Completed, independently source-reviewed through C6 ([C6 PASS](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6417403432)), and squash-merged via [PR #2](https://github.com/mrdzyn/bossforge/pull/2) into `main` at `2ca5c1ebcd0fe4f51b153faf36a8a765d66fec45`. The prior 49-test validation was Codex-reported.
-- **P2 authorization:** Owner explicitly authorized Phase 2 implementation. Work remains on `feat/phase2-playable-boss-battle`, based on the Phase 1 squash merge.
-- **P2 implementation:** Phaser 3.90.0 is pinned; `/arena` is lazy-loaded, accepts only a current validated reveal, and runs deterministic local combat with all four special attacks, movement, aiming, dodge, weakness ammunition, health, victory/defeat, and same-boss rematch. C2 remediation now covers stationary-spawn threat/evasion for every special, truthful hit feedback, and active-backend-restart cleanup. No server combat endpoint or persistence was added.
-- **P2 review state:** Independent C1 identified three bounded findings; remediation and new validation are recorded in [P2-C2 acceptance](ACCEPTANCE.md). Request independent exact-head C2 review on existing Draft PR #3; keep it unmerged.
-- **P2 active specification:** [Playable Boss Battle](P2-PLAYABLE-BOSS-BATTLE.md). Implementation HEAD, exact validation commands, screenshots, and independent review handoff are recorded in [HANDOFFS](HANDOFFS.md) and [ACCEPTANCE](ACCEPTANCE.md).
-- **Twitch registration blocker:** The owner's account 2FA/mobile verification remains unresolved; actual Twitch OAuth/EventSub is postponed. Simulation must be plainly labeled.
-- **Merge/deployment:** No Phase 2 merge, deployment, release or publishing is authorized. Require independent exact-head review and explicit owner merge decision.
+- **Active milestone:** P3-A — Twitch EventSub offline readiness (**kickoff documentation only; no P3 runtime changes or live Twitch access yet**).
+- **Phase 0:** Completed and squash-merged via [PR #1](https://github.com/mrdzyn/bossforge/pull/1).
+- **Phase 1:** Completed, independently source-reviewed through C6 and squash-merged via [PR #2](https://github.com/mrdzyn/bossforge/pull/2) to `main` at `2ca5c1ebcd0fe4f51b153faf36a8a765d66fec45`.
+- **Phase 2:** Completed, independently source-reviewed through C2 ([P2-C2 PASS](https://github.com/mrdzyn/bossforge/pull/3#issuecomment-6419685792)), and squash-merged via [PR #3](https://github.com/mrdzyn/bossforge/pull/3) to `main` at `7aa90c96133bfbc44f1809f5e89bb5c75fb892ce`. Final Codex-reported P2 suite: 62 tests (23 shared, 39 server); independent reviewer did not rerun commands.
+- **P3-A authorization:** Owner requested the next milestone. Branch `feat/phase3-twitch-readiness` created from that exact merged P2 baseline. Current kickoff is **docs-only**; next implementation slice is strictly offline official-shaped EventSub fixture normalization + lifecycle/reconnect tests.
+- **P3-B NOT authorized:** Genuine OAuth, credential acquisition, EventSub subscription, and Twitch-connected forge integration remain blocked by Twitch developer registration requiring 2FA; explicit separate owner approval is required after account recovery.
+- **Active spec:** [P3 Twitch Integration Readiness](P3-TWITCH-INTEGRATION-READINESS.md). Preferred future transport is server-side EventSub WebSocket with user access token and minimum read-only chat scope, subject to current official Twitch requirements.
+- **Security/UX:** Current forge remains 100% local simulation; `ForgeSession` still accepts mock events only and the forge schema explicitly says `simulated: true`, `connectedToTwitch: false`. P3-A may not weaken those checks or claim real Twitch integration.
+- **Merge/deployment:** No P3 merge, production deployment, release or publishing is authorized. Require independent exact-head review and explicit owner merge decision.
 
-## Acceptance target
+## Current milestone acceptance
 
-Complete local demo: simulated four-category forge -> boss reveal -> user starts Phaser arena -> playable boss battle with health and differentiated attack patterns -> streamer/community result -> rematch. Preserve the prior 49-test Phase 1 suite and its local-only boundaries while adding Phase 2 coverage. Do not claim remote multiplayer, authenticated combat, or genuine Twitch voting.
+A testable offline EventSub chat normalizer and connection lifecycle harness that fail closed on malformed/duplicate/wrong-channel events, keep tokens out of the project, make **zero real Twitch network calls**, preserve all Phase 0–2 behavior, and supply a separately gated live OAuth/EventSub activation plan. Run frozen install, build, typecheck, lint, format, full tests, mock simulation and diff check after Codex implementation. Real Twitch connectivity remains **NOT TESTED**, never PASS.
 
-## Source of truth
+## Canonical references
 
-- [P2 specification](P2-PLAYABLE-BOSS-BATTLE.md)
+- [P3-A spec and future P3-B gates](P3-TWITCH-INTEGRATION-READINESS.md)
+- [Project roadmap](ROADMAP.md)
+- [Security boundaries](SECURITY.md)
 - [Architecture](ARCHITECTURE.md)
-- [Security controls](SECURITY.md)
 - [Acceptance history](ACCEPTANCE.md)
-- [Execution handoffs](HANDOFFS.md)
-- [Roadmap](ROADMAP.md)
+- [Handoffs](HANDOFFS.md)
