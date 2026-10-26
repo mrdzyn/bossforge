@@ -23,10 +23,15 @@ deals 75% bonus damage. Combat is a local browser simulation and battle results
 are not persisted.
 
 **Phase 3-A:** [Offline EventSub integration readiness](docs/P3-TWITCH-INTEGRATION-READINESS.md)
-is scoped and authorized for fixture-based implementation only. Live Twitch OAuth,
-EventSub subscriptions and real voting are still blocked by the account's 2FA/developer
-registration issue and require separate approval. All current chat events are synthetic
-and must not be presented as a Twitch connection.
+was independently source-reviewed and squash-merged as PR #4. Its fixture-only
+normalizer and lifecycle harness are not yet wired to the application.
+
+**Phase 3-B:** [Real local Twitch integration](docs/P3B-LIVE-TWITCH-INTEGRATION.md)
+is now authorized for development in a new Draft PR. The owner has registered a
+Twitch app. Secure OAuth, EventSub subscription and real voting are **not yet
+implemented or tested** at kickoff. Configure the Client ID and secret only in
+gitignored local environment after code is reviewed; no tokens in tracked files.
+Until real connectivity is verified, current chat/votes remain synthetic.
 
 See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 [roadmap](docs/ROADMAP.md).
