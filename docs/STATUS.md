@@ -1,10 +1,11 @@
 # Project status
 
 - **Active milestone:** Phase 0 — Repository Foundation and Architecture
-- **Current state:** Phase 0 C2-01 bounded remediation for Draft PR
-  [#1](https://github.com/mrdzyn/bossforge/pull/1) is implemented and validated,
-  ready to push to `feat/phase0-foundation`. PR #1 was created through the
-  owner's connected GitHub account and remains Draft.
+- **Current state:** Phase 0 C2-01 bounded remediation is validated and pushed
+  to `feat/phase0-foundation` on Draft PR
+  [#1](https://github.com/mrdzyn/bossforge/pull/1). PR #1 was created through the
+  owner's connected GitHub account and remains Draft. The branch is ready for
+  C3 independent review.
 - **Twitch status:** No real Twitch authentication or EventSub connection is
   implemented or claimed. The owner-reported Twitch two-factor setup issue
   remains an external blocker for the later real integration phase.
@@ -40,5 +41,5 @@ results are recorded in [ACCEPTANCE.md](ACCEPTANCE.md).
 
 ## Next handoff
 
-After validation and push, request a C3 independent review of the exact branch
-head on Draft PR #1. Do not start Phase 1 without separate owner authorization.
+Request a C3 independent review of the exact pushed branch head on Draft PR #1.
+Do not start Phase 1 without separate owner authorization.

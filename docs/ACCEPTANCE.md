@@ -20,7 +20,7 @@ actual outcomes; do not infer a pass from a configured script.
 | Dashboard and overlay browser rendering          | Chromium at requested viewports                                     | PASS — see Visual QA                  |
 | Secret review                                    | Credential-pattern scan of project files                            | PASS — no matches                     |
 | Patch whitespace                                 | `git diff --check`                                                  | PASS                                  |
-| Feature branch commit and push                   | Initial implementation commit and C2 remediation on origin          | Pending push                          |
+| Feature branch commit and push                   | C2 remediation on `origin/feat/phase0-foundation`                   | PASS — commit `c6ab2c7`               |
 | Draft PR                                         | Draft PR #1                                                         | PASS — owner connected GitHub account |
 
 ## Visual QA

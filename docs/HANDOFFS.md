@@ -40,6 +40,9 @@
   originless loopback requests. An attempted Vite start with `VITE_HOST=0.0.0.0`
   exited during config loading before listening. See `ACCEPTANCE.md` for full
   required command results.
+- **C2 remediation commit:** `c6ab2c7c727397ec010f9767c4a2a0585a67ee4c`, pushed
+  to `origin/feat/phase0-foundation`. This is distinct from the C2 audit SHA
+  above; the C3 target is the current branch tip after this handoff update.
 - **C3 handoff:** Review the pushed tip of `origin/feat/phase0-foundation` on
   Draft PR #1 for C2-01 closure and retention of C1 protections. No merge,
   deployment, Twitch authentication, or Phase 1 work is authorized.
