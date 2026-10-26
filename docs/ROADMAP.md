@@ -15,14 +15,13 @@ or Twitch authentication.
 
 ## Phase 2 — Playable Boss Battle
 
-**Authorized kickoff on the Phase 1 merged baseline.** Implement a compact Phaser 3 arena with streamer movement, telegraphed boss attack patterns, health, meaningful weakness mechanics, and a complete victory/defeat/rematch cycle. See [the active P2 specification](P2-PLAYABLE-BOSS-BATTLE.md). Local mock-only combat; no Twitch authentication, production deployment, or remote multiplayer.
+**Completed and squash-merged via PR #3.** The local Phaser 3 arena includes movement, dodging, four special patterns, weakness combat, victory/defeat and rematch. See [P2 specification](P2-PLAYABLE-BOSS-BATTLE.md). No genuine Twitch connection or remote multiplayer is implemented.
 
 ## Phase 3 — Real Twitch Integration
 
-After Twitch developer registration is unblocked and the owner authorizes the
-work, use server-side OAuth and official EventSub APIs with minimum permissions.
-Verify authorization, chat delivery, reconnect behavior, and permission
-revocation. Never represent the local mock path as this integration.
+**P3-A offline readiness is authorized.** Implement an official-shaped, fixture-only EventSub chat message normalizer and deterministic WebSocket session/reconnect test harness, without making real Twitch requests or changing the mock-only forge. See [P3 readiness and gates](P3-TWITCH-INTEGRATION-READINESS.md).
+
+**P3-B live integration remains gated** on Twitch developer account registration/2FA recovery and a separate owner approval. Then implement server-side OAuth and a minimum-scope user-token EventSub WebSocket subscription, verify genuine chat delivery and revocation/reconnect, and explicitly migrate the current mock-only state/event contracts. Never represent synthetic events as live Twitch.
 
 ## Phase 4 — Streamer UX and OBS Integration
 
