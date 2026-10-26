@@ -130,3 +130,46 @@ only after they exist. Do not invent a Codex session ID; use the session's
   assembly differences, complete local workflow, and preservation of all Phase
   0 security controls. Independent approval remains pending; do not merge,
   deploy, implement Twitch authentication, or start Phase 2.
+
+## Phase 1 C5 — backend restart and state ordering
+
+- **Audit input:** Independent C4 comment
+  [6415746841](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6415746841)
+  reviewed `d627491b06bac068d773313cf806676853664c97` and requested only the
+  restart-epoch and delayed HTTP response fixes.
+- **Remediation:** Forge snapshots and events now include a unique server
+  instance ID and server start timestamp. Dashboard and OBS apply snapshots,
+  WebSocket events, and mutation responses through the shared reconciler.
+  Within one instance it accepts only nondecreasing revisions; it adopts a
+  newer instance even at revision zero; it rejects earlier epochs and old
+  socket generations. A two-second snapshot poll covers backend restarts where
+  the Vite WebSocket proxy does not close the client socket. The repeatable CLI
+  simulation now seeds its loop from the start response so a second run cannot
+  print the previous revealed state as the result of the new run.
+- **Implementation commit:** `5b6abc1984c73ab1168bb693450d126e5a0eee41`.
+  Documentation and real Chromium captures are committed separately; the C5
+  reviewer should inspect the latest exact PR #2 head after push.
+- **Validation (Codex-reported):** Frozen install, build, typecheck, lint,
+  format check, and complete tests passed: 49 tests (10 shared, 39 server).
+  Two consecutive five-second synthetic cycles completed; both revealed the
+  deterministic Thunder Tempest. Full Phase 0 local-only route and WebSocket
+  security regression tests remain green. A real Chromium 154 backend restart
+  smoke kept dashboard and OBS open: both discarded the old boss, adopted the
+  new idle snapshot, and showed the new body vote after a fresh start. The
+  intentional backend shutdown aborted several pending snapshot requests; the
+  periodic retry recovered when the server returned.
+- **Browser evidence:** Captures are in `docs/visual-qa/`: the pre-restart
+  dashboard and OBS show the previous boss; the post-restart dashboard and OBS
+  show the new body vote and no old boss. Exact paths and dimensions are
+  recorded in `docs/ACCEPTANCE.md`.
+- **Limitations:** Restart recovery may take up to the two-second polling
+  interval after the backend is reachable. Epoch ordering assumes the local
+  machine's wall clock advances between process starts. Simulation remains
+  local development functionality; there is no Twitch authentication or public
+  access authorization.
+- **C5 review request:** Review the exact latest pushed HEAD on the existing
+  Draft PR #2 for server epoch identity, centralized state freshness, polling
+  recovery, stale response rejection, repeated simulation behavior, all
+  preserved Phase 0 boundaries, and the recorded validation. This is a Codex
+  handoff, not independent approval. Do not merge, deploy, publish, implement
+  Twitch authentication or combat, or start Phase 2.

@@ -70,16 +70,16 @@ available; otherwise mark browser testing NOT TESTED and report that limitation.
 Status is recorded for the exact Phase 1 branch head in the handoff. These
 results are Codex-run evidence, not independent audit approval.
 
-| Criterion                                                                 | Verification                        | Result                                                                                                                              |
-| ------------------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Frozen install, build, typecheck, lint, formatting, complete suite        | Workspace commands                  | PASS — frozen install, build, typecheck, lint, format, and test completed; 44 tests passed (6 shared, 38 server)                    |
-| Timed four-stage server-authoritative voting                              | Forge session and integration tests | PASS — injectable scheduler transitions; real simulation completed four 5-second windows                                            |
-| Mutable ballot, deterministic tie/fallback, replay/invalid/late rejection | Focused session tests               | PASS — 6 forge tests cover vote changes, ties, fallback, replay, invalid/non-mock/wrong/stale/future/late votes, and timer disposal |
-| HTTP/WebSocket snapshots, two-client updates and reconnect                | Server integration tests            | PASS — two clients receive versioned state and reconnect reads the current snapshot                                                 |
-| Local-only simulation and retained Phase 0 security                       | Existing plus targeted route tests  | PASS — remote/foreign-origin mutations rejected; local dashboard and originless CLI accepted; production routes absent              |
-| Repeatable end-to-end synthetic forge cycle                               | `pnpm simulate`                     | PASS — multiple cycles completed; deterministic `Thunder Tempest` reveal after reset                                                |
-| Desktop/mobile dashboard and two OBS sizes                                | Chromium visual QA and screenshots  | PASS — real captures and viewport checks at all four required sizes                                                                 |
-| Independent review                                                        | C4 review handoff on Draft PR #2    | PENDING — exact pushed head awaits independent review                                                                               |
+| Criterion                                                                 | Verification                        | Result                                                                                                                               |
+| ------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Frozen install, build, typecheck, lint, formatting, complete suite        | Workspace commands                  | PASS — frozen install, build, typecheck, lint, format, and test completed; 44 tests passed (6 shared, 38 server)                     |
+| Timed four-stage server-authoritative voting                              | Forge session and integration tests | PASS — injectable scheduler transitions; real simulation completed four 5-second windows                                             |
+| Mutable ballot, deterministic tie/fallback, replay/invalid/late rejection | Focused session tests               | PASS — 6 forge tests cover vote changes, ties, fallback, replay, invalid/non-mock/wrong/stale/future/late votes, and timer disposal  |
+| HTTP/WebSocket snapshots, two-client updates and reconnect                | Server integration tests            | PASS — two clients receive versioned state and reconnect reads the current snapshot                                                  |
+| Local-only simulation and retained Phase 0 security                       | Existing plus targeted route tests  | PASS — remote/foreign-origin mutations rejected; local dashboard and originless CLI accepted; production routes absent               |
+| Repeatable end-to-end synthetic forge cycle                               | `pnpm simulate`                     | PASS — multiple cycles completed; deterministic `Thunder Tempest` reveal after reset                                                 |
+| Desktop/mobile dashboard and two OBS sizes                                | Chromium visual QA and screenshots  | PASS — real captures and viewport checks at all four required sizes                                                                  |
+| Independent review                                                        | C4 review handoff on Draft PR #2    | CHANGES REQUESTED — C4 comment 6415746841 identified restart epoch and stale HTTP response races; C5 remediation below awaits review |
 
 Phase 1 QA screenshots use the requested viewport paths; the original Phase 0
 captures are preserved under `p0-` filenames. Only real Chromium captures are
@@ -156,3 +156,39 @@ The process-level regression uses an otherwise valid local
 reserved test port, expects a nonzero exit with the host-guard diagnostic, then
 successfully binds the same port on `0.0.0.0` to prove no network listener was
 left behind.
+
+## C5 bounded remediation — backend restart and state ordering
+
+The C4 review comment [6415746841](https://github.com/mrdzyn/bossforge/pull/2#issuecomment-6415746841)
+identified stale revealed state after process restart and an HTTP mutation
+response that could roll back a newer WebSocket state. Forge snapshots now
+carry a per-process UUID and process start timestamp. The shared client
+reconciler accepts a newer process epoch even at revision zero, orders states
+within one process by revision, rejects earlier connection generations, and
+rejects delayed snapshots from an older process epoch. Dashboard and OBS use
+this same hook and freshness policy. A two-second local snapshot poll detects
+backend replacement even if the Vite WebSocket proxy keeps its browser socket
+open.
+
+| Criterion                                                      | Verification                                      | Result                                                                                                                                      |
+| -------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Restart from old revealed revision N to new idle revision 0    | Server and shared reconciliation regression tests | PASS — prior process revealed at revision 5; new instance snapshot accepted at revision 0; immediate fresh body vote accepted at revision 1 |
+| Delayed old connection and old process responses               | Shared reconciler tests                           | PASS — stale socket generation, lower same-instance revision, and delayed prior-epoch response all rejected                                 |
+| HTTP/WebSocket/snapshot freshness, reset/start/category order  | Shared reconciler tests and browser smoke         | PASS — reset/start and all four category transitions keep newer state; old mutation response cannot roll it back                            |
+| Phase 0 local-only security boundaries                         | Full server test suite                            | PASS — all existing route, Origin, loopback, mock-provider, WebSocket, and production restriction tests remain green                        |
+| Frozen install, build, typecheck, lint, formatting, full suite | Workspace commands                                | PASS — C5 candidate has 49 tests total (10 shared, 39 server)                                                                               |
+| Repeated four-category synthetic cycles                        | `BOSSFORGE_VOTE_SECONDS=5 pnpm simulate`          | PASS — repeated full cycles revealed deterministic Thunder Tempest                                                                          |
+| Dashboard and OBS recovery after backend restart               | Chromium 154.0.8037.57, local Vite/Fastify        | PASS — both open pages removed the old revealed boss, accepted new idle state, then displayed the new body vote after start                 |
+| Independent C5 review                                          | Existing Draft PR #2                              | PENDING — review the exact pushed HEAD in the C5 handoff; no independent approval claimed                                                   |
+
+Actual Chromium captures from the restart smoke are
+[old reveal — dashboard](visual-qa/c5-before-restart-dashboard.png),
+[old reveal — OBS](visual-qa/c5-before-restart-overlay.png),
+[recovered cycle — dashboard](visual-qa/c5-after-restart-dashboard.png), and
+[recovered cycle — OBS](visual-qa/c5-after-restart-overlay.png). The recovered
+dashboard and overlay show the old boss removed and the new body vote active.
+The intentional backend stop aborted several in-flight snapshot HTTP requests;
+periodic polling succeeded after the backend returned. Recovery can lag backend
+availability by up to the two-second poll interval. The existing local-only
+simulation model remains development-only and is not authorized for remote or
+public use; no Twitch connection or combat was tested.
