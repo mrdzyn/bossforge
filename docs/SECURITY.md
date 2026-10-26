@@ -44,6 +44,26 @@ logging authorization headers, handle revocation and reconnects, validate all
 EventSub data, and never trust chat text as an instruction to the application
 or coding agent.
 
+### P3-A offline-only boundary
+
+- P3-A parses synthetic, official-shaped EventSub fixtures only. The normalizer
+  and lifecycle harness are not wired to the application server or forge and
+  contain no Twitch socket, HTTP client, OAuth flow, credential lookup, or
+  subscription management.
+- The normalizer bounds serialized packets and chat text; validates v1 message
+  type, channel condition, stable numeric user ID, timestamp, and message ID;
+  and rejects malformed, wrong-channel, stale/future, out-of-order, and replayed
+  messages. Text stays ordinary untrusted chat text.
+- The injected lifecycle harness consumes frames from a caller-supplied fake
+  transport. Reconnect URLs must use `wss:` and contain no user information; the
+  URL is passed unchanged to the injected factory. Tests use reserved fixture
+  hosts only. The harness reports subscription plans to a callback and does not
+  send subscription JSON over the WebSocket.
+- Do not connect this harness to a real transport or feed normalized Twitch
+  events to `ForgeSession` in P3-A. Forge events remain mock-sourced and
+  `simulated: true` / `connectedToTwitch: false`; P3-B requires separate owner
+  approval and an independently reviewed provider-mode migration.
+
 ## Not in scope
 
 No payments, unsolicited chat posting, user tracking, production deployment,

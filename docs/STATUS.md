@@ -1,10 +1,10 @@
 # Project status
 
-- **Active milestone:** P3-A — Twitch EventSub offline readiness (**kickoff documentation only; no P3 runtime changes or live Twitch access yet**).
+- **Active milestone:** P3-A — offline Twitch EventSub fixture normalization and injected lifecycle harness. This slice does not connect to Twitch, use credentials, or enable live voting.
 - **Phase 0:** Completed and squash-merged via [PR #1](https://github.com/mrdzyn/bossforge/pull/1).
 - **Phase 1:** Completed, independently source-reviewed through C6 and squash-merged via [PR #2](https://github.com/mrdzyn/bossforge/pull/2) to `main` at `2ca5c1ebcd0fe4f51b153faf36a8a765d66fec45`.
 - **Phase 2:** Completed, independently source-reviewed through C2 ([P2-C2 PASS](https://github.com/mrdzyn/bossforge/pull/3#issuecomment-6419685792)), and squash-merged via [PR #3](https://github.com/mrdzyn/bossforge/pull/3) to `main` at `7aa90c96133bfbc44f1809f5e89bb5c75fb892ce`. Final Codex-reported P2 suite: 62 tests (23 shared, 39 server); independent reviewer did not rerun commands.
-- **P3-A authorization:** Owner requested the next milestone. Branch `feat/phase3-twitch-readiness` created from that exact merged P2 baseline. Current kickoff is **docs-only**; next implementation slice is strictly offline official-shaped EventSub fixture normalization + lifecycle/reconnect tests.
+- **P3-A authorization:** Owner requested the next milestone on the existing `feat/phase3-twitch-readiness` branch and Draft PR #4. P3-A implementation adds an offline official-shaped EventSub normalizer and dependency-injected lifecycle harness only; the live mock-only ForgeSession remains unchanged.
 - **P3-B NOT authorized:** Genuine OAuth, credential acquisition, EventSub subscription, and Twitch-connected forge integration remain blocked by Twitch developer registration requiring 2FA; explicit separate owner approval is required after account recovery.
 - **Active spec:** [P3 Twitch Integration Readiness](P3-TWITCH-INTEGRATION-READINESS.md). Preferred future transport is server-side EventSub WebSocket with user access token and minimum read-only chat scope, subject to current official Twitch requirements.
 - **Security/UX:** Current forge remains 100% local simulation; `ForgeSession` still accepts mock events only and the forge schema explicitly says `simulated: true`, `connectedToTwitch: false`. P3-A may not weaken those checks or claim real Twitch integration.

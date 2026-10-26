@@ -9,6 +9,7 @@
 ## Critical product-integrity boundary
 
 The current implementation is expressly **mock only**:
+
 - `ForgeSession.handleEvent` accepts only `provider === "mock"`.
 - `ForgeStateSchema` requires `simulated: true` and `connectedToTwitch: false`.
 - `ForgeStateEventSchema` requires `source: "mock"`.
@@ -22,6 +23,7 @@ The current implementation is expressly **mock only**:
 Use the official `channel.chat.message` EventSub subscription (currently v1), with an outgoing **server-side** connection to `wss://eventsub.wss.twitch.tv/ws`. This fits a local streamer-hosted application without a public HTTPS listener.
 
 Official documentation (review again before P3-B):
+
 - Registration and 2FA: https://dev.twitch.tv/docs/authentication/register-app
 - Chat subscription type/required scopes: https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelchatmessage
 - Chat EventSub auth/transport: https://dev.twitch.tv/docs/chat/authenticating
@@ -76,6 +78,7 @@ Do not introduce any unauthenticated public control route. The existing developm
 **Requires both owner confirmation that Twitch app credentials are available and separate explicit authorization of this implementation slice.** Never store secrets in repository, console/browser logs, screenshots, PR comments, telemetry or command-line history.
 
 Acceptance milestones after unblock:
+
 - OAuth browser redirect state mismatch, expired code, denied consent and exact redirect URI negative tests; access/refresh tokens stored securely **server-side** (for a local MVP, short-lived process memory only is acceptable with documented logout-on-restart) and refreshed/revoked safely. Validate tokens via Twitch's supported endpoint where applicable.
 - Subscribe to `channel.chat.message` v1 for an explicitly authorized broadcaster/user pair using a **user access token** and actual WebSocket welcome `session_id`. Keep one connection by default.
 - Validate sender/user/broadcaster/source, apply bounds and deduplication, and feed normalized actual Twitch events into an authorized server forge path that is distinct from local development simulation. Scope access so an authenticated streamer controls which channel may create/close a forge cycle. Avoid client-supplied provider spoofing.

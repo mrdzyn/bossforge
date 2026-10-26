@@ -300,3 +300,29 @@ and [defeat](visual-qa/p2/c2/defeat.png). Images are real Chromium captures.
 Remaining limits are unchanged: local client-side combat only, no persisted or
 OBS-shared battle result, no touch controls, and no real Twitch connectivity.
 Independent C2 exact-head review is pending.
+
+## P3-A offline EventSub foundation
+
+This is fixture-only validation. It does not represent a Twitch connection,
+OAuth run, live subscription, or live vote. No browser surface changed.
+
+| Criterion                                               | Verification                                                                          | Result                                                                                                                                                                                                                                              |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Official-shaped `channel.chat.message` v1 normalization | `apps/server/test/eventsub-normalizer.test.ts`                                        | PASS — validates synthetic fixtures, maps stable user/message IDs and nanosecond timestamps, retains `provider: "twitch"`, and rejects malformed, oversized, unsupported, wrong-channel, duplicate, stale/future and out-of-order inputs            |
+| Forge isolation                                         | Normalizer/ForgeSession integration test                                              | PASS — normalized Twitch fixture is rejected by mock-only ForgeSession and does not change state or `simulated` / `connectedToTwitch` flags                                                                                                         |
+| Offline EventSub lifecycle                              | `apps/server/test/eventsub-session.test.ts`                                           | PASS — welcome/connection timeout, keepalive, notifications, replay prevention, control ping/pong, server reconnect handoff, resubscription planning after disconnect, bounded retries, revocation and shutdown use injected fake transports/timers |
+| No live Twitch network dependency                       | Source and test harness inspection                                                    | PASS — components are not wired into the app; tests inject fake transports and use reserved `.invalid` fixture URLs; no Twitch credentials or API/socket calls are used                                                                             |
+| Existing Phase 0–2 checks                               | Frozen install, build, typecheck, lint, format, full suite, simulation and diff check | PASS — actual outcomes are listed below                                                                                                                                                                                                             |
+
+Validation results:
+
+- `pnpm install --frozen-lockfile --store-dir /workspace/.pnpm-store` — PASS.
+- `pnpm build` — PASS; Vite retains the existing lazy Phaser chunk advisory.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` — PASS.
+- `pnpm test` — PASS, 85 tests total (23 shared, 62 server), preserving all 62
+  P2 tests. Focused P3-A tests: 23 (13 normalizer, 10 lifecycle).
+- `pnpm simulate` — PASS; completed the synthetic four-category mock workflow.
+- `git diff --check` — PASS.
+
+Real Twitch connectivity, OAuth, subscription, and live voting are **NOT
+TESTED** and remain unauthorized. Independent exact-head review is pending.
