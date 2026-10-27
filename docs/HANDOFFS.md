@@ -333,3 +333,27 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Review gate:** Independent P3-B-C3 review is requested against the exact
   pushed HEAD of existing Draft PR #5. Keep it open and unmerged; do not enable
   Twitch, deploy, publish, or begin Phase 4.
+
+## P3-B-C4 remediation handoff
+
+- **Scope:** Fix only C3-01 on the existing branch and Draft PR #5, preserving
+  C1/C2 remediations, keepalive-timeout handling, reconnect handoffs and
+  verified Helix subscription gates.
+- **Socket-loss ordering:** Active socket close/error now invokes
+  `EventSubSession.disconnect()` before the adapter releases its current
+  transport identity. The validated session-loss callback can therefore clear
+  the active Helix lease and immediately publish disconnected/retry state.
+  Error then close is idempotent; retired transport events do not affect a
+  replacement.
+- **Forge and recovery:** Server fake-socket coverage confirms the current
+  Twitch forge is immediately disconnected and any active cycle returns to
+  idle. Retry only restores connected after a fresh welcome and Helix response
+  matching the replacement session ID.
+- **Validation:** Frozen install, build, typecheck, lint, format, 113 tests (23
+  shared / 90 server), `git diff --check`, and four-category synthetic mock
+  simulation passed. Exact results are in
+  [ACCEPTANCE](ACCEPTANCE.md#p3-b-c4--bounded-remediation-of-c3-01).
+- **Security and review gate:** Fake sockets and HTTP only; integration remains
+  disabled and no real Twitch traffic or credentials were used. Request
+  independent P3-B-C4 review against exact pushed HEAD; keep Draft PR #5
+  unmerged, with no deployment, publication or Phase 4 work.

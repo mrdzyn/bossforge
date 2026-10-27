@@ -27,6 +27,23 @@
 - Request independent exact-head P3-B-C2 review on existing Draft PR #5. Keep
   it open, Draft and unmerged; do not enable the integration.
 
+## P3-B-C4 remediation checkpoint
+
+- Fixed C3-01 on the existing Draft PR #5 branch: unexpected close/error of
+  the active verified EventSub socket now reaches the session-loss callback
+  before its adapter transport lease is cleared. This immediately drops
+  verified subscription state, publishes disconnected status, and cancels a
+  Twitch voting cycle.
+- Fake socket coverage checks active close, error followed by close,
+  current versus retired sockets, immediate server forge state, and recovery
+  only after the replacement welcome and Helix subscription verification.
+- The C4 full suite has 113 tests (23 shared / 90 server), preserving the
+  112-test C3 baseline. Command evidence and mock simulation are in
+  [ACCEPTANCE](ACCEPTANCE.md#p3-b-c4--bounded-remediation-of-c3-01).
+- Twitch remains disabled by default. No credentials or real Twitch network,
+  merge, deployment, publication or Phase 4 work was used. Request independent
+  exact-head C4 review; keep PR #5 Draft and unmerged.
+
 ## P3-B implementation checkpoint
 
 - **B1:** Added default-disabled confidential-client authorization-code OAuth at the exact local callback. Browser-bound single-use state, HttpOnly/SameSite cookies, exact Host/loopback checks, `user:read:chat` scope, validated numeric identity/client ID, in-memory access/rotating refresh tokens, refresh, hourly validation, revocation, logout and safe error responses are covered with deterministic fake HTTP tests.

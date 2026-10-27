@@ -139,3 +139,11 @@ introduced in Phase 1.
   welcomed session. Fake scheduler/socket tests cover timeout without a close
   event and malformed-then-valid sequences. No live Twitch network was used.
   See [C3 acceptance evidence](ACCEPTANCE.md#p3-b-c3--bounded-remediation-of-c2-findings).
+- P3-B-C4 preserves the adapter's active transport identity until the lifecycle
+  disconnect handler reports verified session loss. This lets unexpected
+  active socket close/error invalidate Helix verification and publish
+  disconnected retry state immediately; the forge cancels Twitch voting. A
+  retired transport remains unable to affect its successor. Fake-socket tests
+  cover close, error-then-close, current/retired transports, and fresh Helix
+  verification after reconnect. No live Twitch traffic was used. See
+  [C4 acceptance evidence](ACCEPTANCE.md#p3-b-c4--bounded-remediation-of-c3-01).

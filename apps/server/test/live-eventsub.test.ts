@@ -326,6 +326,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
 
   it("creates a new Helix subscription after an unexpected socket loss", async () => {
     const sockets: FakeSocket[] = [];
+    const status = vi.fn();
     const fetcher = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
       const requestBody = JSON.parse(String(init?.body)) as { transport: { session_id: string } };
       return new Response(
@@ -353,7 +354,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
         sockets.push(socket);
         return socket as unknown as WebSocket;
       },
-      onStatus: () => undefined,
+      onStatus: status,
       onChat: () => undefined,
     });
     live.start();
@@ -364,6 +365,9 @@ describe("live EventSub adapter with fake Twitch transports", () => {
     );
     await vi.waitFor(() => expect(live.connected).toBe(true));
     sockets[0]!.emit("close");
+    expect(live.connected).toBe(false);
+    expect(live.status).toBe("retry-wait");
+    expect(status).toHaveBeenLastCalledWith("retry-wait", false);
     await vi.waitFor(() => expect(sockets).toHaveLength(2), { timeout: 2_000 });
     sockets[1]!.sendFrame(
       frame("welcome-second", "session_welcome", {
@@ -372,6 +376,60 @@ describe("live EventSub adapter with fake Twitch transports", () => {
     );
     await vi.waitFor(() => expect(live.connected).toBe(true));
     expect(fetcher).toHaveBeenCalledTimes(2);
+    live.shutdown();
+  });
+
+  it("handles active socket error followed by close as one verified session loss", async () => {
+    const sockets: FakeSocket[] = [];
+    const status = vi.fn();
+    const fetcher = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      const requestBody = JSON.parse(String(init?.body)) as { transport: { session_id: string } };
+      return new Response(
+        JSON.stringify({
+          data: [
+            {
+              type: "channel.chat.message",
+              version: "1",
+              status: "enabled",
+              condition: { broadcaster_user_id: "12345", user_id: "12345" },
+              transport: { session_id: requestBody.transport.session_id },
+            },
+          ],
+        }),
+        { status: 202 },
+      );
+    }) as typeof fetch;
+    const live = new LiveEventSub({
+      clientId: "client-id",
+      identity: { id: "12345", login: "owner", displayName: "Owner" },
+      getAccessToken: async () => "access-token",
+      fetch: fetcher,
+      createSocket: () => {
+        const socket = new FakeSocket();
+        sockets.push(socket);
+        return socket as unknown as WebSocket;
+      },
+      onStatus: status,
+      onChat: () => undefined,
+    });
+    live.start();
+    sockets[0]!.sendFrame(
+      frame("error-close-welcome", "session_welcome", {
+        session: { id: "error-close-session", keepalive_timeout_seconds: 30 },
+      }),
+    );
+    await vi.waitFor(() => expect(live.connected).toBe(true));
+    const previousStatusCalls = status.mock.calls.length;
+
+    sockets[0]!.emit("error", new Error("unexpected transport failure"));
+    expect(live.connected).toBe(false);
+    expect(live.status).toBe("retry-wait");
+    expect(status).toHaveBeenLastCalledWith("retry-wait", false);
+    const afterErrorCalls = status.mock.calls.length;
+    sockets[0]!.emit("close");
+    expect(status.mock.calls.length).toBe(afterErrorCalls);
+    expect(afterErrorCalls).toBeGreaterThan(previousStatusCalls);
+    expect(fetcher).toHaveBeenCalledOnce();
     live.shutdown();
   });
 

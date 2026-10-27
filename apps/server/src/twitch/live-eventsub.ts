@@ -103,9 +103,13 @@ export class LiveEventSub {
           if (transport.closed) return;
           transport.closed = true;
           if (this.activeTransport !== transport || this.stopped) return;
-          this.activeTransport = undefined;
           handlers.disconnect();
-          if (!transport.welcomed) this.setStatus(this.session?.status ?? "reconnecting", false);
+          // Let EventSubSession report a verified loss while the adapter still
+          // holds the same transport identity. Its callback clears this lease.
+          if (this.activeTransport === transport) {
+            this.activeTransport = undefined;
+            if (!transport.welcomed) this.setStatus(this.session?.status ?? "reconnecting", false);
+          }
         };
         socket.once("close", disconnected);
         socket.once("error", disconnected);

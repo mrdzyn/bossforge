@@ -444,3 +444,19 @@ integration tests. No Twitch endpoint, credential, OAuth
 consent, live transport, public endpoint, or production deployment was used.
 Twitch remains disabled by default. Independent exact-head P3-B-C3 review is
 requested on Draft PR #5; do not merge or activate the integration.
+
+## P3-B-C4 — bounded remediation of C3-01
+
+| Criterion                              | C4 evidence                                                                                                                                                                                                                                               |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active verified socket loss            | PASS — an unexpected active socket close now reaches `onSessionLost` while the adapter still holds the matching transport identity. Subscription status is cleared and retry is immediately reported disconnected. Error followed by close is idempotent. |
+| Forge and voting state                 | PASS — the server fake-socket integration starts a Twitch cycle, emits an unexpected socket close, and immediately asserts `connectedToTwitch: false` and idle forge state.                                                                               |
+| Reconnect and fresh Helix verification | PASS — fake retry creates a replacement socket; only its validated welcome plus successful Helix verification restores connected state. The test confirms the new Helix request carries the replacement session ID.                                       |
+| Current versus retired transport       | PASS — current unexpected close/error disables the current lease; close/error from a retired socket after a validated handoff leaves the successor connected and forwarding.                                                                              |
+| Validation                             | PASS — frozen install, build, typecheck, lint, format, full suite (**113 tests: 23 shared, 90 server**), `git diff --check`, and four-category mock simulation. See exact command results recorded with this C4 checkpoint.                               |
+
+Tests use fake sockets, synthetic authorization values and injected fake HTTP;
+the simulation server ran on loopback with `TWITCH_INTEGRATION_ENABLED=false`.
+No real Twitch account, credentials, consent, API request, EventSub connection,
+public endpoint, merge, deployment or publication was used. Keep Draft PR #5
+open and unmerged; independent exact-head P3-B-C4 review is requested.

@@ -143,6 +143,7 @@ describe("BossForge server", () => {
       delayMs: number;
       cancelled: boolean;
     }> = [];
+    const helixSessionIds: string[] = [];
     const mockFetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/token"))
@@ -165,6 +166,8 @@ describe("BossForge server", () => {
         );
       if (url.includes("/eventsub/subscriptions")) {
         expect(init?.method).toBe("POST");
+        const requestBody = JSON.parse(String(init?.body)) as { transport: { session_id: string } };
+        helixSessionIds.push(requestBody.transport.session_id);
         return new Response(
           JSON.stringify({
             data: [
@@ -173,7 +176,7 @@ describe("BossForge server", () => {
                 version: "1",
                 status: "enabled",
                 condition: { broadcaster_user_id: "12345", user_id: "12345" },
-                transport: { session_id: "live-session" },
+                transport: { session_id: requestBody.transport.session_id },
               },
             ],
           }),
@@ -382,7 +385,69 @@ describe("BossForge server", () => {
     expect(secondVotingState).toMatchObject({ status: "voting", connectedToTwitch: true });
     expect(reconciler.apply(secondVotingState, generation)).toBe(true);
 
-    const keepaliveTimeout = eventSubTimers.find(
+    sockets[0]!.emit("close");
+    const droppedSocketState = (
+      await live.app.inject({ method: "GET", url: "/forge/state" })
+    ).json();
+    expect(droppedSocketState).toMatchObject({
+      mode: "twitch",
+      connectedToTwitch: false,
+      status: "idle",
+    });
+    expect(reconciler.apply(droppedSocketState, generation)).toBe(true);
+    const droppedSocketStatus = await live.app.inject({
+      method: "GET",
+      url: "/twitch/status",
+      remoteAddress: "127.0.0.1",
+    });
+    expect(droppedSocketStatus.json()).toMatchObject({ connected: false, status: "retry-wait" });
+    const socketRetryTimer = eventSubTimers.find(
+      (timer) => timer.delayMs === 500 && !timer.cancelled,
+    )!;
+    expect(socketRetryTimer).toBeDefined();
+    socketRetryTimer.cancelled = true;
+    socketRetryTimer.callback();
+    expect(sockets).toHaveLength(2);
+    sockets[1]!.sendFrame({
+      metadata: {
+        message_id: "reconnect-welcome-id",
+        message_type: "session_welcome",
+        message_timestamp: new Date().toISOString(),
+      },
+      payload: { session: { id: "reconnected-live-session", keepalive_timeout_seconds: 30 } },
+    });
+    await vi.waitFor(async () => {
+      const status = await live.app.inject({
+        method: "GET",
+        url: "/twitch/status",
+        remoteAddress: "127.0.0.1",
+      });
+      expect(status.json().connected).toBe(true);
+    });
+    expect(helixSessionIds).toEqual(["live-session", "reconnected-live-session"]);
+    const reconnectedState = (await live.app.inject({ method: "GET", url: "/forge/state" })).json();
+    expect(reconnectedState).toMatchObject({
+      mode: "twitch",
+      connectedToTwitch: true,
+      status: "idle",
+    });
+    expect(reconciler.apply(reconnectedState, generation)).toBe(true);
+    const thirdStart = await live.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      headers: {
+        host: "localhost:3001",
+        origin,
+        "sec-fetch-site": "same-origin",
+        cookie: sessionCookie,
+      },
+      remoteAddress: "127.0.0.1",
+      payload: { durationSeconds: 5 },
+    });
+    expect(thirdStart.statusCode).toBe(200);
+    expect(thirdStart.json()).toMatchObject({ status: "voting", connectedToTwitch: true });
+
+    const keepaliveTimeout = eventSubTimers.findLast(
       (timer) => timer.delayMs === 30_000 && !timer.cancelled,
     )!;
     expect(keepaliveTimeout).toBeDefined();
@@ -407,7 +472,7 @@ describe("BossForge server", () => {
     expect(retryTimer).toBeDefined();
     retryTimer.cancelled = true;
     retryTimer.callback();
-    expect(sockets).toHaveLength(2);
+    expect(sockets).toHaveLength(3);
     const retryingStatus = await live.app.inject({
       method: "GET",
       url: "/twitch/status",
