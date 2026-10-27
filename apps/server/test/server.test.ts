@@ -287,6 +287,15 @@ describe("BossForge server", () => {
       });
       expect(status.json().connected).toBe(true);
     });
+    const twitchConnectedState = (
+      await live.app.inject({
+        method: "GET",
+        url: "/forge/state",
+      })
+    ).json();
+    expect(twitchConnectedState).toMatchObject({ mode: "twitch", connectedToTwitch: true });
+    expect(reconciler.apply(twitchConnectedState, generation)).toBe(true);
+    expect(reconciler.apply(connectingState, generation)).toBe(false);
     const started = await live.app.inject({
       method: "POST",
       url: "/dev/forge/start",
@@ -305,6 +314,14 @@ describe("BossForge server", () => {
       simulated: false,
       connectedToTwitch: true,
     });
+    const twitchVotingState = (
+      await live.app.inject({
+        method: "GET",
+        url: "/forge/state",
+      })
+    ).json();
+    expect(twitchVotingState).toMatchObject({ mode: "twitch", status: "voting" });
+    expect(reconciler.apply(twitchVotingState, generation)).toBe(true);
     const mockInjection = await live.app.inject({
       method: "POST",
       url: "/dev/simulation/next",
