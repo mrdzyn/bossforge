@@ -138,6 +138,11 @@ describe("BossForge server", () => {
 
   it("requires OAuth owner controls and keeps live Twitch ballots separate from mock simulation", async () => {
     const sockets: FakeTwitchSocket[] = [];
+    const eventSubTimers: Array<{
+      callback: () => void;
+      delayMs: number;
+      cancelled: boolean;
+    }> = [];
     const mockFetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/token"))
@@ -188,6 +193,15 @@ describe("BossForge server", () => {
       mode: "development",
       twitchOAuth: oauth,
       twitchFetch: mockFetch,
+      twitchEventSubScheduler: {
+        schedule(callback, delayMs) {
+          const timer = { callback, delayMs, cancelled: false };
+          eventSubTimers.push(timer);
+          return () => {
+            timer.cancelled = true;
+          };
+        },
+      },
       twitchCreateSocket: () => {
         const socket = new FakeTwitchSocket();
         sockets.push(socket);
@@ -349,6 +363,58 @@ describe("BossForge server", () => {
     expect(reset.json()).toMatchObject({ mode: "twitch", status: "idle", connectedToTwitch: true });
     const twitchState = (await live.app.inject({ method: "GET", url: "/forge/state" })).json();
     expect(reconciler.apply(twitchState, generation)).toBe(true);
+    const secondStart = await live.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      headers: {
+        host: "localhost:3001",
+        origin,
+        "sec-fetch-site": "same-origin",
+        cookie: sessionCookie,
+      },
+      remoteAddress: "127.0.0.1",
+      payload: { durationSeconds: 5 },
+    });
+    expect(secondStart.statusCode).toBe(200);
+    const secondVotingState = (
+      await live.app.inject({ method: "GET", url: "/forge/state" })
+    ).json();
+    expect(secondVotingState).toMatchObject({ status: "voting", connectedToTwitch: true });
+    expect(reconciler.apply(secondVotingState, generation)).toBe(true);
+
+    const keepaliveTimeout = eventSubTimers.find(
+      (timer) => timer.delayMs === 30_000 && !timer.cancelled,
+    )!;
+    expect(keepaliveTimeout).toBeDefined();
+    keepaliveTimeout.cancelled = true;
+    keepaliveTimeout.callback();
+    const timedOutTwitchState = (
+      await live.app.inject({ method: "GET", url: "/forge/state" })
+    ).json();
+    expect(timedOutTwitchState).toMatchObject({
+      mode: "twitch",
+      connectedToTwitch: false,
+      status: "idle",
+    });
+    expect(reconciler.apply(timedOutTwitchState, generation)).toBe(true);
+    const disconnectedStatus = await live.app.inject({
+      method: "GET",
+      url: "/twitch/status",
+      remoteAddress: "127.0.0.1",
+    });
+    expect(disconnectedStatus.json()).toMatchObject({ connected: false, status: "retry-wait" });
+    const retryTimer = eventSubTimers.find((timer) => timer.delayMs === 500 && !timer.cancelled)!;
+    expect(retryTimer).toBeDefined();
+    retryTimer.cancelled = true;
+    retryTimer.callback();
+    expect(sockets).toHaveLength(2);
+    const retryingStatus = await live.app.inject({
+      method: "GET",
+      url: "/twitch/status",
+      remoteAddress: "127.0.0.1",
+    });
+    expect(retryingStatus.json()).toMatchObject({ connected: false, status: "connecting" });
+    expect(reconciler.apply(timedOutTwitchState, generation)).toBe(true);
     const logout = await live.app.inject({
       method: "POST",
       url: "/twitch/disconnect",

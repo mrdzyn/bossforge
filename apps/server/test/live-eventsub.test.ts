@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import type WebSocket from "ws";
 import { describe, expect, it, vi } from "vitest";
 import { LiveEventSub } from "../src/twitch/live-eventsub.js";
+import type { EventSubScheduler } from "../src/twitch/eventsub-session.js";
 
 class FakeSocket extends EventEmitter {
   sendFrame(frame: unknown): void {
@@ -119,6 +120,160 @@ describe("live EventSub adapter with fake Twitch transports", () => {
     );
     await vi.waitFor(() => expect(status).toHaveBeenCalledWith("failed", false));
     expect(live.connected).toBe(false);
+    live.shutdown();
+  });
+
+  it("reports internal keepalive loss and stays disconnected throughout retry", async () => {
+    const sockets: FakeSocket[] = [];
+    const timers: Array<{ callback: () => void; delayMs: number; cancelled: boolean }> = [];
+    const scheduler: EventSubScheduler = {
+      schedule(callback, delayMs) {
+        const timer = { callback, delayMs, cancelled: false };
+        timers.push(timer);
+        return () => {
+          timer.cancelled = true;
+        };
+      },
+    };
+    const status = vi.fn();
+    const fetcher = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      const requestBody = JSON.parse(String(init?.body)) as { transport: { session_id: string } };
+      return new Response(
+        JSON.stringify({
+          data: [
+            {
+              type: "channel.chat.message",
+              version: "1",
+              status: "enabled",
+              condition: { broadcaster_user_id: "12345", user_id: "12345" },
+              transport: { session_id: requestBody.transport.session_id },
+            },
+          ],
+        }),
+        { status: 202 },
+      );
+    }) as typeof fetch;
+    const live = new LiveEventSub({
+      clientId: "client-id",
+      identity: { id: "12345", login: "owner", displayName: "Owner" },
+      getAccessToken: async () => "access-token",
+      fetch: fetcher,
+      scheduler,
+      createSocket: () => {
+        const socket = new FakeSocket();
+        sockets.push(socket);
+        return socket as unknown as WebSocket;
+      },
+      onStatus: status,
+      onChat: () => undefined,
+    });
+    live.start();
+    sockets[0]!.sendFrame(
+      frame("timeout-welcome", "session_welcome", {
+        session: { id: "timeout-session", keepalive_timeout_seconds: 30 },
+      }),
+    );
+    await vi.waitFor(() => expect(live.connected).toBe(true));
+    const keepalive = timers.find((timer) => timer.delayMs === 30_000 && !timer.cancelled)!;
+    expect(keepalive).toBeDefined();
+    keepalive.cancelled = true;
+    keepalive.callback();
+    expect(live.connected).toBe(false);
+    expect(live.status).toBe("retry-wait");
+    expect(status).toHaveBeenLastCalledWith("retry-wait", false);
+    expect(
+      status.mock.calls
+        .slice(
+          status.mock.calls.findIndex(
+            ([value, connected]) => value === "connected" && connected === true,
+          ) + 1,
+        )
+        .every(([, connected]) => connected === false),
+    ).toBe(true);
+
+    const retry = timers.find((timer) => timer.delayMs === 500 && !timer.cancelled)!;
+    expect(retry).toBeDefined();
+    retry.cancelled = true;
+    retry.callback();
+    expect(sockets).toHaveLength(2);
+    expect(live.connected).toBe(false);
+    expect(live.status).toBe("connecting");
+    expect(status).toHaveBeenLastCalledWith("connecting", false);
+    live.shutdown();
+  });
+
+  it("does not let malformed welcome or revocation frames poison validated session state", async () => {
+    const socket = new FakeSocket();
+    const events: unknown[] = [];
+    const status = vi.fn();
+    const fetcher = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      const requestBody = JSON.parse(String(init?.body)) as { transport: { session_id: string } };
+      return new Response(
+        JSON.stringify({
+          data: [
+            {
+              type: "channel.chat.message",
+              version: "1",
+              status: "enabled",
+              condition: { broadcaster_user_id: "12345", user_id: "12345" },
+              transport: { session_id: requestBody.transport.session_id },
+            },
+          ],
+        }),
+        { status: 202 },
+      );
+    }) as typeof fetch;
+    const live = new LiveEventSub({
+      clientId: "client-id",
+      identity: { id: "12345", login: "owner", displayName: "Owner" },
+      getAccessToken: async () => "access-token",
+      fetch: fetcher,
+      createSocket: () => socket as unknown as WebSocket,
+      onStatus: status,
+      onChat: (event) => events.push(event),
+    });
+    live.start();
+    socket.sendFrame(
+      frame("welcome-missing-timeout", "session_welcome", {
+        session: { id: "validated-session" },
+      }),
+    );
+    const malformedTimestamp = frame("welcome-bad-timestamp", "session_welcome", {
+      session: { id: "validated-session", keepalive_timeout_seconds: 30 },
+    });
+    malformedTimestamp.metadata.message_timestamp = "not-a-timestamp";
+    socket.sendFrame(malformedTimestamp);
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(live.status).toBe("connecting");
+
+    socket.sendFrame(
+      frame("welcome-valid", "session_welcome", {
+        session: { id: "validated-session", keepalive_timeout_seconds: 30 },
+      }),
+    );
+    await vi.waitFor(() => expect(live.connected).toBe(true));
+    socket.sendFrame(frame("revocation-malformed", "revocation", { subscription: { status: "" } }));
+    expect(live.connected).toBe(true);
+    expect(status).not.toHaveBeenCalledWith("revoked", false);
+
+    socket.sendFrame(
+      frame("validated-notification", "notification", {
+        subscription: {
+          type: "channel.chat.message",
+          version: "1",
+          condition: { broadcaster_user_id: "12345", user_id: "12345" },
+        },
+        event: {
+          broadcaster_user_id: "12345",
+          chatter_user_id: "777",
+          chatter_user_login: "viewer",
+          chatter_user_name: "Viewer",
+          message_id: "validated-message",
+          message: { text: "!vote body drake" },
+        },
+      }),
+    );
+    expect(events).toHaveLength(1);
     live.shutdown();
   });
 

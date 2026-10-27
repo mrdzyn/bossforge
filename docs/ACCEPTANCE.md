@@ -423,3 +423,24 @@ secret, OAuth consent, Helix request, EventSub connection, public endpoint, or
 production deployment was used. The feature remains disabled by default.
 Independent exact-head P3-B-C2 review is requested on Draft PR #5; no merge or
 activation is authorized.
+
+## P3-B-C3 — bounded remediation of C2 findings
+
+| Criterion                              | C3 evidence                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C2-01 — verified session loss          | PASS — internal keepalive expiry calls the verified-session loss path. It invalidates subscription verification, reports `retry-wait` with `connected: false`, and cancels the active Twitch forge cycle. Fake-scheduler tests trigger expiry without a socket close event and assert no false connected status during retry.   |
+| C2-02 — validated protocol transitions | PASS — welcome and revocation state changes occur only after lifecycle payload validation. Malformed welcomes and revocations leave the valid connection usable; malformed-then-valid frame regressions pass. Session leases attach to validated welcomes; server-directed handoff and stale Helix response protections remain. |
+| Frozen install                         | PASS — `pnpm install --frozen-lockfile` using pnpm 11.25.0.                                                                                                                                                                                                                                                                     |
+| Build, typecheck, lint and formatting  | PASS — `pnpm build`, `pnpm typecheck`, `pnpm lint`, and `pnpm format:check`. Build retains the existing Phaser chunk size advisory (~1.22 MB raw / 337 KB gzip).                                                                                                                                                                |
+| Full tests                             | PASS — 112 total (23 shared, 89 server), retaining the 110-test C2 baseline.                                                                                                                                                                                                                                                    |
+| Mock simulation                        | PASS — `BOSSFORGE_URL=http://127.0.0.1:3301 BOSSFORGE_VOTE_SECONDS=5 pnpm simulate` completed body, element, special, and weakness with two synthetic votes each; revealed Thunder Tempest. The loopback server used synthetic OAuth values and `TWITCH_INTEGRATION_ENABLED=false`.                                             |
+| Diff check                             | PASS — `git diff --check`.                                                                                                                                                                                                                                                                                                      |
+
+Browser smoke check: Chromium loaded the local dashboard through Vite and the
+loopback server; it displayed SIMULATION MODE, SIMULATED DISCONNECTED, and kept
+the Twitch authorization unavailable. No browser errors were observed. Runtime
+timeout itself is exercised deterministically by the server fake-scheduler
+integration tests. No Twitch endpoint, credential, OAuth
+consent, live transport, public endpoint, or production deployment was used.
+Twitch remains disabled by default. Independent exact-head P3-B-C3 review is
+requested on Draft PR #5; do not merge or activate the integration.

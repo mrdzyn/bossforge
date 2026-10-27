@@ -15,6 +15,7 @@ import { createRateLimit } from "./security/rate-limit.js";
 import { ForgeSession, type ForgeScheduler } from "./forge/forge-session.js";
 import { TwitchOAuth } from "./twitch/oauth.js";
 import { LiveEventSub, type LiveEventSubStatus } from "./twitch/live-eventsub.js";
+import type { EventSubScheduler } from "./twitch/eventsub-session.js";
 
 const packageVersion = "0.1.0";
 const bodyLimitBytes = 8 * 1024;
@@ -34,6 +35,7 @@ export interface AppOptions {
   twitchOAuth?: TwitchOAuth;
   twitchFetch?: typeof fetch;
   twitchCreateSocket?: (url: string) => WebSocket;
+  twitchEventSubScheduler?: EventSubScheduler;
 }
 
 export interface BossForgeApp {
@@ -248,6 +250,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         refreshAccessToken: () => oauth.refreshAccessToken(sessionCookie),
         ...(options.twitchFetch ? { fetch: options.twitchFetch } : {}),
         ...(options.twitchCreateSocket ? { createSocket: options.twitchCreateSocket } : {}),
+        ...(options.twitchEventSubScheduler ? { scheduler: options.twitchEventSubScheduler } : {}),
         onChat: (event) => {
           if (provider !== "twitch") return;
           hub.publish(event);
@@ -266,7 +269,9 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
                 ? "error"
                 : status === "stopped"
                   ? "disconnected"
-                  : "connecting",
+                  : status === "retry-wait"
+                    ? "disconnected"
+                    : "connecting",
           });
         },
       });

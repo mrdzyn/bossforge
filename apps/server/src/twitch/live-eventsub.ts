@@ -1,7 +1,11 @@
 import WebSocket from "ws";
 import type { NormalizedChatEvent } from "@bossforge/shared";
 import { EventSubChatNormalizer } from "./eventsub-normalizer.js";
-import { EventSubSession, type EventSubSessionStatus } from "./eventsub-session.js";
+import {
+  EventSubSession,
+  type EventSubScheduler,
+  type EventSubSessionStatus,
+} from "./eventsub-session.js";
 import type { TwitchIdentity } from "./oauth.js";
 
 export type LiveEventSubStatus = EventSubSessionStatus | "subscribing";
@@ -15,6 +19,7 @@ export interface LiveEventSubOptions {
   onChat(event: NormalizedChatEvent): void;
   fetch?: typeof fetch;
   createSocket?: (url: string) => WebSocket;
+  scheduler?: EventSubScheduler;
 }
 
 interface HelixSubscription {
@@ -52,6 +57,8 @@ export class LiveEventSub {
   private subscriptionGeneration = 0;
   private welcomedSessionId: string | undefined;
   private activeTransport: { closed: boolean; welcomed: boolean } | undefined;
+  private readonly transportsById = new Map<number, { closed: boolean; welcomed: boolean }>();
+  private nextTransportId = 0;
 
   constructor(private readonly options: LiveEventSubOptions) {
     this.fetcher = options.fetch ?? fetch;
@@ -81,40 +88,12 @@ export class LiveEventSub {
       createTransport: (url, handlers) => {
         const socket = this.makeSocket(url);
         const transport = { closed: false, welcomed: false };
+        const transportId = ++this.nextTransportId;
+        this.transportsById.set(transportId, transport);
         if (!this.activeTransport) this.activeTransport = transport;
         socket.on("message", (data) => {
           if (transport.closed || this.stopped) return;
           const raw = data.toString();
-          try {
-            const packet = JSON.parse(raw) as {
-              metadata?: { message_type?: unknown };
-              payload?: { session?: { id?: unknown } };
-            };
-            if (
-              packet.metadata?.message_type === "session_welcome" &&
-              typeof packet.payload?.session?.id === "string" &&
-              !transport.welcomed
-            ) {
-              const wasConnected = this.subscriptionActive;
-              this.subscriptionGeneration += 1;
-              this.welcomedSessionId = packet.payload.session.id;
-              transport.welcomed = true;
-              this.activeTransport = transport;
-              if (!wasConnected) this.subscriptionActive = false;
-            }
-            if (
-              packet.metadata?.message_type === "revocation" &&
-              this.activeTransport === transport &&
-              transport.welcomed
-            ) {
-              this.subscriptionGeneration += 1;
-              this.welcomedSessionId = undefined;
-              this.subscriptionActive = false;
-              this.setStatus("revoked", false);
-            }
-          } catch {
-            // The lifecycle harness rejects malformed frames.
-          }
           handlers.message(raw);
           if (this.session?.status === "connected" && this.subscriptionActive)
             this.setStatus("connected", true);
@@ -125,11 +104,8 @@ export class LiveEventSub {
           transport.closed = true;
           if (this.activeTransport !== transport || this.stopped) return;
           this.activeTransport = undefined;
-          this.welcomedSessionId = undefined;
-          this.subscriptionGeneration += 1;
-          this.subscriptionActive = false;
           handlers.disconnect();
-          this.setStatus(this.session?.status === "failed" ? "failed" : "reconnecting", false);
+          if (!transport.welcomed) this.setStatus(this.session?.status ?? "reconnecting", false);
         };
         socket.once("close", disconnected);
         socket.once("error", disconnected);
@@ -141,6 +117,48 @@ export class LiveEventSub {
           },
           // `ws` automatically answers control Ping frames with Pong.
         };
+      },
+      ...(this.options.scheduler ? { scheduler: this.options.scheduler } : {}),
+      onValidatedWelcome: (sessionId, transportId) => {
+        const transport = this.transportsById.get(transportId);
+        if (!transport || transport.closed || this.stopped) return;
+        const wasConnected = this.subscriptionActive;
+        this.subscriptionGeneration += 1;
+        this.welcomedSessionId = sessionId;
+        transport.welcomed = true;
+        this.activeTransport = transport;
+        if (!wasConnected) this.subscriptionActive = false;
+      },
+      onValidatedRevocation: (_revocationStatus, transportId) => {
+        const transport = this.transportsById.get(transportId);
+        if (!transport || this.activeTransport !== transport) return;
+        this.subscriptionGeneration += 1;
+        this.welcomedSessionId = undefined;
+        this.subscriptionActive = false;
+        this.activeTransport = undefined;
+      },
+      onSessionLost: (sessionId, transportId, status) => {
+        const transport = this.transportsById.get(transportId);
+        if (
+          this.welcomedSessionId !== sessionId ||
+          !transport ||
+          this.activeTransport !== transport
+        )
+          return;
+        this.subscriptionGeneration += 1;
+        this.welcomedSessionId = undefined;
+        this.subscriptionActive = false;
+        this.activeTransport = undefined;
+        this.setStatus(status, false);
+      },
+      onStatusChange: (status) => {
+        if (status === "connected") {
+          if (this.subscriptionActive) this.setStatus("connected", true);
+          return;
+        }
+        if (status === "reconnecting") return;
+        if (this.welcomedSessionId) return;
+        this.setStatus(status, false);
       },
       onNotification: (input) => {
         if (!this.subscriptionActive) return false;
@@ -162,6 +180,7 @@ export class LiveEventSub {
     this.subscriptionGeneration += 1;
     this.welcomedSessionId = undefined;
     this.activeTransport = undefined;
+    this.transportsById.clear();
     this.subscriptionActive = false;
     this.session?.shutdown();
     this.session = undefined;

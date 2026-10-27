@@ -54,6 +54,7 @@ export interface EventSubScheduler {
 }
 
 export type SubscriptionPlan = "initial" | "resubscribe" | "handoff";
+export type EventSubSessionLossStatus = "reconnecting" | "retry-wait" | "failed";
 
 export interface EventSubSessionOptions {
   /** Supplied by the caller. Production Twitch transport is intentionally absent. */
@@ -62,6 +63,10 @@ export interface EventSubSessionOptions {
   /** Return true only after the notification has passed its application schema. */
   onNotification(message: unknown): boolean;
   onSubscriptionPlan?(sessionId: string, plan: SubscriptionPlan): void;
+  onValidatedWelcome?(sessionId: string, transportId: number, handoff: boolean): void;
+  onValidatedRevocation?(status: string, transportId: number): void;
+  onSessionLost?(sessionId: string, transportId: number, status: EventSubSessionLossStatus): void;
+  onStatusChange?(status: EventSubSessionStatus): void;
   scheduler?: EventSubScheduler;
   maxRetries?: number;
   baseRetryDelayMs?: number;
@@ -91,7 +96,7 @@ export class EventSubSession {
   private activeTransportId: number | null = null;
   private pendingReconnectId: number | null = null;
   private readonly transports = new Map<number, EventSubTransport>();
-  private readonly welcomedTransports = new Set<number>();
+  private readonly welcomedTransports = new Map<number, string>();
   private readonly keepaliveTimers = new Map<number, { cancel: () => void; timeoutMs: number }>();
   private cancelRetry: (() => void) | undefined;
   private retries = 0;
@@ -125,7 +130,7 @@ export class EventSubSession {
 
   start(): void {
     if (this.statusValue !== "idle" && this.statusValue !== "stopped") return;
-    this.statusValue = "connecting";
+    this.setStatus("connecting");
     this.open(this.options.initialUrl, false);
   }
 
@@ -163,10 +168,11 @@ export class EventSubSession {
         this.pendingReconnectId = null;
       }
       this.activeTransportId = transportId;
-      this.welcomedTransports.add(transportId);
-      this.statusValue = "connected";
+      this.welcomedTransports.set(transportId, welcome.data.session.id);
+      this.setStatus("connected");
       this.retries = 0;
       this.resetKeepalive(transportId, welcome.data.session.keepalive_timeout_seconds);
+      this.options.onValidatedWelcome?.(welcome.data.session.id, transportId, wasReconnect);
       if (wasReconnect) {
         this.options.onSubscriptionPlan?.(welcome.data.session.id, "handoff");
       } else {
@@ -219,7 +225,7 @@ export class EventSubSession {
         )
           return;
         this.remember(metadata.message_id);
-        this.statusValue = "reconnecting";
+        this.setStatus("reconnecting");
         // Twitch can issue another reconnect instruction before the current
         // replacement welcomes. Retire that pending socket before opening a
         // new one so there is never an orphaned transport.
@@ -228,7 +234,11 @@ export class EventSubSession {
         return;
       }
       case "revocation":
-        if (!RevocationSchema.safeParse(payload).success) return;
+        {
+          const revocation = RevocationSchema.safeParse(payload);
+          if (!revocation.success) return;
+          this.options.onValidatedRevocation?.(revocation.data.subscription.status, transportId);
+        }
         this.remember(metadata.message_id);
         this.stopAs("revoked");
         return;
@@ -246,13 +256,18 @@ export class EventSubSession {
 
   disconnect(transportId = this.activeTransportId): void {
     if (transportId === null || transportId !== this.activeTransportId) return;
+    const sessionId = this.welcomedTransports.get(transportId);
     this.closeTransport(transportId);
     this.activeTransportId = null;
+    let lossStatus: EventSubSessionLossStatus;
     if (this.pendingReconnectId !== null) {
-      this.statusValue = "reconnecting";
-      return;
+      this.setStatus("reconnecting");
+      lossStatus = "reconnecting";
+    } else {
+      this.scheduleRetry();
+      lossStatus = this.statusValue as EventSubSessionLossStatus;
     }
-    this.scheduleRetry();
+    if (sessionId) this.options.onSessionLost?.(sessionId, transportId, lossStatus);
   }
 
   shutdown(): void {
@@ -270,7 +285,7 @@ export class EventSubSession {
     if (reconnect) this.pendingReconnectId = transportId;
     else {
       this.activeTransportId = transportId;
-      this.statusValue = "connecting";
+      this.setStatus("connecting");
     }
     this.resetKeepalive(transportId, this.connectionTimeoutMs / 1000);
   }
@@ -289,7 +304,7 @@ export class EventSubSession {
         this.closeTransport(transportId);
         this.pendingReconnectId = null;
         if (this.activeTransportId === null) this.scheduleRetry();
-        else this.statusValue = "connected";
+        else this.setStatus("connected");
         return;
       }
       this.disconnect(transportId);
@@ -300,11 +315,11 @@ export class EventSubSession {
   private scheduleRetry(): void {
     if (this.statusValue === "stopped" || this.statusValue === "revoked") return;
     if (this.retries >= this.maxRetries) {
-      this.statusValue = "failed";
+      this.setStatus("failed");
       return;
     }
     this.retries += 1;
-    this.statusValue = "retry-wait";
+    this.setStatus("retry-wait");
     const delay = this.baseRetryDelayMs * 2 ** (this.retries - 1);
     this.cancelRetry = this.scheduler.schedule(() => {
       this.cancelRetry = undefined;
@@ -334,7 +349,13 @@ export class EventSubSession {
     this.welcomedTransports.clear();
     this.activeTransportId = null;
     this.pendingReconnectId = null;
+    this.setStatus(status);
+  }
+
+  private setStatus(status: EventSubSessionStatus): void {
+    if (this.statusValue === status) return;
     this.statusValue = status;
+    this.options.onStatusChange?.(status);
   }
 
   private remember(id: string): void {

@@ -131,3 +131,11 @@ introduced in Phase 1.
 - Local auth-start and callback preflight used synthetic credentials with
   `TWITCH_INTEGRATION_ENABLED=false`. The server returned disabled/invalid
   responses without contacting Twitch. See [C2 acceptance evidence](ACCEPTANCE.md#p3-b-c2--bounded-remediation-of-independent-c1-findings).
+- P3-B-C3 routes verified EventSub session loss, including internal keepalive
+  expiry, through the adapter's authoritative loss callback. It clears stale
+  subscription verification, stops Twitch intake, reports disconnected retry
+  state, and cancels an active Twitch cycle. Welcome and revocation state is
+  committed only after lifecycle validation; malformed frames cannot poison a
+  welcomed session. Fake scheduler/socket tests cover timeout without a close
+  event and malformed-then-valid sequences. No live Twitch network was used.
+  See [C3 acceptance evidence](ACCEPTANCE.md#p3-b-c3--bounded-remediation-of-c2-findings).

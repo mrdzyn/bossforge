@@ -310,3 +310,26 @@ only after they exist. Do not invent a Codex session ID; use the session's
   preservation, OAuth/default-deny/Origin boundaries, provider isolation and
   fake-network regression coverage. Review request is attached to PR #5.
   Keep Draft/open/unmerged; do not enable live integration.
+
+## P3-B-C3 remediation handoff
+
+- **Scope:** Resolve only C2-01 and C2-02 on the existing branch and Draft PR
+  #5; retain all four C1 fixes and the C5 restart/reconciliation safeguards.
+- **Timeout integrity:** Verified session loss, including internal keepalive
+  timeout, invalidates subscription verification, immediately disables Twitch
+  vote intake, publishes disconnected retry state, and safely cancels an active
+  Twitch cycle. Deterministic scheduler tests do not depend on socket close.
+- **Protocol integrity:** Welcome and revocation effects are committed only
+  after lifecycle validation. Validated welcomes establish session leases;
+  malformed welcomes/revocations do not poison a usable session. Server
+  handoff and stale Helix completion checks remain covered.
+- **Validation:** Frozen install, build, typecheck, lint, format, 112 tests (23
+  shared / 89 server), four-category mock simulation, and `git diff --check`
+  passed. Details are in [ACCEPTANCE](ACCEPTANCE.md#p3-b-c3--bounded-remediation-of-c2-findings).
+- **Security boundary:** Synthetic values, fake HTTP/WebSocket transports, and
+  fake timers only. No Twitch endpoint, account, credentials, OAuth consent,
+  public endpoint, or deployment was used. Integration remains disabled by
+  default.
+- **Review gate:** Independent P3-B-C3 review is requested against the exact
+  pushed HEAD of existing Draft PR #5. Keep it open and unmerged; do not enable
+  Twitch, deploy, publish, or begin Phase 4.
