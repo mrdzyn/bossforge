@@ -506,3 +506,29 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Review gate:** Keep the Phase 4-A pull request Draft and unmerged. Request
   an independent exact-head review after validation and push. Do not deploy,
   publish, or start Phase 5.
+
+### P4A-C1 — stale live-voting prompt remediation
+
+- **Finding and correction:** The C1 audit found that cached
+  `connectedToTwitch=true` forge state could keep live commands, counts, and a
+  countdown visible after the dashboard/overlay lost its local event feed.
+  The web hook now invalidates freshness on socket close/error and requires
+  reconciled state from the current connection generation. Both Dashboard and
+  OverlayPreview hide the cached forge presentation until the local feed is
+  connected and a fresh authoritative state has been accepted.
+- **User-visible state:** Local feed loss shows **SERVER LINK UNAVAILABLE / LIVE
+  VOTE STATUS UNKNOWN**. Reconnection while awaiting a state refresh shows
+  **WAITING FOR FRESH SERVER STATE / LIVE VOTE STATUS UNKNOWN**. An authoritative
+  Twitch disconnect remains separate from local transport loss; mock mode
+  remains labeled simulated. The overlay remains read-only.
+- **Scope and evidence:** Frontend and regression tests only; no backend security
+  boundary, OAuth, EventSub, vote intake, authenticated runtime, or live Twitch
+  evidence changed. Actual Dashboard and OverlayPreview composition regressions
+  cover live, feed loss with cached state, unavailable refresh, fresh reconnect,
+  Twitch disconnect, mock mode, and overlay controls. Frozen install, build,
+  typecheck, lint, format, 149 tests (29 shared / 19 web / 101 server),
+  four-category synthetic mock simulation, and `git diff --check` passed. Gate
+  details are in the P4A-C1 section of `docs/ACCEPTANCE.md`.
+- **Review gate:** Keep existing PR #6 Draft and unmerged. Request an
+  independent exact-head re-audit after commit and push. Do not deploy or begin
+  Phase 5.

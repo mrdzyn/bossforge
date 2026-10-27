@@ -1206,6 +1206,27 @@ p {
   background: #182a32;
   color: #e5edf2;
 }
+.live-vote-unavailable {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid #ff9c5570;
+  border-radius: 10px;
+  background: #2a1b1b;
+}
+.live-vote-unavailable strong {
+  color: #ffc49a;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+}
+.live-vote-unavailable span {
+  color: #e3d5d1;
+  font-size: 12px;
+}
+.live-vote-unavailable.overlay {
+  margin: 12px 0;
+}
 .vote-instructions p {
   margin: 0 0 9px;
   line-height: 1.5;

@@ -674,3 +674,45 @@ an accepted genuine vote in every category. Actual OBS application capture
 remains **UNVERIFIED**. The earlier 124 fake-network tests belong to commit
 `279ff63fc803921310226d9c6903a029af7f0bd5` and must not be attributed to live
 Twitch or the Phase 4-A change.
+
+### P4A-C1 — stale live-voting prompt remediation
+
+The independent P4A-C1 review found that `useLiveEvents` retained its last
+forge snapshot after local WebSocket loss, while the dashboard and OBS overlay
+continued rendering live Twitch commands, totals, leaders, and countdowns from
+that cached state. The frontend now invalidates snapshot freshness immediately
+on socket close/error and at the start of each connection generation. A
+validated HTTP snapshot or forge-state event from the current open socket must
+be accepted by `ForgeStateReconciler` before the UI restores current state.
+
+Both actual dashboard and overlay compositions require a connected local event
+feed and a fresh authoritative snapshot. On feed loss they show
+**SERVER LINK UNAVAILABLE / LIVE VOTE STATUS UNKNOWN**; while reconnecting or
+waiting for an authoritative HTTP refresh they show **WAITING FOR FRESH SERVER
+STATE / LIVE VOTE STATUS UNKNOWN**. Cached counts, leaders, active prompts, and
+countdowns are hidden. A fresh Twitch-disconnected snapshot remains distinct
+from local server loss, and fresh mock mode remains explicitly simulated. The
+overlay remains read-only. No backend, OAuth, EventSub, or vote-intake boundary
+changed; no real Twitch or authenticated runtime was used.
+
+Deterministic React render regressions exercise the actual exported Dashboard
+and OverlayPreview compositions for fresh verified live voting, WebSocket loss
+with a cached Twitch-connected snapshot, unavailable HTTP refresh, fresh state
+after reconnect, actual Twitch disconnect, mock/simulated state, and the
+read-only overlay. The shared live-vote surface tests also assert that stale
+counts, commands, and countdowns are not rendered. These are frontend
+state-composition tests, distinct from genuine Twitch live evidence.
+
+**P4A-C1 validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build,
+typecheck, lint, Prettier, full suite (**149 tests: 29 shared / 19 web / 101
+server**) and `git diff --check` passed. The 19 web tests include seven renders
+of the actual Dashboard/OverlayPreview compositions plus eight live-surface
+gate tests and the four existing vote-instruction tests. A disposable
+loopback-only mock server completed `BOSSFORGE_VOTE_SECONDS=5 pnpm simulate`
+across Body, Element, Special, and Weakness with two synthetic votes per stage;
+it revealed Thunder Tempest (drake / storm / thunder-dash / light). This is
+synthetic regression evidence, not Twitch QA. The build retains the existing
+large Phaser arena chunk advisory. No authenticated runtime restart, OAuth,
+real Twitch request, or live vote occurred. Actual OBS application capture
+remains **UNVERIFIED**. The prior Phase 4-A baseline above remains separately
+recorded.

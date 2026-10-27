@@ -9,6 +9,7 @@ import {
 import { useLiveEvents } from "./hooks/useLiveEvents.js";
 import { FORGE_DURATIONS, forgeCountdownLabel, type ForgeDuration } from "./live-forge-ui.js";
 import { VoteInstructions } from "./VoteInstructions.js";
+import { LiveVoteSurface } from "./LiveVoteSurface.js";
 
 const Arena = lazy(() => import("./arena/Arena.js"));
 
@@ -26,10 +27,10 @@ function Brand() {
 }
 function Sidebar({
   overlay = false,
-  mode = "mock",
+  mode = null,
 }: {
   overlay?: boolean;
-  mode?: "mock" | "twitch";
+  mode?: "mock" | "twitch" | null;
 }) {
   return (
     <aside className="sidebar">
@@ -45,7 +46,13 @@ function Sidebar({
         <div className="avatar">M</div>
         <div>
           <strong>Local session</strong>
-          <span>{mode === "mock" ? "SIMULATION MODE" : "TWITCH MODE"}</span>
+          <span>
+            {mode === null
+              ? "SERVER STATE UNKNOWN"
+              : mode === "mock"
+                ? "SIMULATION MODE"
+                : "TWITCH MODE"}
+          </span>
         </div>
       </div>
     </aside>
@@ -206,8 +213,17 @@ function CategoryResults({ state }: { state: ForgeState }) {
   );
 }
 
-function Dashboard() {
-  const { events, forge, connection, error, notice, post } = useLiveEvents();
+export function Dashboard() {
+  const {
+    events,
+    forge: cachedForge,
+    connection,
+    error,
+    notice,
+    post,
+    snapshotAvailable,
+  } = useLiveEvents();
+  const forge = connection === "connected" && snapshotAvailable ? cachedForge : null;
   const [seconds, setSeconds] = useState(0);
   const [durationSeconds, setDurationSeconds] = useState<ForgeDuration>(15);
   const [diagnostics, setDiagnostics] = useState<string | null>(null);
@@ -286,7 +302,7 @@ function Dashboard() {
   const isRevealed = forge?.status === "revealed";
   return (
     <div className="app-shell">
-      <Sidebar mode={forge?.mode ?? "mock"} />
+      <Sidebar mode={forge?.mode ?? null} />
       <main className="main-content">
         <header className="topbar">
           <div className="breadcrumb">
@@ -297,9 +313,13 @@ function Dashboard() {
               <i />{" "}
               {forge?.connectedToTwitch
                 ? "TWITCH CONNECTED"
-                : forge?.mode === "twitch"
-                  ? "TWITCH DISCONNECTED"
-                  : "SIMULATED"}
+                : connection !== "connected"
+                  ? "SERVER LINK UNAVAILABLE"
+                  : !snapshotAvailable
+                    ? "WAITING FOR FRESH SERVER STATE"
+                    : forge?.mode === "twitch"
+                      ? "TWITCH DISCONNECTED"
+                      : "SIMULATED"}
             </span>
             <Connection status={connection} />
           </div>
@@ -309,7 +329,13 @@ function Dashboard() {
             <div>
               <p className="eyebrow">
                 STREAMER DASHBOARD <span>•</span>{" "}
-                {forge?.mode === "twitch" ? "LIVE TWITCH" : "SIMULATED"}
+                {connection !== "connected"
+                  ? "SERVER LINK UNAVAILABLE"
+                  : !snapshotAvailable
+                    ? "WAITING FOR FRESH SERVER STATE"
+                    : forge?.mode === "twitch"
+                      ? "LIVE TWITCH"
+                      : "SIMULATED"}
               </p>
               <h1>
                 Make something <em>monstrous.</em>
@@ -337,6 +363,7 @@ function Dashboard() {
               <button
                 className="primary-button"
                 disabled={
+                  !forge ||
                   forge?.status === "voting" ||
                   (forge?.mode === "twitch" && !forge.connectedToTwitch)
                 }
@@ -442,13 +469,15 @@ function Dashboard() {
               <div>
                 <span className="stat-label">CHAT CONNECTION</span>
                 <strong>
-                  {forge?.connectedToTwitch
-                    ? "Twitch chat connected"
-                    : forge?.mode === "twitch"
-                      ? "Twitch chat disconnected"
-                      : connection === "connected"
-                        ? "Local simulated chat"
-                        : "Reconnecting"}
+                  {!forge
+                    ? connection === "connected"
+                      ? "Waiting for fresh server state"
+                      : "Local server link unavailable"
+                    : forge.connectedToTwitch
+                      ? "Twitch chat connected"
+                      : forge.mode === "twitch"
+                        ? "Twitch chat disconnected"
+                        : "Local simulated chat"}
                 </strong>
               </div>
               <Connection status={connection} />
@@ -458,24 +487,25 @@ function Dashboard() {
               <div>
                 <span className="stat-label">FORGE STATUS</span>
                 <strong>
-                  {forge?.status === "voting"
-                    ? `Voting · ${title(forge.activeCategory ?? "")}`
-                    : isRevealed
-                      ? "Boss revealed"
-                      : "Ready to forge"}
+                  {!forge
+                    ? "Server state unavailable"
+                    : forge.status === "voting"
+                      ? `Voting · ${title(forge.activeCategory ?? "")}`
+                      : isRevealed
+                        ? "Boss revealed"
+                        : "Ready to forge"}
                 </strong>
               </div>
-              <span className="stat-value">{forge?.progress ?? 0} / 4</span>
+              <span className="stat-value">{forge ? `${forge.progress} / 4` : "— / 4"}</span>
             </div>
             <div className="stat-card">
               <span className="stat-icon violet">◷</span>
               <div>
                 <span className="stat-label">ACTIVE VOTES</span>
                 <strong>
-                  {activeCategory?.totalVotes ??
-                    forge?.categories.reduce((total, item) => total + item.totalVotes, 0) ??
-                    0}{" "}
-                  votes cast
+                  {forge
+                    ? `${activeCategory?.totalVotes ?? forge.categories.reduce((total, item) => total + item.totalVotes, 0)} votes cast`
+                    : "Vote total unknown"}
                 </strong>
               </div>
               <span className="stat-value">
@@ -565,11 +595,17 @@ function Dashboard() {
                         : "READY"}
                   </span>
                 </div>
-                {forge ? (
-                  <CategoryResults state={forge} />
-                ) : (
-                  <p className="muted">Connecting to local forge state…</p>
-                )}
+                <LiveVoteSurface
+                  connection={connection}
+                  snapshotAvailable={snapshotAvailable}
+                  surface="dashboard"
+                >
+                  {forge ? (
+                    <CategoryResults state={forge} />
+                  ) : (
+                    <p className="muted">Connecting to local forge state…</p>
+                  )}
+                </LiveVoteSurface>
               </article>
               <article className="panel controls-panel">
                 <div className="panel-heading">
@@ -582,6 +618,7 @@ function Dashboard() {
                   {forge?.mode !== "twitch" && (
                     <button
                       className="text-button"
+                      disabled={!forge}
                       onClick={() => void post("/api/dev/simulation/next")}
                     >
                       Generate event
@@ -619,11 +656,15 @@ function Dashboard() {
               BOSSFORGE LIVE <b>•</b> CHAT CREATES THE BOSS.
             </span>
             <span>
-              {forge?.connectedToTwitch
-                ? "TWITCH CONNECTED"
-                : forge?.mode === "mock"
-                  ? "SIMULATED • NOT CONNECTED TO TWITCH"
-                  : "TWITCH DISCONNECTED · LIVE VOTING PAUSED"}
+              {connection !== "connected"
+                ? "SERVER LINK UNAVAILABLE · LIVE VOTE STATUS UNKNOWN"
+                : !snapshotAvailable
+                  ? "WAITING FOR FRESH SERVER STATE · LIVE VOTE STATUS UNKNOWN"
+                  : forge?.connectedToTwitch
+                    ? "TWITCH CONNECTED"
+                    : forge?.mode === "mock"
+                      ? "SIMULATED • NOT CONNECTED TO TWITCH"
+                      : "TWITCH DISCONNECTED · LIVE VOTING PAUSED"}
             </span>
           </footer>
         </div>
@@ -632,8 +673,9 @@ function Dashboard() {
   );
 }
 
-function OverlayPreview() {
-  const { forge, connection } = useLiveEvents();
+export function OverlayPreview() {
+  const { forge: cachedForge, connection, snapshotAvailable } = useLiveEvents();
+  const forge = connection === "connected" && snapshotAvailable ? cachedForge : null;
   const category =
     forge?.status === "voting"
       ? (forge.categories.find((item) => item.category === forge.activeCategory) ?? null)
@@ -659,11 +701,15 @@ function OverlayPreview() {
         <div className="overlay-round">
           <span className="round-live">
             <i />
-            {forge?.connectedToTwitch
-              ? "LIVE TWITCH"
-              : forge?.mode === "mock"
-                ? "SIMULATED / NOT CONNECTED TO TWITCH"
-                : "TWITCH DISCONNECTED / VOTING PAUSED"}
+            {connection !== "connected"
+              ? "SERVER LINK UNAVAILABLE / LIVE VOTE STATUS UNKNOWN"
+              : !snapshotAvailable
+                ? "WAITING FOR FRESH SERVER STATE / LIVE VOTE STATUS UNKNOWN"
+                : forge?.connectedToTwitch
+                  ? "LIVE TWITCH"
+                  : forge?.mode === "mock"
+                    ? "SIMULATED / NOT CONNECTED TO TWITCH"
+                    : "TWITCH DISCONNECTED / VOTING PAUSED"}
           </span>
           <span>
             {forge?.cycleId?.toUpperCase() ?? "AWAITING FORGE"} <b>•</b> {connection.toUpperCase()}
@@ -690,83 +736,93 @@ function OverlayPreview() {
           )}
         </div>
       </section>
-      <section className="overlay-vote-card">
-        <div className="overlay-vote-heading">
-          <span className="eyebrow">
-            {forge?.status === "revealed" ? "FORGE COMPLETE" : "THE FORGE IS LISTENING"}
-          </span>
-          <span className="vote-open">
-            <i />
+      <LiveVoteSurface
+        connection={connection}
+        snapshotAvailable={snapshotAvailable}
+        surface="overlay"
+      >
+        <section className="overlay-vote-card">
+          <div className="overlay-vote-heading">
+            <span className="eyebrow">
+              {forge?.status === "revealed" ? "FORGE COMPLETE" : "THE FORGE IS LISTENING"}
+            </span>
+            <span className="vote-open">
+              <i />
+              {category
+                ? `VOTE: ${title(category.category)} · ${seconds}s`
+                : forge?.status === "revealed"
+                  ? "BOSS REVEALED"
+                  : "WAITING TO BEGIN"}
+            </span>
+          </div>
+          <h2>
             {category
-              ? `VOTE: ${title(category.category)} · ${seconds}s`
-              : forge?.status === "revealed"
-                ? "BOSS REVEALED"
-                : "WAITING TO BEGIN"}
-          </span>
-        </div>
-        <h2>
-          {category
-            ? `Choose the boss ${category.category === "weakness" ? "weakness" : category.category}`
-            : "A boss built by the whole chat"}
-        </h2>
-        <VoteInstructions
-          category={category}
-          mode={forge?.mode ?? "mock"}
-          connectedToTwitch={forge?.connectedToTwitch ?? false}
-          surface="overlay"
-        />
-        {category ? (
-          <>
-            {(() => {
-              const leader = currentVoteLeader(category.options);
-              if (!leader) return null;
-              return leader.status === "leader" ? (
-                <p className="overlay-leader" aria-live="polite">
-                  LEADING RIGHT NOW · {humanizeVoteChoice(leader.choice)} · {leader.count} VOTE
-                  {leader.count === 1 ? "" : "S"}
-                </p>
-              ) : (
-                <p className="overlay-leader" aria-live="polite">
-                  TIED FOR THE LEAD · {leader.count} VOTE{leader.count === 1 ? "" : "S"} EACH
-                </p>
-              );
-            })()}
-            <div className="vote-options">
-              {category.options.map((option) => (
-                <div
-                  className={category.winner === option.choice ? "winner" : ""}
-                  key={option.choice}
-                >
-                  <span className="option-glyph">✦</span>
-                  <span>{title(option.choice)}</span>
-                  <b>
-                    {option.percentage}% · {option.count}
-                  </b>
-                  <i style={{ width: `${option.percentage}%` }} />
-                </div>
+              ? `Choose the boss ${category.category === "weakness" ? "weakness" : category.category}`
+              : "A boss built by the whole chat"}
+          </h2>
+          <VoteInstructions
+            category={category}
+            mode={forge?.mode ?? "mock"}
+            connectedToTwitch={forge?.connectedToTwitch ?? false}
+            surface="overlay"
+          />
+          {category ? (
+            <>
+              {(() => {
+                const leader = currentVoteLeader(category.options);
+                if (!leader) return null;
+                return leader.status === "leader" ? (
+                  <p className="overlay-leader" aria-live="polite">
+                    LEADING RIGHT NOW · {humanizeVoteChoice(leader.choice)} · {leader.count} VOTE
+                    {leader.count === 1 ? "" : "S"}
+                  </p>
+                ) : (
+                  <p className="overlay-leader" aria-live="polite">
+                    TIED FOR THE LEAD · {leader.count} VOTE{leader.count === 1 ? "" : "S"} EACH
+                  </p>
+                );
+              })()}
+              <div className="vote-options">
+                {category.options.map((option) => (
+                  <div
+                    className={category.winner === option.choice ? "winner" : ""}
+                    key={option.choice}
+                  >
+                    <span className="option-glyph">✦</span>
+                    <span>{title(option.choice)}</span>
+                    <b>
+                      {option.percentage}% · {option.count}
+                    </b>
+                    <i style={{ width: `${option.percentage}%` }} />
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : forge ? (
+            <div className="overlay-reveal-row">
+              {forge.categories.map((item) => (
+                <span key={item.category}>
+                  {title(item.category)} <b>{humanizeVoteChoice(item.winner ?? "none")}</b>
+                  {item.winner && ` · ${winnerAttribution(item.winner, item.noVoteFallback)}`}
+                </span>
               ))}
             </div>
-          </>
-        ) : forge ? (
-          <div className="overlay-reveal-row">
-            {forge.categories.map((item) => (
-              <span key={item.category}>
-                {title(item.category)} <b>{humanizeVoteChoice(item.winner ?? "none")}</b>
-                {item.winner && ` · ${winnerAttribution(item.winner, item.noVoteFallback)}`}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p>Connect to the local development server to see votes.</p>
-        )}
-      </section>
+          ) : (
+            <p>Connect to the local development server to see votes.</p>
+          )}
+        </section>
+      </LiveVoteSurface>
       <div className="overlay-activity">
         <span className="activity-dot" />
-        {forge?.connectedToTwitch
-          ? "LIVE TWITCH CHAT · VOTES ARE SERVER AUTHORITATIVE"
-          : forge?.simulated
-            ? "LOCAL SYNTHETIC CHAT · VOTES ARE SERVER AUTHORITATIVE"
-            : "TWITCH DISCONNECTED · LIVE VOTING PAUSED"}
+        {connection !== "connected"
+          ? "SERVER LINK UNAVAILABLE · LIVE VOTE STATUS UNKNOWN"
+          : !snapshotAvailable
+            ? "WAITING FOR FRESH SERVER STATE · LIVE VOTE STATUS UNKNOWN"
+            : forge?.connectedToTwitch
+              ? "LIVE TWITCH CHAT · VOTES ARE SERVER AUTHORITATIVE"
+              : forge?.simulated
+                ? "LOCAL SYNTHETIC CHAT · VOTES ARE SERVER AUTHORITATIVE"
+                : "TWITCH DISCONNECTED · LIVE VOTING PAUSED"}
       </div>
       <div className="overlay-safe-label">
         BROADCAST OVERLAY <b>•</b> SAFE AREA

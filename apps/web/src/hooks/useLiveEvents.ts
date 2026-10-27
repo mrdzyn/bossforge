@@ -17,6 +17,7 @@ export function useLiveEvents() {
   const [snapshotAvailable, setSnapshotAvailable] = useState(false);
   const appliedVersion = useRef(0);
   const [connection, setConnection] = useState("connecting");
+  const transportReadyGeneration = useRef<number | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const applyForge = useCallback((next: ForgeState, generation: number) => {
@@ -29,17 +30,23 @@ export function useLiveEvents() {
       else if (next.status === "voting" || next.status === "revealed") setNotice("");
       forgeRef.current = next;
       setForge(next);
-      setSnapshotAvailable(true);
+      if (transportReadyGeneration.current === generation) setSnapshotAvailable(true);
       appliedVersion.current += 1;
     }
   }, []);
   const refresh = useCallback(
     async (generation: number) => {
+      if (transportReadyGeneration.current !== generation) return;
       const versionAtStart = appliedVersion.current;
       try {
         const response = await fetch("/api/forge/state");
         if (!response.ok) throw new Error(`Snapshot request failed: ${response.status}`);
         const next = ForgeStateSchema.parse(await response.json());
+        if (
+          transportReadyGeneration.current !== generation ||
+          reconciler.current?.connectionGeneration !== generation
+        )
+          return;
         applyForge(next, generation);
         const current = reconciler.current?.state;
         if (
@@ -51,6 +58,7 @@ export function useLiveEvents() {
       } catch {
         // Never let a client keep fighting a revealed boss after its authority is unavailable.
         if (
+          transportReadyGeneration.current === generation &&
           reconciler.current?.connectionGeneration === generation &&
           appliedVersion.current === versionAtStart
         )
@@ -69,29 +77,43 @@ export function useLiveEvents() {
     const connect = () => {
       if (!active) return;
       const generation = reconciler.current!.beginConnection();
+      transportReadyGeneration.current = null;
+      setSnapshotAvailable(false);
       socket = new WebSocket(
         `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/events`,
       );
       socket.addEventListener("open", () => {
         if (active) {
+          transportReadyGeneration.current = generation;
           setConnection("connected");
           void refresh(generation);
         }
       });
       socket.addEventListener("close", () => {
         if (active && reconciler.current?.connectionGeneration === generation) {
+          transportReadyGeneration.current = null;
+          setSnapshotAvailable(false);
           setConnection("disconnected");
           retry = setTimeout(connect, 1200);
         }
       });
       socket.addEventListener("error", () => {
-        if (active) setConnection("error");
+        if (active && reconciler.current?.connectionGeneration === generation) {
+          transportReadyGeneration.current = null;
+          setSnapshotAvailable(false);
+          setConnection("error");
+        }
       });
       socket.addEventListener("message", (message) => {
+        if (!active || reconciler.current?.connectionGeneration !== generation) return;
         try {
           const envelope = AppEventEnvelopeSchema.parse(JSON.parse(String(message.data)));
           setEvents((current) => [envelope, ...current].slice(0, 16));
-          if (envelope.type === "forge.state" && envelope.payload.kind === "forge.state")
+          if (
+            transportReadyGeneration.current === generation &&
+            envelope.type === "forge.state" &&
+            envelope.payload.kind === "forge.state"
+          )
             applyForge(envelope.payload.state, generation);
         } catch {
           setError("An invalid event was rejected by the browser.");
