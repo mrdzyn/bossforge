@@ -3,6 +3,7 @@ import type WebSocket from "ws";
 import { describe, expect, it, vi } from "vitest";
 import { LiveEventSub } from "../src/twitch/live-eventsub.js";
 import type { EventSubScheduler } from "../src/twitch/eventsub-session.js";
+import { EventSubDiagnostics } from "../src/twitch/eventsub-diagnostics.js";
 
 class FakeSocket extends EventEmitter {
   sendFrame(frame: unknown): void {
@@ -27,6 +28,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
     const socket = new FakeSocket();
     const events: unknown[] = [];
     const status = vi.fn();
+    const diagnostics = new EventSubDiagnostics();
     const fetcher = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
       expect(init?.method).toBe("POST");
       return new Response(
@@ -49,6 +51,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
       identity: { id: "12345", login: "owner", displayName: "Owner" },
       getAccessToken: async () => "access-token",
       fetch: fetcher,
+      diagnostics,
       createSocket: () => socket as unknown as WebSocket,
       onStatus: status,
       onChat: (event) => events.push(event),
@@ -92,6 +95,16 @@ describe("live EventSub adapter with fake Twitch transports", () => {
     await vi.waitFor(() => expect(live.connected).toBe(true));
     socket.sendFrame(notification);
     expect(events).toHaveLength(1);
+    expect(diagnostics.snapshot().counters).toMatchObject({
+      rawFrames: 3,
+      validWelcomes: 1,
+      notificationsReceived: 1,
+      notificationsAccepted: 1,
+      normalizedAccepted: 1,
+      chatCallbacks: 1,
+      subscriptionAttempts: 1,
+      subscriptionEnabled: 1,
+    });
     expect(events[0]).toMatchObject({
       kind: "chat.message",
       provider: "twitch",
@@ -327,6 +340,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
   it("creates a new Helix subscription after an unexpected socket loss", async () => {
     const sockets: FakeSocket[] = [];
     const status = vi.fn();
+    const diagnostics = new EventSubDiagnostics();
     const fetcher = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
       const requestBody = JSON.parse(String(init?.body)) as { transport: { session_id: string } };
       return new Response(
@@ -349,6 +363,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
       identity: { id: "12345", login: "owner", displayName: "Owner" },
       getAccessToken: async () => "access-token",
       fetch: fetcher,
+      diagnostics,
       createSocket: () => {
         const socket = new FakeSocket();
         sockets.push(socket);
@@ -364,10 +379,16 @@ describe("live EventSub adapter with fake Twitch transports", () => {
       }),
     );
     await vi.waitFor(() => expect(live.connected).toBe(true));
-    sockets[0]!.emit("close");
+    sockets[0]!.emit("close", 4005, Buffer.from("private close reason"));
     expect(live.connected).toBe(false);
     expect(live.status).toBe("retry-wait");
     expect(status).toHaveBeenLastCalledWith("retry-wait", false);
+    expect(diagnostics.snapshot()).toMatchObject({
+      closeCodes: { "4005": 1 },
+      disconnectReasons: { "socket-close": 1 },
+      counters: { socketCloses: 1, subscriptionAttempts: 1, subscriptionEnabled: 1 },
+      lastDisconnect: { reason: "socket-close", closeCode: 4005 },
+    });
     await vi.waitFor(() => expect(sockets).toHaveLength(2), { timeout: 2_000 });
     sockets[1]!.sendFrame(
       frame("welcome-second", "session_welcome", {
@@ -382,6 +403,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
   it("handles active socket error followed by close as one verified session loss", async () => {
     const sockets: FakeSocket[] = [];
     const status = vi.fn();
+    const diagnostics = new EventSubDiagnostics();
     const fetcher = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
       const requestBody = JSON.parse(String(init?.body)) as { transport: { session_id: string } };
       return new Response(
@@ -404,6 +426,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
       identity: { id: "12345", login: "owner", displayName: "Owner" },
       getAccessToken: async () => "access-token",
       fetch: fetcher,
+      diagnostics,
       createSocket: () => {
         const socket = new FakeSocket();
         sockets.push(socket);
@@ -421,7 +444,10 @@ describe("live EventSub adapter with fake Twitch transports", () => {
     await vi.waitFor(() => expect(live.connected).toBe(true));
     const previousStatusCalls = status.mock.calls.length;
 
-    sockets[0]!.emit("error", new Error("unexpected transport failure"));
+    sockets[0]!.emit(
+      "error",
+      Object.assign(new Error("private error text"), { code: "ECONNRESET" }),
+    );
     expect(live.connected).toBe(false);
     expect(live.status).toBe("retry-wait");
     expect(status).toHaveBeenLastCalledWith("retry-wait", false);
@@ -430,12 +456,18 @@ describe("live EventSub adapter with fake Twitch transports", () => {
     expect(status.mock.calls.length).toBe(afterErrorCalls);
     expect(afterErrorCalls).toBeGreaterThan(previousStatusCalls);
     expect(fetcher).toHaveBeenCalledOnce();
+    const snapshot = diagnostics.snapshot();
+    expect(snapshot.socketErrorClasses["connection-reset"]).toBe(1);
+    expect(snapshot.disconnectReasons["socket-error"]).toBe(1);
+    expect(snapshot.counters.socketErrors).toBe(1);
+    expect(JSON.stringify(snapshot)).not.toContain("private error text");
     live.shutdown();
   });
 
   it("ignores close and error events from the retired socket after a welcomed reconnect", async () => {
     const sockets: FakeSocket[] = [];
     const events: unknown[] = [];
+    const diagnostics = new EventSubDiagnostics();
     const fetcher = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
       const requestBody = JSON.parse(String(init?.body)) as { transport: { session_id: string } };
       return new Response(
@@ -458,6 +490,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
       identity: { id: "12345", login: "owner", displayName: "Owner" },
       getAccessToken: async () => "access-token",
       fetch: fetcher,
+      diagnostics,
       createSocket: () => {
         const socket = new FakeSocket();
         sockets.push(socket);
@@ -487,6 +520,9 @@ describe("live EventSub adapter with fake Twitch transports", () => {
     sockets[0]!.emit("close");
     sockets[0]!.emit("error", new Error("retired socket"));
     expect(live.connected).toBe(true);
+    expect(diagnostics.snapshot().counters.handoffWelcomes).toBe(1);
+    expect(diagnostics.snapshot().counters.socketCloses).toBe(0);
+    expect(diagnostics.snapshot().counters.socketErrors).toBe(0);
     sockets[1]!.sendFrame(
       frame("handoff-chat", "notification", {
         subscription: {

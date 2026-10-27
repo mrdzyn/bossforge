@@ -6,6 +6,7 @@ import {
   type EventSubTransportHandlers,
   type SubscriptionPlan,
 } from "../src/twitch/eventsub-session.js";
+import { EventSubDiagnostics } from "../src/twitch/eventsub-diagnostics.js";
 
 type FakeSocket = {
   url: string;
@@ -18,6 +19,8 @@ function harness(
   options: {
     maxRetries?: number;
     acceptNotification?: (message: unknown) => boolean;
+    diagnostics?: EventSubDiagnostics;
+    monotonicNow?: () => number;
   } = {},
 ) {
   const timers: Array<{ callback: () => void; delayMs: number; cancelled: boolean }> = [];
@@ -54,6 +57,8 @@ function harness(
     },
     onSubscriptionPlan: (sessionId, plan) => plans.push({ sessionId, plan }),
     scheduler,
+    ...(options.diagnostics ? { diagnostics: options.diagnostics } : {}),
+    ...(options.monotonicNow ? { monotonicNow: options.monotonicNow } : {}),
     maxRetries: options.maxRetries ?? 2,
     baseRetryDelayMs: 10,
   });
@@ -351,6 +356,51 @@ describe("offline injected EventSub lifecycle", () => {
     expect(h.notifications).toHaveLength(0);
     deadline.callback();
     expect(h.session.status).toBe("retry-wait");
+  });
+
+  it("resets the advertised keepalive deadline when a keepalive arrives just before expiry", () => {
+    let monotonicMs = 0;
+    const diagnostics = new EventSubDiagnostics();
+    const h = harness({ diagnostics, monotonicNow: () => monotonicMs });
+    h.session.start();
+    const socket = h.sockets[0]!;
+    h.welcome(socket, "welcome-near-timeout");
+    const initialDeadline = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    expect(initialDeadline.delayMs).toBe(30_000);
+
+    monotonicMs = 29_999;
+    h.send(socket, message("keepalive-near-timeout", "session_keepalive"));
+    expect(initialDeadline.cancelled).toBe(true);
+    expect(h.session.status).toBe("connected");
+    expect(h.timers.filter((timer) => !timer.cancelled).at(-1)?.delayMs).toBe(30_000);
+    expect(diagnostics.snapshot().counters.keepalives).toBe(1);
+    h.session.shutdown();
+  });
+
+  it("classifies a genuine keepalive expiration and records only relative timing", () => {
+    let monotonicMs = 0;
+    const diagnostics = new EventSubDiagnostics();
+    const h = harness({ diagnostics, monotonicNow: () => monotonicMs });
+    h.session.start();
+    const socket = h.sockets[0]!;
+    h.welcome(socket, "welcome-expiration");
+    const deadline = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    monotonicMs = 30_025;
+    deadline.cancelled = true;
+    deadline.callback();
+
+    expect(h.session.status).toBe("retry-wait");
+    expect(diagnostics.snapshot()).toMatchObject({
+      disconnectReasons: { "keepalive-timeout": 1 },
+      keepalive: { lastElapsedMs: 30_025, advertisedTimeoutMs: 30_000 },
+      lastDisconnect: {
+        reason: "keepalive-timeout",
+        elapsedMs: 30_025,
+        timeoutMs: 30_000,
+      },
+    });
+    expect(JSON.stringify(diagnostics.snapshot())).not.toContain("welcome-expiration");
+    h.session.shutdown();
   });
 
   it("does not establish a handshake from a malformed welcome", () => {

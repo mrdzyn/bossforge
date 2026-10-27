@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { EventSubDiagnostics, type EventSubSocketErrorClass } from "./eventsub-diagnostics.js";
+
+export type EventSubDisconnectDetails =
+  | { reason: "socket-close"; closeCode: number | null }
+  | { reason: "socket-error"; errorClass: EventSubSocketErrorClass }
+  | { reason: "keepalive-timeout" | "connection-timeout" | "transport-unknown" };
 
 const SessionWelcomeSchema = z.object({
   session: z.object({
@@ -45,7 +51,7 @@ export interface EventSubTransport {
 
 export interface EventSubTransportHandlers {
   message(data: unknown): void;
-  disconnect(): void;
+  disconnect(details?: EventSubDisconnectDetails): void;
   ping(): void;
 }
 
@@ -65,9 +71,16 @@ export interface EventSubSessionOptions {
   onSubscriptionPlan?(sessionId: string, plan: SubscriptionPlan): void;
   onValidatedWelcome?(sessionId: string, transportId: number, handoff: boolean): void;
   onValidatedRevocation?(status: string, transportId: number): void;
-  onSessionLost?(sessionId: string, transportId: number, status: EventSubSessionLossStatus): void;
+  onSessionLost?(
+    sessionId: string,
+    transportId: number,
+    status: EventSubSessionLossStatus,
+    details: EventSubDisconnectDetails,
+  ): void;
   onStatusChange?(status: EventSubSessionStatus): void;
   scheduler?: EventSubScheduler;
+  diagnostics?: EventSubDiagnostics;
+  monotonicNow?: () => number;
   maxRetries?: number;
   baseRetryDelayMs?: number;
   connectionTimeoutMs?: number;
@@ -102,6 +115,8 @@ export class EventSubSession {
   private retries = 0;
   private hasWelcomed = false;
   private readonly seenIds = new Set<string>();
+  private readonly monotonicNow: () => number;
+  private readonly lastHealthMessageAt = new Map<number, number>();
 
   constructor(private readonly options: EventSubSessionOptions) {
     const initialUrl = new URL(options.initialUrl);
@@ -109,6 +124,7 @@ export class EventSubSession {
       throw new Error("EventSub transport URL must be a credential-free wss URL");
     this.initialHost = initialUrl.host.toLowerCase();
     this.scheduler = options.scheduler ?? realScheduler;
+    this.monotonicNow = options.monotonicNow ?? (() => performance.now());
     this.maxRetries = options.maxRetries ?? 3;
     this.baseRetryDelayMs = options.baseRetryDelayMs ?? 500;
     this.connectionTimeoutMs = options.connectionTimeoutMs ?? 10_000;
@@ -144,15 +160,23 @@ export class EventSubSession {
         : data instanceof Uint8Array
           ? Buffer.from(data).toString("utf8")
           : null;
-    if (raw === null || Buffer.byteLength(raw, "utf8") > 64 * 1024) return;
+    this.options.diagnostics?.increment("rawFrames");
+    if (raw === null || Buffer.byteLength(raw, "utf8") > 64 * 1024) {
+      this.options.diagnostics?.increment("malformedFrames");
+      return;
+    }
     let decoded: unknown;
     try {
       decoded = JSON.parse(raw);
     } catch {
+      this.options.diagnostics?.increment("malformedFrames");
       return;
     }
     const parsed = MessageHeaderSchema.safeParse(decoded);
-    if (!parsed.success) return;
+    if (!parsed.success) {
+      this.options.diagnostics?.increment("malformedFrames");
+      return;
+    }
     if (transportId !== this.activeTransportId && transportId !== this.pendingReconnectId) return;
     const { metadata, payload } = parsed.data;
     if (this.seenIds.has(metadata.message_id)) return;
@@ -162,6 +186,8 @@ export class EventSubSession {
       if (!welcome.success || this.welcomedTransports.has(transportId)) return;
       this.remember(metadata.message_id);
       const wasReconnect = transportId === this.pendingReconnectId;
+      this.options.diagnostics?.increment("validWelcomes");
+      if (wasReconnect) this.options.diagnostics?.increment("handoffWelcomes");
       if (wasReconnect) {
         if (this.activeTransportId !== null && this.activeTransportId !== transportId)
           this.closeTransport(this.activeTransportId);
@@ -192,10 +218,12 @@ export class EventSubSession {
       case "session_keepalive": {
         if (!SessionKeepaliveSchema.safeParse(payload).success) return;
         this.remember(metadata.message_id);
+        this.options.diagnostics?.increment("keepalives");
         this.resetKeepalive(transportId);
         return;
       }
       case "notification": {
+        this.options.diagnostics?.increment("notificationsReceived");
         const accepted = (() => {
           try {
             return this.options.onNotification(decoded);
@@ -203,6 +231,9 @@ export class EventSubSession {
             return false;
           }
         })();
+        this.options.diagnostics?.increment(
+          accepted ? "notificationsAccepted" : "notificationsRejected",
+        );
         if (!accepted) return;
         this.remember(metadata.message_id);
         this.resetKeepalive(transportId);
@@ -225,6 +256,7 @@ export class EventSubSession {
         )
           return;
         this.remember(metadata.message_id);
+        this.options.diagnostics?.increment("reconnectInstructions");
         this.setStatus("reconnecting");
         // Twitch can issue another reconnect instruction before the current
         // replacement welcomes. Retire that pending socket before opening a
@@ -237,6 +269,7 @@ export class EventSubSession {
         {
           const revocation = RevocationSchema.safeParse(payload);
           if (!revocation.success) return;
+          this.options.diagnostics?.recordDisconnect("revoked");
           this.options.onValidatedRevocation?.(revocation.data.subscription.status, transportId);
         }
         this.remember(metadata.message_id);
@@ -254,9 +287,22 @@ export class EventSubSession {
     this.transports.get(transportId)?.pong?.();
   }
 
-  disconnect(transportId = this.activeTransportId): void {
+  disconnect(
+    transportId = this.activeTransportId,
+    details: EventSubDisconnectDetails = { reason: "transport-unknown" },
+  ): void {
     if (transportId === null || transportId !== this.activeTransportId) return;
     const sessionId = this.welcomedTransports.get(transportId);
+    const timeoutMs = this.keepaliveTimers.get(transportId)?.timeoutMs ?? null;
+    const elapsedMs = this.lastHealthMessageAt.has(transportId)
+      ? this.monotonicNow() - this.lastHealthMessageAt.get(transportId)!
+      : null;
+    this.options.diagnostics?.recordDisconnect(details.reason, {
+      closeCode: details.reason === "socket-close" ? details.closeCode : null,
+      errorClass: details.reason === "socket-error" ? details.errorClass : null,
+      elapsedMs,
+      timeoutMs,
+    });
     this.closeTransport(transportId);
     this.activeTransportId = null;
     let lossStatus: EventSubSessionLossStatus;
@@ -267,7 +313,7 @@ export class EventSubSession {
       this.scheduleRetry();
       lossStatus = this.statusValue as EventSubSessionLossStatus;
     }
-    if (sessionId) this.options.onSessionLost?.(sessionId, transportId, lossStatus);
+    if (sessionId) this.options.onSessionLost?.(sessionId, transportId, lossStatus, details);
   }
 
   shutdown(): void {
@@ -278,7 +324,7 @@ export class EventSubSession {
     const transportId = ++this.nextTransportId;
     const transport = this.options.createTransport(url, {
       message: (message) => this.receive(message, transportId),
-      disconnect: () => this.disconnect(transportId),
+      disconnect: (details) => this.disconnect(transportId, details),
       ping: () => this.receivePing(transportId),
     });
     this.transports.set(transportId, transport);
@@ -299,16 +345,25 @@ export class EventSubSession {
     this.keepaliveTimers.delete(transportId);
     if (timeoutMs <= 0) return;
     const cancel = this.scheduler.schedule(() => {
-      this.keepaliveTimers.delete(transportId);
+      const elapsedMs = this.lastHealthMessageAt.has(transportId)
+        ? this.monotonicNow() - this.lastHealthMessageAt.get(transportId)!
+        : timeoutMs;
+      this.options.diagnostics?.recordKeepalive(elapsedMs, timeoutMs);
       if (transportId === this.pendingReconnectId) {
+        this.options.diagnostics?.increment("reconnectHandoffTimeouts");
         this.closeTransport(transportId);
         this.pendingReconnectId = null;
         if (this.activeTransportId === null) this.scheduleRetry();
         else this.setStatus("connected");
         return;
       }
-      this.disconnect(transportId);
+      this.disconnect(transportId, {
+        reason: this.welcomedTransports.has(transportId)
+          ? "keepalive-timeout"
+          : "connection-timeout",
+      });
     }, timeoutMs);
+    this.lastHealthMessageAt.set(transportId, this.monotonicNow());
     this.keepaliveTimers.set(transportId, { cancel, timeoutMs });
   }
 
@@ -332,6 +387,7 @@ export class EventSubSession {
     const timer = this.keepaliveTimers.get(id);
     timer?.cancel();
     this.keepaliveTimers.delete(id);
+    this.lastHealthMessageAt.delete(id);
     const transport = this.transports.get(id);
     if (!transport) return;
     this.transports.delete(id);
@@ -344,6 +400,7 @@ export class EventSubSession {
     this.cancelRetry = undefined;
     for (const timer of this.keepaliveTimers.values()) timer.cancel();
     this.keepaliveTimers.clear();
+    this.lastHealthMessageAt.clear();
     for (const id of this.transports.keys()) this.transports.get(id)?.close();
     this.transports.clear();
     this.welcomedTransports.clear();
@@ -355,6 +412,7 @@ export class EventSubSession {
   private setStatus(status: EventSubSessionStatus): void {
     if (this.statusValue === status) return;
     this.statusValue = status;
+    this.options.diagnostics?.recordStatus(status);
     this.options.onStatusChange?.(status);
   }
 

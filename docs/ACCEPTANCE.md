@@ -460,3 +460,62 @@ the simulation server ran on loopback with `TWITCH_INTEGRATION_ENABLED=false`.
 No real Twitch account, credentials, consent, API request, EventSub connection,
 public endpoint, merge, deployment or publication was used. Keep Draft PR #5
 open and unmerged; independent exact-head P3-B-C4 review is requested.
+
+## P3-B4-C5 — EventSub disconnect investigation
+
+### Owner-controlled live observations
+
+| Observation                                                                   | Result                                                                                                        |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| OAuth completed and EventSub subscription verified                            | PASS — observed in the owner-controlled local runtime                                                         |
+| Authenticated forge start                                                     | PASS — HTTP 200                                                                                               |
+| Voting progress                                                               | PASS — Body and Element opened; visible timer advanced                                                        |
+| Disconnect and cancellation                                                   | PASS — Twitch status dropped and authoritative forge returned to idle before the four-stage cycle completed   |
+| Reconnect                                                                     | PASS — connection returned; voting remained idle by design                                                    |
+| Genuine notification, normalization, callback, accepted vote, dashboard total | NOT VERIFIED                                                                                                  |
+| Exact disconnect trigger                                                      | UNKNOWN — the live run did not collect close code/error class or distinguish the watchdog from transport loss |
+
+The current watchdog schedules expiry at exactly
+`keepalive_timeout_seconds * 1000`. Twitch's [EventSub WebSocket guidance](https://dev.twitch.tv/docs/eventsub/handling-websocket-events/)
+says to treat silence as loss when it lasts longer than the advertised window.
+An equality-boundary race is plausible, but no live evidence proves it caused
+this disconnect. No speculative timer change was made; the real cause remains
+unknown until opt-in diagnostics observe a subsequent loss.
+
+### Bounded diagnostics and regression evidence
+
+Diagnostics are disabled by default and require the explicit development
+setting `BOSSFORGE_EVENTSUB_DIAGNOSTICS=true`. When enabled, a volatile
+in-memory snapshot is available only at `/dev/twitch/diagnostics` with a local
+loopback request, allowed same-origin Origin, and the authenticated Twitch
+owner session. There is no public route and nothing is sent to the OBS overlay.
+The snapshot contains only fixed reason codes, numeric close codes, allowlisted
+socket error classes, relative elapsed/timeout milliseconds, fixed forge
+cancellation-cause counters, bounded status counters, and
+notification/normalizer/callback/ballot counts. It retains no raw
+frames, chat text, viewer or session IDs, usernames, URLs, secrets, cookies, or
+full error objects.
+
+| Criterion                                      | Result                                                                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Keepalive just before timeout resets the timer | PASS — deterministic fake monotonic clock at 29,999 ms of a 30,000 ms window                                                         |
+| Genuine keepalive expiry                       | PASS — fake timer records elapsed and advertised timeout, then follows verified loss/retry handling                                  |
+| Socket close and error classification          | PASS — numeric close code and fixed error class only; error-then-close remains idempotent                                            |
+| Reconnect handoff and retired socket           | PASS — successor keeps its verified subscription; retired close/error is not counted                                                 |
+| Forge loss/reconnect                           | PASS — active Twitch cycle cancels on verified loss; fresh verified subscription reconnects without restoring or fabricating ballots |
+| Diagnostics endpoint access                    | PASS — absent by default; when enabled it rejects missing owner session, returns no-store to the authenticated same-origin owner     |
+| Secret/data minimization                       | PASS — tests verify snapshots omit synthetic message, viewer, close-reason and error-text values                                     |
+
+Validation ran in a detached disposable worktree so the active authenticated
+development server was not watched or restarted. All **121 tests passed** in
+two isolated runs: 23 shared and 98 server. The first sandbox run blocked
+socket-binding tests with `EPERM`; they were rerun in the authorized local
+test environment and passed. Server build, typecheck, lint, Prettier, and
+`git diff --check` passed. Web UI code was unchanged by this checkpoint.
+
+No live diagnostic was activated, no Twitch endpoint was contacted during
+automated tests, and no genuine vote is claimed. A subsequent 60-second Body
+vote check requires separate owner coordination to restart and reauthorize;
+the procedure is in [the active P3-B specification](P3B-LIVE-TWITCH-INTEGRATION.md#next-controlled-live-check).
+Keep Draft PR #5 open and unmerged pending independent exact-head review and
+verified live vote evidence.

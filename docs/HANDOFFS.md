@@ -357,3 +357,35 @@ only after they exist. Do not invent a Codex session ID; use the session's
   disabled and no real Twitch traffic or credentials were used. Request
   independent P3-B-C4 review against exact pushed HEAD; keep Draft PR #5
   unmerged, with no deployment, publication or Phase 4 work.
+
+## P3-B4-C5 EventSub disconnect handoff
+
+- **Live evidence:** Owner-controlled QA observed OAuth completion, a verified
+  EventSub subscription, HTTP 200 forge start, Body and Element voting with an
+  advancing timer, then an EventSub disconnect that canceled voting. Reconnect
+  restored the connection, not the cycle. A genuine notification and counted
+  vote remain **NOT VERIFIED**.
+- **Root cause:** **Unknown.** The live process did not collect close code or
+  socket error classification, so transport loss cannot be distinguished from
+  application keepalive expiry. The code schedules expiry at exactly the
+  advertised timeout while Twitch guidance specifies silence longer than the
+  timeout. This boundary is plausible but not confirmed; no speculative timer
+  fix was made.
+- **Bounded change:** Added default-off, volatile, owner-authenticated,
+  loopback-only development diagnostics and fake-session tests. The endpoint
+  is absent unless explicitly enabled in development; no public route or OBS
+  data was added. It captures only reason enums, numeric close codes,
+  allowlisted error classes, relative timings and bounded pipeline counters.
+- **Validation:** 121 tests passed (23 shared / 98 server). Server build,
+  typecheck, lint, formatting and diff check passed. The full server suite first
+  hit sandbox socket `EPERM`, then passed in the authorized isolated local
+  environment. Tests used fake sockets, deterministic clocks, and synthetic
+  values; no live diagnostic was activated and no Twitch endpoint was called.
+- **Next owner step:** Separately coordinate a local server restart to load the
+  opt-in diagnostics setting; reauthorize in the browser because OAuth state is
+  process-memory only. At `http://localhost:5173`, verify EventSub, select 60
+  seconds per category, send one genuine Body vote, and compare sanitized
+  counters with the authoritative vote total. Do not resume a canceled cycle.
+- **Review gate:** Independent source review may assess the exact PR #5 head and
+  fake-test evidence. Live root cause and end-to-end voting remain open. Keep
+  Draft PR #5 unmerged; do not deploy, publish, or claim live-vote success.

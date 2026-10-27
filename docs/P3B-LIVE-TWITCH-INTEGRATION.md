@@ -1,6 +1,6 @@
 # Phase 3-B — Authenticated Local Twitch Chat + EventSub Voting
 
-**Status:** B1–B3 implementation candidate on Draft PR #5; offline validation and Chromium regression evidence recorded in [ACCEPTANCE](ACCEPTANCE.md). Real OAuth/EventSub and channel-vote operation remain **NOT TESTED** pending owner configuration and interaction.
+**Status:** B1–B3 implementation candidate on Draft PR #5. Owner-controlled local QA observed successful OAuth, verified EventSub, and forge start; a later EventSub loss canceled voting after Body and Element opened. Reconnect restored connection only. Genuine notification delivery and vote counting remain **NOT VERIFIED**. See [C5 acceptance evidence](ACCEPTANCE.md#p3-b4-c5--eventsub-disconnect-investigation).
 **Base:** `main@5adbd71f5378666e17b805617f37c3bb000505b8` (P3-A independently audited and squash-merged via PR #4)  
 **Working branch:** `feat/phase3b-live-twitch-integration`  
 **Delivery:** One Draft PR, bounded implementation checkpoints, independent exact-head review, **separate explicit owner squash-merge decision**.  
@@ -76,7 +76,7 @@ Local MVP: authenticate the **broadcaster's own Twitch account** with `user:read
 
 **No-credential CI:** injectable fake OAuth HTTP client, fake WSS/Helix, fake clock and deterministic fixtures; no test must hit the real Twitch API or require the owner's secret. Do not place tokens in test output.
 
-**Manual local owner QA:** after secure local secret configuration and explicit opt-in, initiate OAuth in browser using registered URL; verify identity/scope; successfully subscribe to own channel, use a separate viewer to post real chat `!vote` commands for all four categories; verify real boss attributes, enter arena, finish fight, compare OBS labels/counters to true chat; simulate refresh/disconnect/revocation, then recover safely. Owner must participate for real OAuth consent and provide redacted results only. Mark **NOT TESTED** until actually exercised.
+**Manual local owner QA:** Owner-controlled QA has observed OAuth, verified subscription, forge start, and a disconnect cancellation. The genuine EventSub notification and counted chat-vote stages remain **NOT VERIFIED**. Continue only with the controlled, redacted procedure below; owner must participate in OAuth and real chat posting.
 
 **Browser QA:** Chromium 1440×900 dashboard, 390×844 no overflow, OBS 1920×1080 + 1280×720, arena combat, disconnect/reconnect states. Capture screenshots only with identifiers and sensitive data redacted or absent, and report actual errors/limitations.
 
@@ -89,3 +89,55 @@ Local MVP: authenticate the **broadcaster's own Twitch account** with `user:read
 - **Resolved in this P3-B implementation:** guard multiple distinct `session_reconnect` messages by closing the prior pending transport before opening its replacement; a regression test covers this.
 - Strict per-process monotonic EventSub timestamp rejection might discard legitimate cross-socket out-of-order delivery; review event ordering vs replay guarantees when real traffic becomes available.
 - Existing C5 process epoch ordering by wall clock is local-development acceptable but not a cross-machine distributed guarantee.
+
+## P3-B4-C5 — EventSub disconnect investigation
+
+### Observed live evidence
+
+Owner-controlled local testing observed OAuth completion, a verified EventSub
+subscription, a successful authenticated forge start, Body and Element voting,
+and an advancing timer. EventSub then disconnected; the authoritative forge
+canceled to idle. Reconnection restored Twitch connection state but did not
+resume the canceled cycle. No genuine chat notification or counted vote is
+verified. This is partial operational evidence, not end-to-end acceptance.
+
+The live run did not retain a numeric WebSocket close code or socket error
+classification. The exact trigger therefore remains unknown. Source inspection
+shows an internal watchdog scheduled at exactly
+`keepalive_timeout_seconds * 1000`; Twitch's [WebSocket guidance](https://dev.twitch.tv/docs/eventsub/handling-websocket-events/)
+says to infer a lost connection when silence lasts **longer than** the timeout.
+The equality boundary may race an arriving keepalive, but is still only a
+hypothesis and was not patched without live diagnostic evidence.
+
+### Opt-in diagnostic safeguards
+
+`BOSSFORGE_EVENTSUB_DIAGNOSTICS=true` enables only volatile, bounded counters
+in development mode. The `/dev/twitch/diagnostics` route is absent by default
+and requires a loopback request, allowed same-origin browser Origin, and the
+authenticated Twitch owner session. It is not exposed to OBS. Values are fixed
+reason codes, numeric WebSocket close codes, allowlisted socket-error classes,
+relative elapsed/timeout milliseconds, subscription/reconnect states, and
+normalization/chat-callback/ballot counters. Raw frames, message text, IDs,
+usernames, URLs, credentials, and full error objects are never stored or
+returned.
+
+The diagnostics were exercised only with fake sockets and synthetic fixtures.
+They were not enabled in the authenticated runtime; enabling the flag requires
+a separately coordinated server restart and owner reauthorization because
+OAuth state is process-memory only. Do not automatically resume a canceled
+forge or synthesize missing ballots.
+
+### Next controlled live check
+
+After the owner separately coordinates a safe local restart and reauthorization,
+verify the dashboard is at `http://localhost:5173`, confirm the actual EventSub
+subscription is enabled, and read the protected diagnostics through the
+authenticated same-origin browser session at
+`http://localhost:5173/api/dev/twitch/diagnostics` (Vite proxies it to Fastify).
+Start a forge with **60 seconds per
+category**, send one genuine `!vote body drake` during Body from the intended
+viewer, and confirm notification, normalization, callback, accepted ballot,
+Body total, and dashboard count. Record only the fixed counters and relative
+timings. Continue observing the status counters; if a disconnect occurs, do
+not resume the cycle or claim a pass. Reconnect must again require a fresh
+verified subscription. No fake event is live evidence.

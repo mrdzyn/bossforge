@@ -90,7 +90,7 @@ introduced in Phase 1.
 - OAuth/session/forge mode operations are authorized **local streamer controls**, not unprotected loopback mutations. Apply browser-bound owner session controls plus CSRF/Origin protection; do not bypass Phase 0 effective-host, socket-peer, Origin, rate limit and production restrictions. OBS must have no auth controls or tokens.
 - Real-mode votes and mock-mode votes must be mutually exclusive per forge cycle and marked accurately. The P3-B source-aware state migration enforces this provider boundary.
 - Control Ping/Pong must not reset application keepalive; no real notification may be forwarded until verified welcome and active Helix subscription. Never infer `connectedToTwitch` from a local browser socket.
-- Owner must opt in to local OAuth authorization and provide the secret through private local configuration. Never force browser login or make real Twitch API calls in tests. Real operational QA is **NOT TESTED** until executed against the account.
+- Owner must opt in to local OAuth authorization and provide the secret through private local configuration. Never force browser login or make real Twitch API calls in tests. Owner-controlled QA observed OAuth and verified EventSub; genuine notification delivery and vote counting remain **NOT VERIFIED**.
 - Full [active implementation and test gates](P3B-LIVE-TWITCH-INTEGRATION.md).
 
 ### P3-B implementation status
@@ -117,9 +117,10 @@ introduced in Phase 1.
   endpoints are rejected while a Twitch forge is selected; authenticated live
   start/reset controls remain available. OBS receives only provider mode,
   verified connection status and forge state, never credentials or controls.
-- B1/B2/B3 tests use fake fetch responses and fake WSS sockets. Real Twitch
-  account consent, live subscription, token validation and channel chat have
-  **NOT TESTED** status; synthetic test results are not operational proof.
+- B1/B2/B3 automated tests use fake fetch responses and fake WSS sockets.
+  Owner-controlled local QA later observed OAuth completion and a verified
+  live subscription. No genuine chat notification or counted vote has been
+  verified; fake test traffic is not operational proof.
 - P3-B-C2 scopes disconnect/error state to the current socket and invalidates
   Helix verification when the welcomed EventSub session changes. Deferred fake
   HTTP tests cover stale success, HTTP 409 verification, and request failure.
@@ -147,3 +148,19 @@ introduced in Phase 1.
   cover close, error-then-close, current/retired transports, and fresh Helix
   verification after reconnect. No live Twitch traffic was used. See
   [C4 acceptance evidence](ACCEPTANCE.md#p3-b-c4--bounded-remediation-of-c3-01).
+
+### P3-B4-C5 diagnostic containment
+
+- EventSub diagnostics are opt-in (`BOSSFORGE_EVENTSUB_DIAGNOSTICS=true`),
+  development-only, in-memory, and disabled by default. When enabled, the
+  diagnostic route is exposed only in the development server and requires a
+  loopback peer, allowed same-origin Origin, and authenticated Twitch owner
+  session. It returns `Cache-Control: no-store`; no diagnostic route or data is
+  added to OBS.
+- Recorded fields are fixed counters/reason enums, numeric WebSocket close
+  codes, allowlisted socket error classes, and relative millisecond timings.
+  The implementation stores no raw frames, chat text, usernames, viewer or
+  session IDs, URLs, OAuth data, cookies, secrets, or full error objects.
+- The active authenticated runtime was not restarted to activate diagnostics.
+  No diagnostics were observed from the real disconnect, so its root cause
+  remains unknown. See [C5 evidence](ACCEPTANCE.md#p3-b4-c5--eventsub-disconnect-investigation).

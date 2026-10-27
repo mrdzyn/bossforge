@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ForgeSession, type ForgeScheduler } from "../src/forge/forge-session.js";
 import { assembleBoss } from "../src/forge/boss-assembly.js";
+import { EventSubDiagnostics } from "../src/twitch/eventsub-diagnostics.js";
 
 function setup() {
   let millis = Date.parse("2026-10-26T12:00:00.000Z");
@@ -247,5 +248,40 @@ describe("ForgeSession", () => {
     millis += 5000;
     callbacks.shift()?.();
     expect(session.getState().status).toBe("idle");
+  });
+
+  it("counts accepted and rejected live ballot outcomes without retaining event data", () => {
+    const diagnostics = new EventSubDiagnostics();
+    const session = new ForgeSession(
+      () => new Date("2026-10-26T12:00:00.000Z"),
+      { schedule: () => () => undefined },
+      () => undefined,
+      "diagnostic-test",
+      undefined,
+      "twitch",
+      true,
+      (reason) => diagnostics.recordBallot(reason),
+    );
+    session.start(15);
+    const twitchEvent = (id: string, text: string) => ({
+      kind: "chat.message" as const,
+      provider: "twitch" as const,
+      message: {
+        id,
+        viewer: { id: "viewer-id", displayName: "Viewer" },
+        text,
+        occurredAt: "2026-10-26T12:00:00.000Z",
+      },
+    });
+    expect(session.handleEvent(twitchEvent("message-id", "!vote body drake"))).toBe(true);
+    expect(session.handleEvent(twitchEvent("message-id", "!vote body drake"))).toBe(false);
+    expect(session.handleEvent(twitchEvent("wrong-category", "!vote element fire"))).toBe(false);
+    expect(diagnostics.snapshot()).toMatchObject({
+      counters: { ballotsAccepted: 1, ballotsRejected: 2 },
+      ballotReasons: { accepted: 1, "duplicate-message": 1, "wrong-category": 1 },
+    });
+    expect(JSON.stringify(diagnostics.snapshot())).not.toContain("message-id");
+    expect(JSON.stringify(diagnostics.snapshot())).not.toContain("viewer-id");
+    session.close();
   });
 });

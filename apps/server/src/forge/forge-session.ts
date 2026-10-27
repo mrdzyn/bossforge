@@ -11,6 +11,7 @@ import {
   type VoteCategory,
 } from "@bossforge/shared";
 import { assembleBoss } from "./boss-assembly.js";
+import type { ForgeBallotReason } from "../twitch/eventsub-diagnostics.js";
 
 const categories: VoteCategory[] = ["body", "element", "special", "weakness"];
 const validViewerId = /^[\p{L}\p{N}_.:@-]{1,64}$/u;
@@ -53,6 +54,7 @@ export class ForgeSession {
     private readonly serverStartedAt: string = new Date().toISOString(),
     private readonly mode: Provider = "mock",
     private connectedToTwitch = false,
+    private readonly onBallotResult?: (reason: ForgeBallotReason) => void,
   ) {}
 
   start(durationSeconds = 15): ForgeState {
@@ -92,40 +94,42 @@ export class ForgeSession {
   }
 
   handleEvent(event: NormalizedChatEvent): boolean {
-    if (
-      event.kind !== "chat.message" ||
-      event.provider !== this.mode ||
-      (this.mode === "twitch" && !this.connectedToTwitch)
-    )
-      return false;
+    if (event.kind !== "chat.message") return this.rejectBallot("wrong-event");
+    if (event.provider !== this.mode) return this.rejectBallot("wrong-provider");
+    if (this.mode === "twitch" && !this.connectedToTwitch) return this.rejectBallot("disconnected");
     const { message } = event;
-    if (this.seenMessageIds.has(message.id)) return false;
+    if (this.seenMessageIds.has(message.id)) return this.rejectBallot("duplicate-message");
     this.seenMessageIds.add(message.id);
     if (this.seenMessageIds.size > 4096) {
       const oldest = this.seenMessageIds.values().next().value as string | undefined;
       if (oldest) this.seenMessageIds.delete(oldest);
     }
-    if (this.status !== "voting") return false;
+    if (this.status !== "voting") return this.rejectBallot("inactive-voting");
     this.syncTime();
-    if (this.status !== "voting" || !this.closesAt || !this.openedAt) return false;
+    if (this.status !== "voting" || !this.closesAt || !this.openedAt)
+      return this.rejectBallot("inactive-voting");
     const occurredAt = Date.parse(message.occurredAt);
     const now = this.now().getTime();
+    if (!Number.isFinite(occurredAt)) return this.rejectBallot("invalid-timestamp");
     if (
-      !Number.isFinite(occurredAt) ||
       occurredAt < this.openedAt.getTime() ||
       occurredAt > now ||
       occurredAt >= this.closesAt.getTime()
     )
-      return false;
-    if (!validViewerId.test(message.viewer.id)) return false;
+      return this.rejectBallot("late-or-future-timestamp");
+    if (!validViewerId.test(message.viewer.id)) return this.rejectBallot("invalid-viewer");
     const command = parseVoteCommand(message.text);
-    if (!command || command.category !== categories[this.activeIndex]) return false;
+    if (!command) return this.rejectBallot("invalid-choice");
+    if (command.category !== categories[this.activeIndex])
+      return this.rejectBallot("wrong-category");
     const choices = FORGE_VOTE_CHOICES[command.category] as readonly string[];
-    if (!choices.includes(command.choice.toLowerCase())) return false;
+    if (!choices.includes(command.choice.toLowerCase())) return this.rejectBallot("invalid-choice");
     const choice = command.choice.toLowerCase();
     const ballots = this.ballots[command.category];
-    if (ballots.get(message.viewer.id)?.choice === choice) return false;
+    if (ballots.get(message.viewer.id)?.choice === choice)
+      return this.rejectBallot("unchanged-choice");
     ballots.set(message.viewer.id, { viewerId: message.viewer.id, choice });
+    this.onBallotResult?.("accepted");
     this.changed();
     return true;
   }
@@ -254,6 +258,11 @@ export class ForgeSession {
     const state = this.buildState();
     this.onChange(state);
     return state;
+  }
+
+  private rejectBallot(reason: Exclude<ForgeBallotReason, "accepted">): false {
+    this.onBallotResult?.(reason);
+    return false;
   }
 
   private newBallots(): Record<VoteCategory, Map<string, Ballot>> {

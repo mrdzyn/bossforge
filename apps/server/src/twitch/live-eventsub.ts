@@ -3,9 +3,11 @@ import type { NormalizedChatEvent } from "@bossforge/shared";
 import { EventSubChatNormalizer } from "./eventsub-normalizer.js";
 import {
   EventSubSession,
+  type EventSubDisconnectDetails,
   type EventSubScheduler,
   type EventSubSessionStatus,
 } from "./eventsub-session.js";
+import { EventSubDiagnostics, classifySocketError } from "./eventsub-diagnostics.js";
 import type { TwitchIdentity } from "./oauth.js";
 
 export type LiveEventSubStatus = EventSubSessionStatus | "subscribing";
@@ -20,6 +22,7 @@ export interface LiveEventSubOptions {
   fetch?: typeof fetch;
   createSocket?: (url: string) => WebSocket;
   scheduler?: EventSubScheduler;
+  diagnostics?: EventSubDiagnostics;
 }
 
 interface HelixSubscription {
@@ -99,11 +102,15 @@ export class LiveEventSub {
             this.setStatus("connected", true);
         });
         socket.on("ping", () => handlers.ping());
-        const disconnected = () => {
+        const disconnected = (details: EventSubDisconnectDetails) => {
           if (transport.closed) return;
           transport.closed = true;
           if (this.activeTransport !== transport || this.stopped) return;
-          handlers.disconnect();
+          if (details.reason === "socket-close")
+            this.options.diagnostics?.recordClose(details.closeCode);
+          if (details.reason === "socket-error")
+            this.options.diagnostics?.recordSocketError(details.errorClass);
+          handlers.disconnect(details);
           // Let EventSubSession report a verified loss while the adapter still
           // holds the same transport identity. Its callback clears this lease.
           if (this.activeTransport === transport) {
@@ -111,8 +118,14 @@ export class LiveEventSub {
             if (!transport.welcomed) this.setStatus(this.session?.status ?? "reconnecting", false);
           }
         };
-        socket.once("close", disconnected);
-        socket.once("error", disconnected);
+        socket.once("close", (code: number) => {
+          const closeCode = Number.isInteger(code) && code >= 1000 && code <= 4999 ? code : null;
+          disconnected({ reason: "socket-close", closeCode });
+        });
+        socket.once("error", (error: unknown) => {
+          const errorClass = classifySocketError(error);
+          disconnected({ reason: "socket-error", errorClass });
+        });
         return {
           close: () => {
             transport.closed = true;
@@ -123,6 +136,7 @@ export class LiveEventSub {
         };
       },
       ...(this.options.scheduler ? { scheduler: this.options.scheduler } : {}),
+      ...(this.options.diagnostics ? { diagnostics: this.options.diagnostics } : {}),
       onValidatedWelcome: (sessionId, transportId) => {
         const transport = this.transportsById.get(transportId);
         if (!transport || transport.closed || this.stopped) return;
@@ -167,7 +181,12 @@ export class LiveEventSub {
       onNotification: (input) => {
         if (!this.subscriptionActive) return false;
         const result = this.normalizer.normalize(input);
-        if (!result.ok) return false;
+        if (!result.ok) {
+          this.options.diagnostics?.increment("normalizedRejected");
+          return false;
+        }
+        this.options.diagnostics?.increment("normalizedAccepted");
+        this.options.diagnostics?.increment("chatCallbacks");
         this.options.onChat(result.event);
         return true;
       },
@@ -193,6 +212,7 @@ export class LiveEventSub {
 
   private async subscribe(sessionId: string): Promise<void> {
     if (this.stopped) return;
+    this.options.diagnostics?.increment("subscriptionAttempts");
     const generation = ++this.subscriptionGeneration;
     const isCurrent = () =>
       !this.stopped &&
@@ -255,16 +275,19 @@ export class LiveEventSub {
       }
       if (!isCurrent()) return;
       this.subscriptionActive = true;
+      this.options.diagnostics?.increment("subscriptionEnabled");
       this.setStatus("connected", true);
     } catch {
       if (!isCurrent()) return;
       this.subscriptionActive = false;
+      this.options.diagnostics?.increment("subscriptionFailed");
       this.setStatus("failed", false);
     }
   }
 
   private setStatus(status: LiveEventSubStatus, connected: boolean): void {
     this.statusValue = status;
+    if (status === "subscribing") this.options.diagnostics?.recordStatus(status);
     this.options.onStatus(status, connected);
   }
 

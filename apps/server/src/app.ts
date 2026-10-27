@@ -16,6 +16,10 @@ import { ForgeSession, type ForgeScheduler } from "./forge/forge-session.js";
 import { TwitchOAuth } from "./twitch/oauth.js";
 import { LiveEventSub, type LiveEventSubStatus } from "./twitch/live-eventsub.js";
 import type { EventSubScheduler } from "./twitch/eventsub-session.js";
+import {
+  EventSubDiagnostics,
+  type ForgeCancellationReason,
+} from "./twitch/eventsub-diagnostics.js";
 
 const packageVersion = "0.1.0";
 const bodyLimitBytes = 8 * 1024;
@@ -36,6 +40,7 @@ export interface AppOptions {
   twitchFetch?: typeof fetch;
   twitchCreateSocket?: (url: string) => WebSocket;
   twitchEventSubScheduler?: EventSubScheduler;
+  eventSubDiagnostics?: boolean;
 }
 
 export interface BossForgeApp {
@@ -50,6 +55,10 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
   const now = options.now ?? (() => new Date());
   const mockAdapter = new MockChatAdapter(now);
   const hub = new EventHub();
+  const diagnosticsEnabled =
+    developmentMode &&
+    (options.eventSubDiagnostics ?? process.env.BOSSFORGE_EVENTSUB_DIAGNOSTICS === "true");
+  const eventSubDiagnostics = diagnosticsEnabled ? new EventSubDiagnostics() : undefined;
   let provider: "mock" | "twitch" = "mock";
   let liveEventSub: LiveEventSub | undefined;
   const serverInstanceId = options.serverInstanceId ?? randomUUID();
@@ -70,6 +79,9 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       forgeStartedAt,
       mode,
       connected,
+      mode === "twitch" && eventSubDiagnostics
+        ? (reason) => eventSubDiagnostics.recordBallot(reason)
+        : undefined,
     );
   };
   let forge = createForge("mock");
@@ -251,6 +263,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         ...(options.twitchFetch ? { fetch: options.twitchFetch } : {}),
         ...(options.twitchCreateSocket ? { createSocket: options.twitchCreateSocket } : {}),
         ...(options.twitchEventSubScheduler ? { scheduler: options.twitchEventSubScheduler } : {}),
+        ...(eventSubDiagnostics ? { diagnostics: eventSubDiagnostics } : {}),
         onChat: (event) => {
           if (provider !== "twitch") return;
           hub.publish(event);
@@ -258,6 +271,18 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         },
         onStatus: (status: LiveEventSubStatus, connected) => {
           if (provider !== "twitch") return;
+          if (!connected && forge.getState().status === "voting" && eventSubDiagnostics) {
+            const reason: ForgeCancellationReason =
+              status === "failed"
+                ? "subscription-failed"
+                : status === "stopped"
+                  ? "stopped"
+                  : status === "revoked"
+                    ? "revoked"
+                    : (eventSubDiagnostics.snapshot().lastDisconnect?.reason ??
+                      "transport-unknown");
+            eventSubDiagnostics.recordForgeCancellation(reason);
+          }
           if (connected && forge.getState().mode !== "twitch") forge = createForge("twitch", true);
           if (forge.getState().mode === "twitch") forge.setTwitchConnected(connected);
           hub.publish({
@@ -343,6 +368,16 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
     app.get("/forge/state", { onRequest: requireLocalDevelopmentRequest }, async () =>
       forge.getState(),
     );
+    if (eventSubDiagnostics) {
+      app.get(
+        "/dev/twitch/diagnostics",
+        { onRequest: requireTwitchOwner },
+        async (_request, reply) => {
+          reply.header("cache-control", "no-store");
+          return eventSubDiagnostics.snapshot();
+        },
+      );
+    }
     app.post(
       "/dev/forge/start",
       {

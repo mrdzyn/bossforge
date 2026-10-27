@@ -102,6 +102,27 @@ describe("BossForge server", () => {
     expect(response.json()).toEqual({ error: "Not found" });
   });
 
+  it("keeps Twitch diagnostics absent by default and owner-protected when enabled", async () => {
+    const absent = await server.app.inject({
+      method: "GET",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin: "http://localhost:5173" },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(absent.statusCode).toBe(404);
+
+    const enabled = await createBossForgeApp({ mode: "development", eventSubDiagnostics: true });
+    const unauthenticated = await enabled.app.inject({
+      method: "GET",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin: "http://localhost:5173", "sec-fetch-site": "same-origin" },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(unauthenticated.statusCode).toBe(401);
+    expect(unauthenticated.headers["cache-control"]).toBeUndefined();
+    await enabled.close();
+  });
+
   it("keeps Twitch authorization disabled by default and rejects a mismatched callback Host", async () => {
     const disabled = await server.app.inject({
       method: "GET",
@@ -194,6 +215,7 @@ describe("BossForge server", () => {
     });
     const live = await createBossForgeApp({
       mode: "development",
+      eventSubDiagnostics: true,
       twitchOAuth: oauth,
       twitchFetch: mockFetch,
       twitchEventSubScheduler: {
@@ -270,6 +292,13 @@ describe("BossForge server", () => {
       remoteAddress: "127.0.0.1",
     });
     expect(connected.statusCode).toBe(202);
+    const diagnosticsWithoutOwner = await live.app.inject({
+      method: "GET",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin, "sec-fetch-site": "same-origin" },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(diagnosticsWithoutOwner.statusCode).toBe(401);
     const connectingState = (await live.app.inject({ method: "GET", url: "/forge/state" })).json();
     expect(connectingState).toMatchObject({ mode: "twitch", connectedToTwitch: false });
     expect(Date.parse(connectingState.serverStartedAt)).toBeGreaterThan(
@@ -313,6 +342,19 @@ describe("BossForge server", () => {
     expect(twitchConnectedState).toMatchObject({ mode: "twitch", connectedToTwitch: true });
     expect(reconciler.apply(twitchConnectedState, generation)).toBe(true);
     expect(reconciler.apply(connectingState, generation)).toBe(false);
+    const ownerDiagnostics = await live.app.inject({
+      method: "GET",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin, "sec-fetch-site": "same-origin", cookie: sessionCookie },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(ownerDiagnostics.statusCode).toBe(200);
+    expect(ownerDiagnostics.headers["cache-control"]).toBe("no-store");
+    expect(ownerDiagnostics.json()).toMatchObject({
+      counters: { rawFrames: 1, validWelcomes: 1, subscriptionAttempts: 1, subscriptionEnabled: 1 },
+    });
+    expect(ownerDiagnostics.body).not.toContain("live-session");
+    expect(ownerDiagnostics.body).not.toContain("12345");
     const started = await live.app.inject({
       method: "POST",
       url: "/dev/forge/start",
@@ -385,7 +427,7 @@ describe("BossForge server", () => {
     expect(secondVotingState).toMatchObject({ status: "voting", connectedToTwitch: true });
     expect(reconciler.apply(secondVotingState, generation)).toBe(true);
 
-    sockets[0]!.emit("close");
+    sockets[0]!.emit("close", 4006, Buffer.from("ignored close reason"));
     const droppedSocketState = (
       await live.app.inject({ method: "GET", url: "/forge/state" })
     ).json();
@@ -401,6 +443,20 @@ describe("BossForge server", () => {
       remoteAddress: "127.0.0.1",
     });
     expect(droppedSocketStatus.json()).toMatchObject({ connected: false, status: "retry-wait" });
+    const closeDiagnostics = await live.app.inject({
+      method: "GET",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin, "sec-fetch-site": "same-origin", cookie: sessionCookie },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(closeDiagnostics.json()).toMatchObject({
+      closeCodes: { "4006": 1 },
+      disconnectReasons: { "socket-close": 1 },
+      forgeCancellationReasons: { "socket-close": 1 },
+      counters: { forgeCancellations: 1, socketCloses: 1 },
+      lastDisconnect: { closeCode: 4006, reason: "socket-close" },
+    });
+    expect(closeDiagnostics.body).not.toContain("ignored close reason");
     const socketRetryTimer = eventSubTimers.find(
       (timer) => timer.delayMs === 500 && !timer.cancelled,
     )!;
@@ -468,6 +524,18 @@ describe("BossForge server", () => {
       remoteAddress: "127.0.0.1",
     });
     expect(disconnectedStatus.json()).toMatchObject({ connected: false, status: "retry-wait" });
+    const timeoutDiagnostics = await live.app.inject({
+      method: "GET",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin, "sec-fetch-site": "same-origin", cookie: sessionCookie },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(timeoutDiagnostics.json()).toMatchObject({
+      disconnectReasons: { "keepalive-timeout": 1 },
+      forgeCancellationReasons: { "keepalive-timeout": 1 },
+      counters: { forgeCancellations: 2 },
+      lastDisconnect: { reason: "keepalive-timeout", timeoutMs: 30_000 },
+    });
     const retryTimer = eventSubTimers.find((timer) => timer.delayMs === 500 && !timer.cancelled)!;
     expect(retryTimer).toBeDefined();
     retryTimer.cancelled = true;
