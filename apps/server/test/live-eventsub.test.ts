@@ -6,6 +6,10 @@ import type { EventSubScheduler } from "../src/twitch/eventsub-session.js";
 import { EventSubDiagnostics } from "../src/twitch/eventsub-diagnostics.js";
 
 class FakeSocket extends EventEmitter {
+  constructor(readonly url?: string) {
+    super();
+  }
+
   sendFrame(frame: unknown): void {
     this.emit("message", Buffer.from(JSON.stringify(frame)));
   }
@@ -52,11 +56,12 @@ describe("live EventSub adapter with fake Twitch transports", () => {
       getAccessToken: async () => "access-token",
       fetch: fetcher,
       diagnostics,
-      createSocket: () => socket as unknown as WebSocket,
+      createSocket: (url) => Object.assign(socket, { url }) as unknown as WebSocket,
       onStatus: status,
       onChat: (event) => events.push(event),
     });
     live.start();
+    expect(socket.url).toBe("wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=30");
 
     const notification = frame("notification-frame", "notification", {
       subscription: {
@@ -110,6 +115,10 @@ describe("live EventSub adapter with fake Twitch transports", () => {
       provider: "twitch",
       message: { viewer: { id: "777" }, text: "!vote body drake" },
     });
+    socket.sendFrame(notification);
+    expect(events).toHaveLength(1);
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(diagnostics.snapshot().counters.notificationsAccepted).toBe(1);
     live.shutdown();
   });
 
@@ -139,6 +148,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
   it("reports internal keepalive loss and stays disconnected throughout retry", async () => {
     const sockets: FakeSocket[] = [];
     const timers: Array<{ callback: () => void; delayMs: number; cancelled: boolean }> = [];
+    let monotonicMs = 0;
     const scheduler: EventSubScheduler = {
       schedule(callback, delayMs) {
         const timer = { callback, delayMs, cancelled: false };
@@ -172,6 +182,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
       getAccessToken: async () => "access-token",
       fetch: fetcher,
       scheduler,
+      monotonicNow: () => monotonicMs,
       createSocket: () => {
         const socket = new FakeSocket();
         sockets.push(socket);
@@ -189,8 +200,15 @@ describe("live EventSub adapter with fake Twitch transports", () => {
     await vi.waitFor(() => expect(live.connected).toBe(true));
     const keepalive = timers.find((timer) => timer.delayMs === 30_000 && !timer.cancelled)!;
     expect(keepalive).toBeDefined();
+    monotonicMs = 30_000;
     keepalive.cancelled = true;
     keepalive.callback();
+    expect(live.connected).toBe(true);
+    const grace = timers.find((timer) => timer.delayMs === 250 && !timer.cancelled)!;
+    expect(grace).toBeDefined();
+    monotonicMs = 30_250;
+    grace.cancelled = true;
+    grace.callback();
     expect(live.connected).toBe(false);
     expect(live.status).toBe("retry-wait");
     expect(status).toHaveBeenLastCalledWith("retry-wait", false);
@@ -491,8 +509,8 @@ describe("live EventSub adapter with fake Twitch transports", () => {
       getAccessToken: async () => "access-token",
       fetch: fetcher,
       diagnostics,
-      createSocket: () => {
-        const socket = new FakeSocket();
+      createSocket: (url) => {
+        const socket = new FakeSocket(url);
         sockets.push(socket);
         return socket as unknown as WebSocket;
       },
@@ -512,6 +530,7 @@ describe("live EventSub adapter with fake Twitch transports", () => {
       }),
     );
     expect(sockets).toHaveLength(2);
+    expect(sockets[1]?.url).toBe("wss://eventsub.wss.twitch.tv/ws?handoff=1");
     sockets[1]!.sendFrame(
       frame("handoff-second", "session_welcome", {
         session: { id: "handoff-b", keepalive_timeout_seconds: 30 },

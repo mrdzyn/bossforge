@@ -408,3 +408,39 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Next gate:** After independent exact-head review, separately coordinate
   owner-controlled restart/reauthorization before enabling diagnostics and
   conducting the genuine 60-second Body vote check. Keep Draft PR #5 unmerged.
+
+## P3-B4-C5-R2 EventSub keepalive remediation handoff
+
+- **Live evidence preserved:** Owner-controlled sanitized diagnostics recorded
+  5 validated welcomes, 5 enabled Helix subscriptions, 8 keepalives, 2 accepted
+  EventSub notifications and normalized chat messages, 1 genuine ballot
+  accepted, 1 rejected as `inactive-voting`, 4 keepalive-timeout disconnects,
+  no socket closes/errors, and 1 canceled forge. The final disconnect measured
+  10,001 ms against a 10,000 ms advertised timeout. This implicates the
+  watchdog boundary; do not state that the post-fix live run passed.
+- **Correction:** The first Twitch WebSocket URL asks for a 30-second keepalive
+  timeout using Twitch’s supported query parameter. Every validated welcome’s
+  timeout remains authoritative. The watchdog uses monotonic elapsed time,
+  rechecks the newest validated keepalive/accepted notification, and provides
+  250 ms of bounded grace before loss handling. Twitch reconnect URLs pass
+  through unchanged. Verified loss still cancels voting and does not resume it.
+- **Tests:** Fake-clock and fake-socket regressions cover boundary arrival,
+  traffic inside grace, genuine expiry past grace, accepted notification timer
+  reset, queued stale timer isolation, socket close, revocation/logout,
+  reconnect URL preservation, and existing deduplication/session-lease rules.
+- **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build,
+  typecheck, lint, formatting, 124 tests (23 shared / 101 server),
+  `git diff --check`, and a four-category mock simulation passed. The
+  simulation ran against a separate disposable server on 127.0.0.1:3301. The
+  full test suite needed the authorized local environment after sandbox socket
+  binding tests hit `EPERM`. Hosted status checks were empty for the starting
+  head; the local gates provide manual CI evidence.
+- **Runtime/security:** Changes were made in a detached disposable worktree.
+  The active authenticated server was not restarted. No OAuth, Twitch API or
+  WebSocket request, real vote, credential read, public endpoint, merge,
+  deployment or publication was performed.
+- **Next step:** A controlled owner-authorized local run may verify the welcome
+  timeout actually returned by Twitch, then observe a fresh cycle and
+  diagnostics. Do not reactivate a canceled cycle or use synthetic ballots as
+  live evidence. Keep PR #5 Draft and request independent review of the exact
+  pushed SHA.

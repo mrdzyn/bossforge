@@ -22,6 +22,7 @@ export interface LiveEventSubOptions {
   fetch?: typeof fetch;
   createSocket?: (url: string) => WebSocket;
   scheduler?: EventSubScheduler;
+  monotonicNow?: () => number;
   diagnostics?: EventSubDiagnostics;
 }
 
@@ -87,7 +88,9 @@ export class LiveEventSub {
     if (this.session || this.stopped) return;
     this.setStatus("connecting", false);
     this.session = new EventSubSession({
-      initialUrl: "wss://eventsub.wss.twitch.tv/ws",
+      // Twitch supports requesting a keepalive window on the initial socket.
+      // The validated welcome remains authoritative if Twitch adjusts it.
+      initialUrl: "wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=30",
       createTransport: (url, handlers) => {
         const socket = this.makeSocket(url);
         const transport = { closed: false, welcomed: false };
@@ -136,6 +139,7 @@ export class LiveEventSub {
         };
       },
       ...(this.options.scheduler ? { scheduler: this.options.scheduler } : {}),
+      ...(this.options.monotonicNow ? { monotonicNow: this.options.monotonicNow } : {}),
       ...(this.options.diagnostics ? { diagnostics: this.options.diagnostics } : {}),
       onValidatedWelcome: (sessionId, transportId) => {
         const transport = this.transportsById.get(transportId);

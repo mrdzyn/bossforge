@@ -171,6 +171,7 @@ describe("BossForge server", () => {
       delayMs: number;
       cancelled: boolean;
     }> = [];
+    let eventSubMonotonicMs = 0;
     const helixSessionIds: string[] = [];
     const mockFetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
@@ -234,6 +235,7 @@ describe("BossForge server", () => {
           };
         },
       },
+      twitchEventSubMonotonicNow: () => eventSubMonotonicMs,
       twitchCreateSocket: () => {
         const socket = new FakeTwitchSocket();
         sockets.push(socket);
@@ -575,8 +577,22 @@ describe("BossForge server", () => {
       (timer) => timer.delayMs === 30_000 && !timer.cancelled,
     )!;
     expect(keepaliveTimeout).toBeDefined();
+    eventSubMonotonicMs = 30_000;
     keepaliveTimeout.cancelled = true;
     keepaliveTimeout.callback();
+    const duringGrace = (await live.app.inject({ method: "GET", url: "/forge/state" })).json();
+    expect(duringGrace).toMatchObject({
+      mode: "twitch",
+      connectedToTwitch: true,
+      status: "voting",
+    });
+    const graceTimer = eventSubTimers.findLast(
+      (timer) => timer.delayMs === 250 && !timer.cancelled,
+    )!;
+    expect(graceTimer).toBeDefined();
+    eventSubMonotonicMs = 30_250;
+    graceTimer.cancelled = true;
+    graceTimer.callback();
     const timedOutTwitchState = (
       await live.app.inject({ method: "GET", url: "/forge/state" })
     ).json();

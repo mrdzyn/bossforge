@@ -465,22 +465,24 @@ open and unmerged; independent exact-head P3-B-C4 review is requested.
 
 ### Owner-controlled live observations
 
-| Observation                                                                   | Result                                                                                                        |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| OAuth completed and EventSub subscription verified                            | PASS — observed in the owner-controlled local runtime                                                         |
-| Authenticated forge start                                                     | PASS — HTTP 200                                                                                               |
-| Voting progress                                                               | PASS — Body and Element opened; visible timer advanced                                                        |
-| Disconnect and cancellation                                                   | PASS — Twitch status dropped and authoritative forge returned to idle before the four-stage cycle completed   |
-| Reconnect                                                                     | PASS — connection returned; voting remained idle by design                                                    |
-| Genuine notification, normalization, callback, accepted vote, dashboard total | NOT VERIFIED                                                                                                  |
-| Exact disconnect trigger                                                      | UNKNOWN — the live run did not collect close code/error class or distinguish the watchdog from transport loss |
+| Observation                                                          | Result                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OAuth completed and EventSub subscription verified                   | PASS — observed in the owner-controlled local runtime                                                                                                                                                                                               |
+| Authenticated forge start                                            | PASS — HTTP 200                                                                                                                                                                                                                                     |
+| Voting progress                                                      | PASS — Body and Element opened; visible timer advanced                                                                                                                                                                                              |
+| Disconnect and cancellation                                          | PASS — Twitch status dropped and authoritative forge returned to idle before the four-stage cycle completed                                                                                                                                         |
+| Reconnect                                                            | PASS — connection returned; voting remained idle by design                                                                                                                                                                                          |
+| Genuine notifications, normalization, callback and ballot acceptance | PASS — 2 accepted EventSub notifications normalized; diagnostics recorded 1 genuine ballot accepted and 1 rejected as `inactive-voting`                                                                                                             |
+| Dashboard vote-total reconciliation and full live cycle              | NOT VERIFIED                                                                                                                                                                                                                                        |
+| Exact disconnect trigger                                             | DIAGNOSTICS POINT TO WATCHDOG — four `keepalive-timeout` losses were recorded, with no socket close/error; the last was at 10,001 ms for a 10,000 ms advertised timeout. This is evidence for a deadline race, not proof of post-fix live behavior. |
 
-The current watchdog schedules expiry at exactly
+The original watchdog scheduled expiry at exactly
 `keepalive_timeout_seconds * 1000`. Twitch's [EventSub WebSocket guidance](https://dev.twitch.tv/docs/eventsub/handling-websocket-events/)
 says to treat silence as loss when it lasts longer than the advertised window.
-An equality-boundary race is plausible, but no live evidence proves it caused
-this disconnect. No speculative timer change was made; the real cause remains
-unknown until opt-in diagnostics observe a subsequent loss.
+Sanitized live diagnostics later recorded four watchdog losses, no socket
+close/error, and a final elapsed value of 10,001 ms against a 10,000 ms
+advertised timeout. This strongly indicates premature exact-deadline expiry;
+the remediation below is still awaiting controlled live confirmation.
 
 ### Bounded diagnostics and regression evidence
 
@@ -512,6 +514,36 @@ two isolated runs: 23 shared and 98 server. The first sandbox run blocked
 socket-binding tests with `EPERM`; they were rerun in the authorized local
 test environment and passed. Server build, typecheck, lint, Prettier, and
 `git diff --check` passed. Web UI code was unchanged by this checkpoint.
+
+## P3-B4-C5-R2 — EventSub keepalive remediation
+
+| Criterion                         | Result                                                                                                                                                                                                                                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Preserve sanitized live evidence  | PASS — 5 valid welcomes, 5 enabled Helix subscriptions, 8 keepalives, 2 accepted and normalized notifications, 1 genuine ballot accepted, 1 `inactive-voting` rejection, 4 keepalive-timeout losses, 0 socket closes/errors, and 1 canceled forge. Last loss: 10,001 ms against 10,000 ms advertised. |
+| Initial keepalive request         | PASS — initial Twitch WSS URL requests `keepalive_timeout_seconds=30`; the implementation still uses each validated welcome’s returned timeout as authoritative.                                                                                                                                      |
+| Timeout boundary and grace        | PASS — deterministic monotonic fake-clock tests verify a keepalive at equality, keepalive and accepted notification during the 250 ms grace reset timing, and absent traffic causes disconnect after the advertised timeout plus grace.                                                               |
+| Stale timer/replacement isolation | PASS — queued old timer callback is ignored after refreshed or replaced transport; server-directed reconnect URL is unchanged.                                                                                                                                                                        |
+| Fail-closed behavior              | PASS — socket close still loses session, revocation and logout still shut down, subscriptions remain session-bound, and no canceled forge is resumed or ballot fabricated.                                                                                                                            |
+| Duplicate protection              | PASS — existing EventSub message replay and Helix subscription generation tests remain passing; no duplicate subscription or ballot path was added.                                                                                                                                                   |
+| Live post-fix verification        | PENDING — no Twitch connection, endpoint, OAuth, or real vote was used for this code remediation.                                                                                                                                                                                                     |
+
+Official Twitch documentation permits the optional initial WebSocket query
+parameter `keepalive_timeout_seconds` (10–600 seconds) and says the returned
+welcome value governs the keepalive window. The code requests 30 seconds but
+does not assume acceptance. The 250 ms grace is bounded, is measured with
+`performance.now()` by default, and only delays declaring loss; it does not
+disable or remove the timeout safeguard. Full command output and exact commit
+are recorded in the P3-B4-C5-R2 handoff after validation.
+
+**P3-B4-C5-R2 validation:** Node v24.21.0 / pnpm 11.25.0; frozen install,
+workspace build, typecheck, lint, Prettier check, full tests (124 total: 23
+shared / 101 server), and `git diff --check` passed. The four-category mock
+simulation revealed Thunder Tempest using an isolated disposable server bound
+to `127.0.0.1:3301`; the authenticated runtime was not touched. The first
+sandbox full-suite attempt hit existing socket-binding `EPERM`; the complete
+suite passed in the authorized local test environment. Hosted status checks
+were unavailable for the starting head; local command evidence is the manual
+CI evidence for this candidate.
 
 No live diagnostic was activated, no Twitch endpoint was contacted during
 automated tests, and no genuine vote is claimed. A subsequent 60-second Body

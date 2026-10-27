@@ -25,6 +25,10 @@ const EventSubTimestampSchema = z
   .string()
   .regex(RFC3339_TIMESTAMP)
   .refine((timestamp) => Number.isFinite(Date.parse(timestamp)));
+// Twitch says a session is lost only after no notification or keepalive has
+// arrived for longer than its advertised window. Allow a small scheduling
+// margin around that boundary while still rechecking with a monotonic clock.
+export const KEEPALIVE_TIMEOUT_GRACE_MS = 250;
 const MessageHeaderSchema = z.object({
   metadata: z.object({
     message_id: z.string().min(1).max(100),
@@ -110,7 +114,10 @@ export class EventSubSession {
   private pendingReconnectId: number | null = null;
   private readonly transports = new Map<number, EventSubTransport>();
   private readonly welcomedTransports = new Map<number, string>();
-  private readonly keepaliveTimers = new Map<number, { cancel: () => void; timeoutMs: number }>();
+  private readonly keepaliveTimers = new Map<
+    number,
+    { cancel: () => void; timeoutMs: number; lastHealthAt: number }
+  >();
   private cancelRetry: (() => void) | undefined;
   private retries = 0;
   private hasWelcomed = false;
@@ -344,27 +351,45 @@ export class EventSubSession {
       timeoutSeconds === undefined ? (existing?.timeoutMs ?? 0) : timeoutSeconds * 1000;
     this.keepaliveTimers.delete(transportId);
     if (timeoutMs <= 0) return;
-    const cancel = this.scheduler.schedule(() => {
-      const elapsedMs = this.lastHealthMessageAt.has(transportId)
-        ? this.monotonicNow() - this.lastHealthMessageAt.get(transportId)!
-        : timeoutMs;
-      this.options.diagnostics?.recordKeepalive(elapsedMs, timeoutMs);
-      if (transportId === this.pendingReconnectId) {
-        this.options.diagnostics?.increment("reconnectHandoffTimeouts");
-        this.closeTransport(transportId);
-        this.pendingReconnectId = null;
-        if (this.activeTransportId === null) this.scheduleRetry();
-        else this.setStatus("connected");
-        return;
-      }
-      this.disconnect(transportId, {
-        reason: this.welcomedTransports.has(transportId)
-          ? "keepalive-timeout"
-          : "connection-timeout",
-      });
-    }, timeoutMs);
-    this.lastHealthMessageAt.set(transportId, this.monotonicNow());
-    this.keepaliveTimers.set(transportId, { cancel, timeoutMs });
+    const lastHealthAt = this.monotonicNow();
+    this.lastHealthMessageAt.set(transportId, lastHealthAt);
+    const armWatchdog = (delayMs: number): void => {
+      const entry: { cancel: () => void; timeoutMs: number; lastHealthAt: number } = {
+        cancel: () => undefined,
+        timeoutMs,
+        lastHealthAt,
+      };
+      this.keepaliveTimers.set(transportId, entry);
+      entry.cancel = this.scheduler.schedule(() => {
+        // A canceled callback may already be queued. It must not act on a
+        // refreshed deadline or a replacement transport.
+        if (this.keepaliveTimers.get(transportId) !== entry) return;
+        if (this.activeTransportId !== transportId && this.pendingReconnectId !== transportId)
+          return;
+        const latestHealthAt = this.lastHealthMessageAt.get(transportId);
+        if (latestHealthAt === undefined || latestHealthAt !== entry.lastHealthAt) return;
+        const elapsedMs = Math.max(0, this.monotonicNow() - latestHealthAt);
+        const welcomed = this.welcomedTransports.has(transportId);
+        const allowedMs = timeoutMs + (welcomed ? KEEPALIVE_TIMEOUT_GRACE_MS : 0);
+        this.options.diagnostics?.recordKeepalive(elapsedMs, timeoutMs);
+        if (elapsedMs < allowedMs) {
+          armWatchdog(Math.max(1, allowedMs - elapsedMs));
+          return;
+        }
+        if (transportId === this.pendingReconnectId) {
+          this.options.diagnostics?.increment("reconnectHandoffTimeouts");
+          this.closeTransport(transportId);
+          this.pendingReconnectId = null;
+          if (this.activeTransportId === null) this.scheduleRetry();
+          else this.setStatus("connected");
+          return;
+        }
+        this.disconnect(transportId, {
+          reason: welcomed ? "keepalive-timeout" : "connection-timeout",
+        });
+      }, delayMs);
+    };
+    armWatchdog(timeoutMs);
   }
 
   private scheduleRetry(): void {

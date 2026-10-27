@@ -40,6 +40,7 @@ export interface AppOptions {
   twitchFetch?: typeof fetch;
   twitchCreateSocket?: (url: string) => WebSocket;
   twitchEventSubScheduler?: EventSubScheduler;
+  twitchEventSubMonotonicNow?: () => number;
   eventSubDiagnostics?: boolean;
 }
 
@@ -283,6 +284,9 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         ...(options.twitchFetch ? { fetch: options.twitchFetch } : {}),
         ...(options.twitchCreateSocket ? { createSocket: options.twitchCreateSocket } : {}),
         ...(options.twitchEventSubScheduler ? { scheduler: options.twitchEventSubScheduler } : {}),
+        ...(options.twitchEventSubMonotonicNow
+          ? { monotonicNow: options.twitchEventSubMonotonicNow }
+          : {}),
         ...(eventSubDiagnostics ? { diagnostics: eventSubDiagnostics } : {}),
         onChat: (event) => {
           if (provider !== "twitch") return;

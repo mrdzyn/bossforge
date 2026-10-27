@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   EventSubSession,
+  KEEPALIVE_TIMEOUT_GRACE_MS,
   type EventSubScheduler,
   type EventSubTransport,
   type EventSubTransportHandlers,
@@ -142,6 +143,7 @@ describe("offline injected EventSub lifecycle", () => {
     h.session.start();
     const oldSocket = h.sockets[0]!;
     h.welcome(oldSocket, "welcome-old", "old-session");
+    const oldKeepaliveTimer = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
     const reconnectUrl = "wss://fixtures.invalid/eventsub?session_id=preserve-me";
     h.send(
       oldSocket,
@@ -162,6 +164,8 @@ describe("offline injected EventSub lifecycle", () => {
     expect(h.notifications).toHaveLength(1);
     h.welcome(h.sockets[1]!, "welcome-new", "new-session");
     expect(oldSocket.closed).toBe(true);
+    expect(h.session.status).toBe("connected");
+    oldKeepaliveTimer.callback();
     expect(h.session.status).toBe("connected");
     expect(h.plans).toEqual([
       { sessionId: "old-session", plan: "initial" },
@@ -298,29 +302,42 @@ describe("offline injected EventSub lifecycle", () => {
   });
 
   it("retries after missed keepalive, and valid keepalive refreshes the deadline", () => {
-    const h = harness();
+    let monotonicMs = 0;
+    const h = harness({ monotonicNow: () => monotonicMs });
     h.session.start();
     const socket = h.sockets[0]!;
     h.welcome(socket, "welcome-1");
     const keepaliveTimer = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
     h.send(socket, message("keepalive", "session_keepalive"));
     expect(keepaliveTimer.cancelled).toBe(true);
+    // A callback already queued by the host scheduler must not terminate the
+    // session after the validated keepalive replaced its deadline.
+    keepaliveTimer.callback();
+    expect(h.session.status).toBe("connected");
     const activeTimeout = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    monotonicMs = 30_000;
     activeTimeout.callback();
+    expect(h.session.status).toBe("connected");
+    const grace = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    monotonicMs = 30_250;
+    grace.callback();
     expect(h.session.status).toBe("retry-wait");
   });
 
   it("answers sustained control pings without extending the keepalive deadline", () => {
-    const connecting = harness();
+    let connectingNow = 0;
+    const connecting = harness({ monotonicNow: () => connectingNow });
     connecting.session.start();
     const connectionDeadline = connecting.timers.find((timer) => !timer.cancelled)!;
     for (let index = 0; index < 50; index += 1) connecting.sockets[0]!.handlers.ping();
     expect(connecting.sockets[0]?.pongs).toBe(50);
     expect(connectionDeadline.cancelled).toBe(false);
+    connectingNow = 10_000;
     connectionDeadline.callback();
     expect(connecting.session.status).toBe("retry-wait");
 
-    const h = harness();
+    let monotonicMs = 0;
+    const h = harness({ monotonicNow: () => monotonicMs });
     h.session.start();
     const socket = h.sockets[0]!;
     h.welcome(socket, "welcome-1");
@@ -329,12 +346,18 @@ describe("offline injected EventSub lifecycle", () => {
     expect(socket.pongs).toBe(50);
     expect(deadline.cancelled).toBe(false);
     expect(h.timers.filter((timer) => !timer.cancelled)).toHaveLength(1);
+    monotonicMs = 30_000;
     deadline.callback();
+    expect(h.session.status).toBe("connected");
+    const grace = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    monotonicMs = 30_250;
+    grace.callback();
     expect(h.session.status).toBe("retry-wait");
   });
 
   it("does not extend deadlines for malformed frames or rejected notifications", () => {
-    const h = harness({ acceptNotification: () => false });
+    let monotonicMs = 0;
+    const h = harness({ acceptNotification: () => false, monotonicNow: () => monotonicMs });
     h.session.start();
     const socket = h.sockets[0]!;
     h.welcome(socket, "welcome-1");
@@ -354,7 +377,12 @@ describe("offline injected EventSub lifecycle", () => {
     expect(deadline.cancelled).toBe(false);
     expect(h.timers.filter((timer) => !timer.cancelled)).toHaveLength(1);
     expect(h.notifications).toHaveLength(0);
+    monotonicMs = 30_000;
     deadline.callback();
+    expect(h.session.status).toBe("connected");
+    const grace = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    monotonicMs = 30_250;
+    grace.callback();
     expect(h.session.status).toBe("retry-wait");
   });
 
@@ -377,7 +405,65 @@ describe("offline injected EventSub lifecycle", () => {
     h.session.shutdown();
   });
 
-  it("classifies a genuine keepalive expiration and records only relative timing", () => {
+  it("accepts a keepalive at the advertised timeout boundary", () => {
+    let monotonicMs = 0;
+    const h = harness({ monotonicNow: () => monotonicMs });
+    h.session.start();
+    const socket = h.sockets[0]!;
+    h.welcome(socket, "welcome-boundary");
+    const deadline = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+
+    monotonicMs = 30_000;
+    h.send(socket, message("boundary-keepalive", "session_keepalive"));
+    expect(deadline.cancelled).toBe(true);
+    deadline.callback();
+    expect(h.session.status).toBe("connected");
+    expect(h.timers.filter((timer) => !timer.cancelled).at(-1)?.delayMs).toBe(30_000);
+    h.session.shutdown();
+  });
+
+  it("accepts a keepalive received inside the bounded grace window", () => {
+    let monotonicMs = 0;
+    const h = harness({ monotonicNow: () => monotonicMs });
+    h.session.start();
+    const socket = h.sockets[0]!;
+    h.welcome(socket, "welcome-keepalive-grace");
+    const deadline = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    monotonicMs = 30_000;
+    deadline.cancelled = true;
+    deadline.callback();
+    const grace = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    expect(grace.delayMs).toBe(KEEPALIVE_TIMEOUT_GRACE_MS);
+
+    monotonicMs = 30_100;
+    h.send(socket, message("grace-keepalive", "session_keepalive"));
+    expect(grace.cancelled).toBe(true);
+    expect(h.session.status).toBe("connected");
+    h.session.shutdown();
+  });
+
+  it("resets the health timer for a valid notification received during grace", () => {
+    let monotonicMs = 0;
+    const h = harness({ monotonicNow: () => monotonicMs });
+    h.session.start();
+    const socket = h.sockets[0]!;
+    h.welcome(socket, "welcome-notification-grace");
+    const deadline = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    monotonicMs = 30_000;
+    deadline.cancelled = true;
+    deadline.callback();
+    const grace = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+
+    monotonicMs = 30_100;
+    h.send(socket, message("grace-notification", "notification", { event: { ok: true } }));
+    expect(grace.cancelled).toBe(true);
+    expect(h.notifications).toHaveLength(1);
+    expect(h.session.status).toBe("connected");
+    expect(h.timers.filter((timer) => !timer.cancelled).at(-1)?.delayMs).toBe(30_000);
+    h.session.shutdown();
+  });
+
+  it("declares keepalive loss only after the advertised timeout plus bounded grace", () => {
     let monotonicMs = 0;
     const diagnostics = new EventSubDiagnostics();
     const h = harness({ diagnostics, monotonicNow: () => monotonicMs });
@@ -385,17 +471,24 @@ describe("offline injected EventSub lifecycle", () => {
     const socket = h.sockets[0]!;
     h.welcome(socket, "welcome-expiration");
     const deadline = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
-    monotonicMs = 30_025;
+    monotonicMs = 30_001;
     deadline.cancelled = true;
     deadline.callback();
+
+    expect(h.session.status).toBe("connected");
+    const grace = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+    expect(grace.delayMs).toBe(KEEPALIVE_TIMEOUT_GRACE_MS - 1);
+    monotonicMs = 30_250;
+    grace.cancelled = true;
+    grace.callback();
 
     expect(h.session.status).toBe("retry-wait");
     expect(diagnostics.snapshot()).toMatchObject({
       disconnectReasons: { "keepalive-timeout": 1 },
-      keepalive: { lastElapsedMs: 30_025, advertisedTimeoutMs: 30_000 },
+      keepalive: { lastElapsedMs: 30_250, advertisedTimeoutMs: 30_000 },
       lastDisconnect: {
         reason: "keepalive-timeout",
-        elapsedMs: 30_025,
+        elapsedMs: 30_250,
         timeoutMs: 30_000,
       },
     });
@@ -424,13 +517,16 @@ describe("offline injected EventSub lifecycle", () => {
   });
 
   it("bounds a connection attempt that never receives a welcome", () => {
-    const h = harness({ maxRetries: 1 });
+    let monotonicMs = 0;
+    const h = harness({ maxRetries: 1, monotonicNow: () => monotonicMs });
     h.session.start();
     expect(h.timers.find((timer) => !timer.cancelled)?.delayMs).toBe(10_000);
+    monotonicMs = 10_000;
     h.fireNextTimer();
     expect(h.session.status).toBe("retry-wait");
     h.fireNextTimer();
     expect(h.sockets).toHaveLength(2);
+    monotonicMs = 20_000;
     h.fireNextTimer();
     expect(h.session.status).toBe("failed");
   });
