@@ -636,17 +636,17 @@ This phase starts from merged main `76a5ddeeea0986aae2ed073deaeb1a5b02fb6280`.
 It does not touch the authenticated local runtime, start OAuth, or contact
 Twitch. See [P4-A checklist](P4A-STREAMER-OBS-READINESS.md).
 
-| Criterion                                            | Verification                                                                  | Result             |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------ |
-| Exact vote command formatting and category mapping   | Shared helper tests use `FORGE_VOTE_CHOICES`                                  | PASS               |
-| Hyphenated special values preserve exact wire syntax | Regression test for `!vote special ember-burst`; human label `Ember Burst`    | PASS               |
-| Countdown and timeout boundary presentation          | Deterministic timestamp tests plus rendered countdown in Chromium             | PASS               |
-| Current leader does not imply early winner           | Regression tests cover no votes, unique leader, and tie                       | PASS               |
-| Default versus genuine winning-ballot attribution    | Regression tests distinguish default and community-vote copy                  | PASS               |
-| Live / simulated / disconnected separation           | React presentation regression; mock-mode Chromium state was SIMULATED         | PASS               |
-| Overlay has no vote-submission controls              | Read-only React render regression; no controls in browser rendering           | PASS               |
-| Dashboard and overlay responsive layout              | Dashboard at 1280×720 and 390×844; overlay at 1920×1080, 1280×720 and 390×844 | PASS — screenshots |
-| Actual capture in OBS application                    | Owner-operated OBS Browser Source                                             | **UNVERIFIED**     |
+| Criterion                                            | Verification                                                                  | Result                                                                       |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Exact vote command formatting and category mapping   | Shared helper tests use `FORGE_VOTE_CHOICES`                                  | PASS                                                                         |
+| Hyphenated special values preserve exact wire syntax | Regression test for `!vote special ember-burst`; human label `Ember Burst`    | PASS                                                                         |
+| Countdown and timeout boundary presentation          | Deterministic timestamp tests plus rendered countdown in Chromium             | PASS                                                                         |
+| Current leader does not imply early winner           | Regression tests cover no votes, unique leader, and tie                       | PASS                                                                         |
+| Default versus genuine winning-ballot attribution    | Regression tests distinguish default and community-vote copy                  | PASS                                                                         |
+| Live / simulated / disconnected separation           | React presentation regression; mock-mode Chromium state was SIMULATED         | PASS                                                                         |
+| Overlay has no vote-submission controls              | Read-only React render regression; no controls in browser rendering           | PASS                                                                         |
+| Dashboard and overlay responsive layout              | Post-C2 Chromium at 360/375/390/430px and 1280×720; overlay also at 1920×1080 | PASS — visible bounds checked at each viewport                               |
+| Actual capture in OBS application                    | Owner-supplied OBS Browser Source evidence                                    | PARTIAL — 1920×1080 visibly rendered; 1280×720 full-frame acceptance pending |
 
 **Phase 4-A automated validation:** Node v24.21.0 / pnpm 11.25.0; frozen
 install, build, typecheck, lint, Prettier, and full workspace tests passed. The
@@ -655,16 +655,28 @@ suite has 134 tests (29 shared, 4 web presentation, 101 server), preserving all
 completed in the disposable mock-only server and revealed Thunder Tempest;
 that synthetic outcome is not live Twitch evidence.
 
-**Browser QA:** Disposable mock-only server `127.0.0.1:33301` and Vite
-`127.0.0.1:5201`; the authenticated owner runtime was not touched. Chromium
-screenshots show the active mock prompt and separate simulation label. The
-390px dashboard and overlay document widths measured exactly 390px with no
-horizontal overflow. Visual captures: [dashboard 1280×720](visual-qa/p4a/dashboard-1280x720.png),
-[dashboard 390×844](visual-qa/p4a/dashboard-390x844.png),
-[overlay 1920×1080](visual-qa/p4a/overlay-1920x1080.png),
-[overlay 1280×720](visual-qa/p4a/overlay-1280x720.png), and
-[overlay 390×844](visual-qa/p4a/overlay-390x844.png). These are browser renders,
-not OBS application capture.
+**Post-C1 browser QA:** Disposable mock-only server `127.0.0.1:33301` and Vite
+`127.0.0.1:5201`; the authenticated owner runtime on ports 3001/5173 was not
+touched. Desktop dashboard and overlay renders fit at 1280×720; overlay also
+fit at 1920×1080. At 390×844, the dashboard action row and overlay
+prompt/options visibly clip at the right edge. Although `scrollWidth` is 390px,
+that metric does not detect this visual clipping. The mobile visual gate is
+therefore **FAIL**. Connection-loss/recovery browser checks passed: after the
+isolated server stopped, dashboard and overlay showed **SERVER LINK
+UNAVAILABLE / LIVE VOTE STATUS UNKNOWN** and hid cached prompts, counts and
+countdown; after the isolated server returned, each restored fresh state.
+Screenshots: [dashboard 1280×720](visual-qa/p4a-c1/dashboard-1280x720.jpg),
+[dashboard 390×844](visual-qa/p4a-c1/dashboard-390x844.jpg),
+[overlay 1920×1080](visual-qa/p4a-c1/overlay-1920x1080.jpg),
+[overlay 1280×720](visual-qa/p4a-c1/overlay-1280x720.jpg), and
+[overlay 390×844](visual-qa/p4a-c1/overlay-390x844.jpg). These are browser
+renders, not OBS application capture. See the exact owner OBS steps in
+[the readiness checklist](P4A-STREAMER-OBS-READINESS.md#owner-obs-browser-source-checklist).
+
+**Proposed bounded UI fix:** constrain dashboard actions and overlay voting
+content to the mobile available width and allow their controls/options to wrap.
+No application source was changed during this visual QA pass. Re-run all five
+viewport checks after remediation before accepting responsive layout.
 
 The Phase 3-B live evidence is owner-supplied, not a Phase 4-A automated test:
 OAuth/EventSub and stable connection passed in the owner's run; 3 genuine
@@ -716,3 +728,51 @@ large Phaser arena chunk advisory. No authenticated runtime restart, OAuth,
 real Twitch request, or live vote occurred. Actual OBS application capture
 remains **UNVERIFIED**. The prior Phase 4-A baseline above remains separately
 recorded.
+
+### P4A-C2 — mobile clipping remediation
+
+The owner-reported C1 visual check found the dashboard action row and overlay
+prompt/options clipped at 390×844 even though the document width did not
+overflow. The mobile rules now allow dashboard action controls to shrink and
+wrap with their labels intact, and give the overlay a zero-minimum single grid
+track so nested content cannot expand beyond the viewport. Changes are scoped
+to widths up to 650px; desktop layout rules are unchanged.
+
+**Browser visual QA:** On the credential-free mock instance at
+`127.0.0.1:33301` with Vite at `127.0.0.1:5201`, Chromium tested Dashboard at
+360×800, 375×812, 390×844, 430×932 and 1280×720; Overlay at those same sizes and
+1920×1080. Visible element bounds were checked against each CSS viewport, not
+only document `scrollWidth`. No relevant visible element crossed the viewport
+edge. Dashboard controls wrap to a second row when needed; overlay options,
+choice labels, counts and countdown remain within the content width. At 360px,
+the disconnected server warning measured 298px inside its parent, and the
+overlay warning measured 332px inside its parent. Connection-loss checks used
+the isolated mock server only; both surfaces displayed **SERVER LINK
+UNAVAILABLE / LIVE VOTE STATUS UNKNOWN**. Recovery returned the mock app to a
+fresh idle state. The first C2 screenshot set is preserved in
+[`visual-qa/p4a-c2`](visual-qa/p4a-c2/); final captures after all CSS
+adjustments are in [`visual-qa/p4a-c2-verified`](visual-qa/p4a-c2-verified/),
+including per-viewport dashboard and overlay images and separate 360px
+disconnect-warning captures. All are mock-mode browser evidence; no real Twitch
+commands were sent. In simulated mode, canonical Twitch commands are correctly
+not shown.
+
+**Owner-supplied OBS evidence:** The owner reports that the Browser Source was
+visible in OBS at 1920×1080. At 1280×720, the selected source appeared about
+640×360 inside a larger OBS canvas. The source was rendered, but full-frame
+acceptance at 1280×720 remains pending. This OBS evidence was not independently
+captured or reproduced by Codex. For the owner retest, set the Browser Source
+properties to 1280×720, then use **Transform → Fit to Screen** and confirm the
+source fills the intended frame. Capture the OBS Studio window. Test 1920×1080
+and 1280×720 as separate Browser Sources with their own matching viewport
+dimensions; scaling a 640×360 source to fit does not verify a 1280×720 browser
+viewport. See [the owner checklist](P4A-STREAMER-OBS-READINESS.md#owner-obs-browser-source-checklist).
+
+**P4A-C2 validation:** Node v24.21.0 / pnpm 11.25.0. Frozen install, workspace
+build, typecheck, lint, format check, targeted web tests (19), full suite (149:
+29 shared / 19 web / 101 server), four-category five-second mock simulation
+(2 synthetic ballots per category), and `git diff --check` passed. The mock
+simulation revealed Thunder Tempest (drake / storm / thunder-dash / light); it
+is synthetic evidence only. The full suite ran outside the sandbox after
+default sandbox writes were denied with `EPERM`. No OAuth, live Twitch vote,
+authenticated runtime restart, merge, deployment or publication occurred.

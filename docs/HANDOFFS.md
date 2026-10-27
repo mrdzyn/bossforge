@@ -494,8 +494,9 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Evidence status:** Automated UI/helper tests and disposable mock-mode browser
   QA are recorded in the Phase 4-A section of `docs/ACCEPTANCE.md`. They are
   separate from owner-supplied P3-B live results. Actual OBS application
-  capture remains **UNVERIFIED** pending the owner-operated Browser Source
-  checklist in `docs/P4A-STREAMER-OBS-READINESS.md`.
+  capture has owner-supplied partial evidence: 1920×1080 rendered visibly;
+  1280×720 full-frame acceptance remains pending the owner Browser Source
+  retest in `docs/P4A-STREAMER-OBS-READINESS.md`.
 - **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build,
   typecheck, lint, Prettier, 134 tests (29 shared / 4 web / 101 server),
   four-category mock simulation, responsive browser checks and `git diff
@@ -532,3 +533,34 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Review gate:** Keep existing PR #6 Draft and unmerged. Request an
   independent exact-head re-audit after commit and push. Do not deploy or begin
   Phase 5.
+
+### P4A-C2 — mobile clipping remediation
+
+- **Starting head:** `57baca8ffa6fd4ef5915fa1fa0caf59988859746` on the existing
+  `feat/p4a-streamer-voting-ux` branch and Draft PR #6. Preserve the uncommitted
+  C1 QA notes and screenshots in `docs/visual-qa/p4a-c1/`; C2 preserves its
+  initial captures in `docs/visual-qa/p4a-c2/` and records final post-fix
+  captures in `docs/visual-qa/p4a-c2-verified/`.
+- **Correction:** Mobile dashboard controls can shrink and wrap without cutting
+  button labels. The overlay uses a zero-minimum mobile grid track and bounded
+  live-vote content. Desktop rules and all Twitch/OAuth/server security
+  boundaries remain unchanged.
+- **Browser evidence:** Dashboard checked at 360×800, 375×812, 390×844,
+  430×932 and 1280×720; overlay checked at those sizes plus 1920×1080. Exact
+  visible DOM bounds were checked at each CSS viewport. Connection-loss warning
+  fits at 360px; the isolated mock server was restored after that check. Current
+  screenshots and details are in the P4A-C2 section of `docs/ACCEPTANCE.md`.
+- **OBS evidence:** Owner reports the Browser Source was visible at 1920×1080.
+  At 1280×720 it appeared about 640×360 in a larger canvas. The owner must set
+  a separate Browser Source to 1280×720 in Properties, use **Transform → Fit
+  to Screen**, confirm it fills the canvas and provide a full OBS screenshot.
+  Do not mark full OBS acceptance PASS until this retest is captured.
+- **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build,
+  typecheck, lint, formatting, targeted web tests (19), full workspace tests
+  (149: 29 shared / 19 web / 101 server), four-category five-second mock
+  simulation (2 synthetic ballots per category), and `git diff --check` passed.
+  Visible bounds passed at all requested viewports; disconnect warnings fit at
+  360px. The mock simulation is synthetic evidence only.
+- **Delivery:** Commit and push this bounded fix, docs and preserved/new QA
+  artifacts to the existing Draft PR #6 only. Request independent exact-head
+  re-audit. Do not merge, deploy, publish or start Phase 5.
