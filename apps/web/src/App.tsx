@@ -1,7 +1,14 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { type ForgeState } from "@bossforge/shared";
+import {
+  currentVoteLeader,
+  humanizeVoteChoice,
+  remainingVoteSeconds,
+  type ForgeState,
+  winnerAttribution,
+} from "@bossforge/shared";
 import { useLiveEvents } from "./hooks/useLiveEvents.js";
 import { FORGE_DURATIONS, forgeCountdownLabel, type ForgeDuration } from "./live-forge-ui.js";
+import { VoteInstructions } from "./VoteInstructions.js";
 
 const Arena = lazy(() => import("./arena/Arena.js"));
 
@@ -164,9 +171,33 @@ function CategoryResults({ state }: { state: ForgeState }) {
           ) : (
             <p className="muted">Waiting for this vote category.</p>
           )}
-          {category.noVoteFallback && (
-            <small className="fallback-note">
-              No votes received · first option selected by default
+          {category.status === "open" && state.activeCategory === category.category && (
+            <>
+              <VoteInstructions
+                category={category}
+                mode={state.mode}
+                connectedToTwitch={state.connectedToTwitch}
+                surface="dashboard"
+              />
+              {(() => {
+                const leader = currentVoteLeader(category.options);
+                if (!leader) return null;
+                return leader.status === "leader" ? (
+                  <p className="current-leader" aria-live="polite">
+                    Leading right now: <strong>{humanizeVoteChoice(leader.choice)}</strong> ·{" "}
+                    {leader.count} vote{leader.count === 1 ? "" : "s"}
+                  </p>
+                ) : (
+                  <p className="current-leader" aria-live="polite">
+                    Tied for the lead · {leader.count} vote{leader.count === 1 ? "" : "s"} each
+                  </p>
+                );
+              })()}
+            </>
+          )}
+          {category.status === "closed" && category.winner && (
+            <small className={`winner-source ${category.noVoteFallback ? "default" : "community"}`}>
+              {winnerAttribution(category.winner, category.noVoteFallback)}
             </small>
           )}
         </section>
@@ -241,19 +272,11 @@ function Dashboard() {
     const timer = setInterval(
       () =>
         setSeconds(
-          forge?.categories.find((item) => item.category === forge.activeCategory)?.closesAt
-            ? Math.max(
-                0,
-                Math.ceil(
-                  (Date.parse(
-                    forge.categories.find((item) => item.category === forge.activeCategory)!
-                      .closesAt!,
-                  ) -
-                    Date.now()) /
-                    1000,
-                ),
-              )
-            : 0,
+          remainingVoteSeconds(
+            forge?.categories.find((item) => item.category === forge.activeCategory)?.closesAt ??
+              null,
+            Date.now(),
+          ),
         ),
       250,
     );
@@ -611,15 +634,13 @@ function Dashboard() {
 
 function OverlayPreview() {
   const { forge, connection } = useLiveEvents();
-  const category = forge?.categories.find((item) => item.category === forge.activeCategory);
+  const category =
+    forge?.status === "voting"
+      ? (forge.categories.find((item) => item.category === forge.activeCategory) ?? null)
+      : null;
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
-    const update = () =>
-      setSeconds(
-        category?.closesAt
-          ? Math.max(0, Math.ceil((Date.parse(category.closesAt) - Date.now()) / 1000))
-          : 0,
-      );
+    const update = () => setSeconds(remainingVoteSeconds(category?.closesAt ?? null, Date.now()));
     update();
     const timer = setInterval(update, 250);
     return () => clearInterval(timer);
@@ -688,28 +709,50 @@ function OverlayPreview() {
             ? `Choose the boss ${category.category === "weakness" ? "weakness" : category.category}`
             : "A boss built by the whole chat"}
         </h2>
+        <VoteInstructions
+          category={category}
+          mode={forge?.mode ?? "mock"}
+          connectedToTwitch={forge?.connectedToTwitch ?? false}
+          surface="overlay"
+        />
         {category ? (
-          <div className="vote-options">
-            {category.options.map((option) => (
-              <div
-                className={category.winner === option.choice ? "winner" : ""}
-                key={option.choice}
-              >
-                <span className="option-glyph">✦</span>
-                <span>{title(option.choice)}</span>
-                <b>
-                  {option.percentage}% · {option.count}
-                </b>
-                <i style={{ width: `${option.percentage}%` }} />
-              </div>
-            ))}
-          </div>
+          <>
+            {(() => {
+              const leader = currentVoteLeader(category.options);
+              if (!leader) return null;
+              return leader.status === "leader" ? (
+                <p className="overlay-leader" aria-live="polite">
+                  LEADING RIGHT NOW · {humanizeVoteChoice(leader.choice)} · {leader.count} VOTE
+                  {leader.count === 1 ? "" : "S"}
+                </p>
+              ) : (
+                <p className="overlay-leader" aria-live="polite">
+                  TIED FOR THE LEAD · {leader.count} VOTE{leader.count === 1 ? "" : "S"} EACH
+                </p>
+              );
+            })()}
+            <div className="vote-options">
+              {category.options.map((option) => (
+                <div
+                  className={category.winner === option.choice ? "winner" : ""}
+                  key={option.choice}
+                >
+                  <span className="option-glyph">✦</span>
+                  <span>{title(option.choice)}</span>
+                  <b>
+                    {option.percentage}% · {option.count}
+                  </b>
+                  <i style={{ width: `${option.percentage}%` }} />
+                </div>
+              ))}
+            </div>
+          </>
         ) : forge ? (
           <div className="overlay-reveal-row">
             {forge.categories.map((item) => (
               <span key={item.category}>
-                {title(item.category)} <b>{title(item.winner ?? "NONE")}</b>
-                {item.noVoteFallback && " · DEFAULT"}
+                {title(item.category)} <b>{humanizeVoteChoice(item.winner ?? "none")}</b>
+                {item.winner && ` · ${winnerAttribution(item.winner, item.noVoteFallback)}`}
               </span>
             ))}
           </div>

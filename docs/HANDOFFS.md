@@ -473,3 +473,36 @@ only after they exist. Do not invent a Codex session ID; use the session's
   These are code/test results, not the source of the live Twitch outcome.
 - **Review gate:** Request final independent exact-head audit of the
   documentation-only commit below. Do not merge, deploy or publish.
+
+## Phase 4-A — streamer voting UX and OBS readiness
+
+- **Current base:** `main` at the PR #5 merge commit
+  `76a5ddeeea0986aae2ed073deaeb1a5b02fb6280`. PR #5 is closed and merged;
+  older P3-B handoff entries retain their historical open/Draft review status
+  as it stood at each checkpoint.
+- **Branch:** `feat/p4a-streamer-voting-ux`. Work is isolated from the owner's
+  authenticated checkout and runtime.
+- **Scope:** Dashboard and read-only overlay expose the active canonical
+  category, exact valid `!vote` commands for verified live Twitch, human labels,
+  countdown, totals, and a tie-aware current leader. Completed outcomes
+  distinguish a community winner from a no-valid-votes default. Live,
+  simulated, and disconnected states are labeled separately. No vote-submission
+  UI was added to the overlay.
+- **Security boundary:** The change does not alter OAuth, EventSub, vote intake,
+  state routes, network binding, or production behavior. No authenticated
+  runtime restart, OAuth, Twitch request, or real vote is part of this work.
+- **Evidence status:** Automated UI/helper tests and disposable mock-mode browser
+  QA are recorded in the Phase 4-A section of `docs/ACCEPTANCE.md`. They are
+  separate from owner-supplied P3-B live results. Actual OBS application
+  capture remains **UNVERIFIED** pending the owner-operated Browser Source
+  checklist in `docs/P4A-STREAMER-OBS-READINESS.md`.
+- **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build,
+  typecheck, lint, Prettier, 134 tests (29 shared / 4 web / 101 server),
+  four-category mock simulation, responsive browser checks and `git diff
+--check` passed. Phaser's existing large arena chunk emits a build-size
+  advisory; the build succeeds.
+- **Phase 5:** Submission preparations are recorded in the readiness guide;
+  no video, footage, session ID, public submission, or publication is claimed.
+- **Review gate:** Keep the Phase 4-A pull request Draft and unmerged. Request
+  an independent exact-head review after validation and push. Do not deploy,
+  publish, or start Phase 5.

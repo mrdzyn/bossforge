@@ -4,6 +4,10 @@ Status vocabulary: **PASS** ran successfully; **FAIL** ran and failed;
 **NOT TESTED** was not run or could not be observed. Update this matrix with
 actual outcomes; do not infer a pass from a configured script.
 
+The older Phase 3-B remediation sections below retain historical results and
+review gates as recorded at those checkpoints. PR #5 subsequently merged to
+`main` at `76a5dde`; the current work is Phase 4-A.
+
 ## Required checks
 
 | Criterion                                        | Verification                                                        | Result                                |
@@ -572,15 +576,16 @@ match the active stage. Valid forms and choices are:
 | Weakness | `!vote weakness water`, `!vote weakness light`, `!vote weakness earth`, `!vote weakness wind`                        |
 
 These choices are from `packages/shared/src/index.ts`; the category must match
-the active stage. Recommend showing the syntax and currently valid choices as
-clearer voting instructions in the overlay in a future UX update.
+the active stage. At the time of this checkpoint the overlay prompt was a
+recommended UX improvement; Phase 4-A now presents the active choices and
+exact commands as documented below.
 
 The above live results are owner-supplied, not independent Codex test results.
 Automated checks remain: 124 tests passed at audited implementation HEAD
 `279ff63fc803921310226d9c6903a029af7f0bd5` (23 shared / 101 server), plus the
 build, typecheck, lint, formatting, diff-check and mock-simulation evidence
-above. Final exact-head review of this documentation-only update is pending;
-keep Draft PR #5 open and unmerged.
+above. The final exact-head review request was pending at this checkpoint; PR
+#5 was subsequently squash-merged to `main` at `76a5dde`.
 
 ## P3-B4-C5-R1 — diagnostic browser compatibility
 
@@ -624,3 +629,48 @@ diagnostic query or live browser authentication session was used. The new
 owner-visible button was build-checked; its actual live-session browser click
 remains for the separately coordinated owner QA. No real Twitch endpoint or
 credential was used in tests.
+
+## Phase 4-A — streamer voting UX and OBS readiness
+
+This phase starts from merged main `76a5ddeeea0986aae2ed073deaeb1a5b02fb6280`.
+It does not touch the authenticated local runtime, start OAuth, or contact
+Twitch. See [P4-A checklist](P4A-STREAMER-OBS-READINESS.md).
+
+| Criterion                                            | Verification                                                                  | Result             |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------ |
+| Exact vote command formatting and category mapping   | Shared helper tests use `FORGE_VOTE_CHOICES`                                  | PASS               |
+| Hyphenated special values preserve exact wire syntax | Regression test for `!vote special ember-burst`; human label `Ember Burst`    | PASS               |
+| Countdown and timeout boundary presentation          | Deterministic timestamp tests plus rendered countdown in Chromium             | PASS               |
+| Current leader does not imply early winner           | Regression tests cover no votes, unique leader, and tie                       | PASS               |
+| Default versus genuine winning-ballot attribution    | Regression tests distinguish default and community-vote copy                  | PASS               |
+| Live / simulated / disconnected separation           | React presentation regression; mock-mode Chromium state was SIMULATED         | PASS               |
+| Overlay has no vote-submission controls              | Read-only React render regression; no controls in browser rendering           | PASS               |
+| Dashboard and overlay responsive layout              | Dashboard at 1280×720 and 390×844; overlay at 1920×1080, 1280×720 and 390×844 | PASS — screenshots |
+| Actual capture in OBS application                    | Owner-operated OBS Browser Source                                             | **UNVERIFIED**     |
+
+**Phase 4-A automated validation:** Node v24.21.0 / pnpm 11.25.0; frozen
+install, build, typecheck, lint, Prettier, and full workspace tests passed. The
+suite has 134 tests (29 shared, 4 web presentation, 101 server), preserving all
+124 P3-B tests. `git diff --check` passes. The four-category `pnpm simulate`
+completed in the disposable mock-only server and revealed Thunder Tempest;
+that synthetic outcome is not live Twitch evidence.
+
+**Browser QA:** Disposable mock-only server `127.0.0.1:33301` and Vite
+`127.0.0.1:5201`; the authenticated owner runtime was not touched. Chromium
+screenshots show the active mock prompt and separate simulation label. The
+390px dashboard and overlay document widths measured exactly 390px with no
+horizontal overflow. Visual captures: [dashboard 1280×720](visual-qa/p4a/dashboard-1280x720.png),
+[dashboard 390×844](visual-qa/p4a/dashboard-390x844.png),
+[overlay 1920×1080](visual-qa/p4a/overlay-1920x1080.png),
+[overlay 1280×720](visual-qa/p4a/overlay-1280x720.png), and
+[overlay 390×844](visual-qa/p4a/overlay-390x844.png). These are browser renders,
+not OBS application capture.
+
+The Phase 3-B live evidence is owner-supplied, not a Phase 4-A automated test:
+OAuth/EventSub and stable connection passed in the owner's run; 3 genuine
+ballots were accepted and 3 rejected; all four stages completed; Special used
+its no-vote default; the Phaser arena ended in victory. This does not establish
+an accepted genuine vote in every category. Actual OBS application capture
+remains **UNVERIFIED**. The earlier 124 fake-network tests belong to commit
+`279ff63fc803921310226d9c6903a029af7f0bd5` and must not be attributed to live
+Twitch or the Phase 4-A change.

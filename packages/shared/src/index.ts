@@ -1,6 +1,7 @@
 import { z } from "zod";
 export { ForgeStateReconciler } from "./forge-state-reconciler.js";
 export * from "./combat.js";
+export * from "./voting-presentation.js";
 
 export const ProviderSchema = z.enum(["mock", "twitch"]);
 export type Provider = z.infer<typeof ProviderSchema>;

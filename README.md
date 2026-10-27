@@ -28,7 +28,7 @@ normalizer and lifecycle harness are reused by the separately authorized P3-B
 branch; P3-A itself remains offline and mock-only.
 
 **Phase 3-B:** [Real local Twitch integration](docs/P3B-LIVE-TWITCH-INTEGRATION.md)
-is implemented on existing Draft PR #5, with OAuth/EventSub gated by explicit
+was squash-merged to `main` via PR #5 at `76a5dde`. OAuth/EventSub remain gated by explicit
 local configuration. The owner reports live OAuth/EventSub PASS, one valid
 welcome, one enabled Helix subscription, 11 keepalives for the advertised
 30-second timeout, 6 accepted/normalized notifications and 6 chat callbacks.
@@ -44,8 +44,11 @@ implementation commit `279ff63fc803921310226d9c6903a029af7f0bd5` using fake
 transports. For a local account, the owner must personally approve/configure
 OAuth: set the registered Client ID and private Client Secret in gitignored
 `.env`, then explicitly set `TWITCH_INTEGRATION_ENABLED=true`. The server
-remains loopback-only and mock simulation remains available. PR #5 remains
-Draft and unmerged; see [acceptance evidence](docs/ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
+remains loopback-only and mock simulation remains available. **Phase 4-A is in
+progress** on `feat/p4a-streamer-voting-ux`; it adds clearer streamer voting
+instructions and an OBS-ready read-only overlay. Actual capture inside OBS
+remains unverified. See [Phase 4-A readiness](docs/P4A-STREAMER-OBS-READINESS.md)
+and [acceptance evidence](docs/ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
 
 See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 [roadmap](docs/ROADMAP.md).
@@ -86,7 +89,10 @@ default.
 
 Open <http://127.0.0.1:5173/overlay> for the broadcast presentation. It shares
 the local event stream and omits streamer administration controls. The layout is
-designed for 1920×1080 and 1280×720 safe areas. Voting and boss details show live simulation state; the OBS boss health is a
+designed for 1920×1080 and 1280×720 safe areas. During verified Twitch voting,
+the overlay presents exact chat commands for the active category, current
+counts, leader/tie status and countdown. Simulation and disconnected states are
+labeled separately; defaults are identified explicitly. Voting and boss details show live simulation state; the OBS boss health is a
 forge-derived statistic, not live client-side combat health. Combat results are
 not yet synchronized to the OBS overlay.
 

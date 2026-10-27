@@ -93,6 +93,17 @@ introduced in Phase 1.
 - Owner must opt in to local OAuth authorization and provide the secret through private local configuration. Never force browser login or make real Twitch API calls in tests. **Owner-supplied C5-R2 live QA:** OAuth/EventSub PASS; 1 valid welcome, 1 enabled Helix subscription, 11 keepalives at a 30,000 ms advertised timeout, 6 accepted notifications, 6 normalized messages and 6 chat callbacks. Three genuine ballots were accepted and three rejected (1 `wrong-category`, 2 `invalid-choice`); keepalive disconnects, socket closes/errors and forge cancellations: 0. The four-stage forge revealed Cinder Granite (Golem / Fire / Ember Burst default / Earth); Special used its no-vote default, so acceptance in all categories is not claimed. Phaser result was VICTORY (boss 0/120 HP; streamer 64/100 HP). These results were supplied by the owner, not independently reproduced; actual OBS application capture remains **UNVERIFIED**. Automated fake-network results are separate: 124 tests passed at implementation commit `279ff63fc803921310226d9c6903a029af7f0bd5`.
 - Full [active implementation and test gates](P3B-LIVE-TWITCH-INTEGRATION.md).
 
+## Phase 4-A — voting presentation boundary
+
+The dashboard and OBS overlay display server-authoritative vote state and
+canonical command text. Overlay content does not submit votes or expose forge
+administration, OAuth controls, credentials, chat identities, or diagnostic
+data. Live commands appear only while the authoritative state reports a
+verified Twitch connection and an open category. Simulation and disconnected
+states do not imply live voting. No voting intake, OAuth, EventSub, route,
+listener, or authorization boundary changed in Phase 4-A. Chromium screenshots
+are browser evidence only; actual OBS capture remains unverified.
+
 ### P3-B implementation status
 
 - The implementation uses `TWITCH_INTEGRATION_ENABLED=true` only in

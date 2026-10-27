@@ -1197,6 +1197,89 @@ p {
   border-radius: 12px;
   background: #12121de8;
 }
+
+.vote-instructions {
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #7dd6ca55;
+  border-radius: 10px;
+  background: #182a32;
+  color: #e5edf2;
+}
+.vote-instructions p {
+  margin: 0 0 9px;
+  line-height: 1.5;
+}
+.vote-instructions code {
+  color: #a4f4dd;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+}
+.vote-command-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.vote-command-list span {
+  display: grid;
+  gap: 4px;
+  min-width: 112px;
+  padding: 7px 9px;
+  border: 1px solid #ffffff1c;
+  border-radius: 7px;
+  background: #ffffff08;
+}
+.vote-command-list strong {
+  font-size: 13px;
+}
+.vote-command-list code {
+  font-size: 11px;
+}
+.vote-instructions.dashboard {
+  font-size: 13px;
+}
+.vote-instructions.overlay {
+  font-size: clamp(12px, 1.1vw, 17px);
+}
+.vote-instructions.overlay .vote-command-list span {
+  flex: 1 1 155px;
+}
+.current-leader,
+.overlay-leader,
+.winner-source {
+  display: block;
+  margin: 10px 0 0;
+  color: #a4f4dd;
+  font:
+    600 12px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0.2px;
+}
+.overlay-leader {
+  margin: 0 0 10px;
+  font-size: clamp(11px, 1vw, 15px);
+}
+.winner-source.default {
+  color: #ffc783;
+}
+.winner-source.community {
+  color: #a4f4dd;
+}
+.local-badge.disconnected {
+  color: #ffc783;
+}
+.local-badge.disconnected i {
+  background: #f4a261;
+  box-shadow: 0 0 9px #f4a26199;
+}
+
+@media (max-width: 600px) {
+  .vote-instructions.overlay .vote-command-list span {
+    flex-basis: 125px;
+  }
+}
 .overlay-vote-heading {
   display: flex;
   justify-content: space-between;
@@ -2564,5 +2647,82 @@ p {
 @media (prefers-reduced-motion: reduce) {
   .arena-health-row em {
     transition: none;
+  }
+}
+
+@media (max-width: 650px) {
+  .overlay-page {
+    width: 100%;
+    max-width: 100vw;
+  }
+  .overlay-page > * {
+    min-width: 0;
+  }
+  .overlay-topline {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .overlay-brand {
+    justify-content: flex-start;
+  }
+  .overlay-round {
+    align-items: flex-start;
+    max-width: 100%;
+    min-width: 0;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  .overlay-round > span {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .overlay-boss-card,
+  .overlay-vote-card,
+  .overlay-activity,
+  .overlay-safe-label {
+    width: 100%;
+    min-width: 0;
+  }
+  .overlay-boss-info {
+    width: 100%;
+    min-width: 0;
+  }
+  .overlay-boss-info h1 {
+    overflow-wrap: anywhere;
+  }
+  .overlay-vote-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .vote-open {
+    font-size: 11px;
+    white-space: normal;
+  }
+  .vote-command-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .vote-command-list span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .vote-instructions.overlay .vote-command-list span {
+    min-width: 0;
+  }
+  .vote-instructions p {
+    overflow-wrap: anywhere;
+  }
+  .vote-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vote-options > div {
+    min-width: 0;
+    width: 100%;
+  }
+  .overlay-activity {
+    overflow-wrap: anywhere;
   }
 }

@@ -1,9 +1,9 @@
 # Phase 3-B — Authenticated Local Twitch Chat + EventSub Voting
 
-**Status:** C5-R2 implementation and owner-supplied live acceptance are recorded on Draft PR #5. The owner reported successful OAuth/EventSub, stable keepalives, genuine notifications and ballots, all four forge stages, and a Phaser victory. These live results were not independently reproduced; actual OBS application capture remains **UNVERIFIED**. Full owner-supplied results and automated-test separation are in [C5-R2 acceptance evidence](ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
+**Status:** P3-B was squash-merged via PR #5 at `76a5ddeeea0986aae2ed073deaeb1a5b02fb6280`. Its C5-R2 live acceptance remains owner-supplied and not independently reproduced. Actual OBS application capture remains **UNVERIFIED**. Phase 4-A now implements the formerly recommended viewer-facing command and choice prompts; see [P4-A readiness](P4A-STREAMER-OBS-READINESS.md) and [C5-R2 evidence](ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
 **Base:** `main@5adbd71f5378666e17b805617f37c3bb000505b8` (P3-A independently audited and squash-merged via PR #4)  
 **Working branch:** `feat/phase3b-live-twitch-integration`  
-**Delivery:** One Draft PR, bounded implementation checkpoints, independent exact-head review, **separate explicit owner squash-merge decision**.  
+**Historical delivery:** Existing Draft PR #5, bounded implementation checkpoints, independent reviews, then owner-approved squash merge at `76a5dde`. This specification records the completed P3-B scope.
 **Product goal:** Real Twitch viewer `!vote` commands shape the same playable BossForge boss, with independently identifiable **SIMULATED** and **LIVE TWITCH** sessions. No deployment, publishing, public server, or chat posting.
 
 ## Owner-provisioned Twitch application and local developer setup
@@ -82,7 +82,7 @@ Local MVP: authenticate the **broadcaster's own Twitch account** with `user:read
 
 **Deliverables:** update `docs/STATUS.md`, `docs/ACCEPTANCE.md`, `docs/HANDOFFS.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/ROADMAP.md`, README, env placeholders and new focused runbook. Commit and push to **existing P3-B branch/Draft PR**, no new PR. Request independent exact-head audit for each security-relevant slice.
 
-**Human approvals:** Approved: begin P3-B development and local authenticated Twitch integration. Not approved: squash/merge, cloud/public deployment, release, publishing, production remote access, secret disclosure or Phase 4. Do not treat code-writing approval as permission to run OAuth against an account without local operator consent. Owner must explicitly start/login through the app.
+**Historical human-approval record:** P3-B began with approval for local Twitch integration development, but without merge, cloud/public deployment, release, publication, production remote access, or secret disclosure approval. The owner later authorized and completed the PR #5 squash merge recorded above. The current Phase 4-A work is separately scoped; it does not run OAuth or authorize deployment/publication. The owner must personally initiate any future OAuth flow.
 
 ## Known future hardening
 
