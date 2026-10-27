@@ -6,18 +6,28 @@ import {
   type AppEventEnvelope,
   type ForgeState,
 } from "@bossforge/shared";
+import { isTwitchVoteCancelled, sanitizedForgeStartError } from "../live-forge-ui.js";
 
 export function useLiveEvents() {
   const reconciler = useRef<ForgeStateReconciler | null>(null);
   if (!reconciler.current) reconciler.current = new ForgeStateReconciler();
   const [events, setEvents] = useState<AppEventEnvelope[]>([]);
   const [forge, setForge] = useState<ForgeState | null>(null);
+  const forgeRef = useRef<ForgeState | null>(null);
   const [snapshotAvailable, setSnapshotAvailable] = useState(false);
   const appliedVersion = useRef(0);
   const [connection, setConnection] = useState("connecting");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const applyForge = useCallback((next: ForgeState, generation: number) => {
     if (reconciler.current?.apply(next, generation)) {
+      const previous = forgeRef.current;
+      if (isTwitchVoteCancelled(previous, next))
+        setNotice(
+          "Voting was canceled because the Twitch connection was lost. Reconnect to start a new forge.",
+        );
+      else if (next.status === "voting" || next.status === "revealed") setNotice("");
+      forgeRef.current = next;
       setForge(next);
       setSnapshotAvailable(true);
       appliedVersion.current += 1;
@@ -107,9 +117,22 @@ export function useLiveEvents() {
             ? { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }
             : {}),
         });
-        if (!response.ok) throw new Error(String(response.status));
+        if (!response.ok) {
+          let serverError: unknown;
+          try {
+            const payload: unknown = await response.json();
+            if (payload && typeof payload === "object" && "error" in payload)
+              serverError = payload.error;
+          } catch {
+            // Status-specific messages below remain sanitized if no JSON body exists.
+          }
+          setError(sanitizedForgeStartError(response.status, serverError));
+          return false;
+        }
         const result = ForgeStateSchema.safeParse(await response.json());
         if (result.success) applyForge(result.data, generation);
+        else
+          setError("The local server returned an invalid forge state. Reconnect the server link.");
         return result.success;
       } catch {
         setError("Local forge request failed. Confirm the development server is running.");
@@ -118,5 +141,5 @@ export function useLiveEvents() {
     },
     [applyForge],
   );
-  return { events, forge, connection, error, post, snapshotAvailable };
+  return { events, forge, connection, error, notice, post, snapshotAvailable };
 }

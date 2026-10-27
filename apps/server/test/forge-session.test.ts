@@ -187,6 +187,13 @@ describe("ForgeSession", () => {
       connectedToTwitch: false,
       status: "idle",
     });
+    live.setTwitchConnected(true);
+    expect(live.getState()).toMatchObject({
+      connectedToTwitch: true,
+      status: "idle",
+      activeCategory: null,
+      progress: 0,
+    });
     expect(
       live.handleEvent({
         ...event("twitch"),
@@ -194,5 +201,51 @@ describe("ForgeSession", () => {
       }),
     ).toBe(false);
     live.close();
+  });
+
+  it("cancels the active Twitch timer on connection loss and does not resume after reconnect", () => {
+    let millis = Date.parse("2026-10-26T12:00:00.000Z");
+    const callbacks: Array<() => void> = [];
+    const scheduler: ForgeScheduler = {
+      schedule(callback) {
+        callbacks.push(callback);
+        return () => {
+          const index = callbacks.indexOf(callback);
+          if (index >= 0) callbacks.splice(index, 1);
+        };
+      },
+    };
+    const session = new ForgeSession(
+      () => new Date(millis),
+      scheduler,
+      () => undefined,
+      "live-session",
+      undefined,
+      "twitch",
+      true,
+    );
+    session.start(15);
+    expect(session.getState()).toMatchObject({ status: "voting", activeCategory: "body" });
+    expect(callbacks).toHaveLength(1);
+
+    session.setTwitchConnected(false);
+    expect(session.getState()).toMatchObject({
+      status: "idle",
+      activeCategory: null,
+      connectedToTwitch: false,
+      progress: 0,
+    });
+    expect(callbacks).toHaveLength(0);
+
+    session.setTwitchConnected(true);
+    expect(session.getState()).toMatchObject({
+      status: "idle",
+      activeCategory: null,
+      connectedToTwitch: true,
+      progress: 0,
+    });
+    millis += 5000;
+    callbacks.shift()?.();
+    expect(session.getState().status).toBe("idle");
   });
 });

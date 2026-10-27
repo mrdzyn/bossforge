@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { type ForgeState } from "@bossforge/shared";
 import { useLiveEvents } from "./hooks/useLiveEvents.js";
+import { FORGE_DURATIONS, forgeCountdownLabel, type ForgeDuration } from "./live-forge-ui.js";
 
 const Arena = lazy(() => import("./arena/Arena.js"));
 
@@ -175,8 +176,9 @@ function CategoryResults({ state }: { state: ForgeState }) {
 }
 
 function Dashboard() {
-  const { events, forge, connection, error, post } = useLiveEvents();
+  const { events, forge, connection, error, notice, post } = useLiveEvents();
   const [seconds, setSeconds] = useState(0);
+  const [durationSeconds, setDurationSeconds] = useState<ForgeDuration>(15);
   const [twitch, setTwitch] = useState<{
     configured: boolean;
     mode: "mock" | "twitch";
@@ -265,6 +267,23 @@ function Dashboard() {
               <p className="subheading">Four timed votes. One boss forged by chat.</p>
             </div>
             <div className="dashboard-actions">
+              <label className="duration-control">
+                <span>SECONDS / CATEGORY</span>
+                <select
+                  aria-label="Seconds per voting category"
+                  value={durationSeconds}
+                  disabled={forge?.status === "voting"}
+                  onChange={(event) =>
+                    setDurationSeconds(Number(event.target.value) as ForgeDuration)
+                  }
+                >
+                  {FORGE_DURATIONS.map((duration) => (
+                    <option key={duration} value={duration}>
+                      {duration} seconds
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 className="primary-button"
                 disabled={
@@ -273,7 +292,7 @@ function Dashboard() {
                 }
                 onClick={async () => {
                   if (isRevealed && !(await post("/api/dev/forge/reset"))) return;
-                  await post("/api/dev/forge/start", { durationSeconds: 15 });
+                  await post("/api/dev/forge/start", { durationSeconds });
                 }}
               >
                 {isRevealed ? "✦ Forge again" : "✦ Start the forge"}
@@ -349,6 +368,11 @@ function Dashboard() {
               {error}
             </div>
           )}
+          {notice && (
+            <div className="forge-notice" role="status">
+              {notice}
+            </div>
+          )}
           <section className="stat-strip">
             <div className="stat-card">
               <span className="stat-icon cyan">◎</span>
@@ -391,7 +415,11 @@ function Dashboard() {
                   votes cast
                 </strong>
               </div>
-              <span className="stat-value">{activeCategory ? `${seconds}s` : "—"}</span>
+              <span className="stat-value">
+                {activeCategory && forge?.status === "voting"
+                  ? forgeCountdownLabel(activeCategory.category, seconds)
+                  : "—"}
+              </span>
             </div>
           </section>
           <section className="workspace-grid">
@@ -467,7 +495,11 @@ function Dashboard() {
                   </div>
                   <span className="live-indicator">
                     <i />
-                    {forge?.status === "voting" ? `${seconds}s` : isRevealed ? "COMPLETE" : "READY"}
+                    {forge?.status === "voting" && forge.activeCategory
+                      ? forgeCountdownLabel(forge.activeCategory, seconds)
+                      : isRevealed
+                        ? "COMPLETE"
+                        : "READY"}
                   </span>
                 </div>
                 {forge ? (
