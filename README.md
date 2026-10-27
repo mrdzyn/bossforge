@@ -23,10 +23,29 @@ deals 75% bonus damage. Combat is a local browser simulation and battle results
 are not persisted.
 
 **Phase 3-A:** [Offline EventSub integration readiness](docs/P3-TWITCH-INTEGRATION-READINESS.md)
-is scoped and authorized for fixture-based implementation only. Live Twitch OAuth,
-EventSub subscriptions and real voting are still blocked by the account's 2FA/developer
-registration issue and require separate approval. All current chat events are synthetic
-and must not be presented as a Twitch connection.
+was independently source-reviewed and squash-merged as PR #4. Its fixture-only
+normalizer and lifecycle harness are reused by the separately authorized P3-B
+branch; P3-A itself remains offline and mock-only.
+
+**Phase 3-B:** [Real local Twitch integration](docs/P3B-LIVE-TWITCH-INTEGRATION.md)
+is implemented on existing Draft PR #5, with OAuth/EventSub gated by explicit
+local configuration. The owner reports live OAuth/EventSub PASS, one valid
+welcome, one enabled Helix subscription, 11 keepalives for the advertised
+30-second timeout, 6 accepted/normalized notifications and 6 chat callbacks.
+Three genuine ballots were accepted and three rejected (one wrong-category,
+two invalid-choice), with no disconnects, socket closes/errors, or forge
+cancellations. The four-stage forge revealed Cinder Granite (Golem / Fire /
+Ember Burst default / Earth); Special used its no-vote default, so accepted
+genuine ballots in all four categories are not claimed. The owner reports a
+Phaser VICTORY (boss 0/120 HP; streamer 64/100 HP). These results are
+owner-supplied and not independently reproduced; actual OBS application capture
+remains **UNVERIFIED**. Automated validation is separate: 124 tests passed at
+implementation commit `279ff63fc803921310226d9c6903a029af7f0bd5` using fake
+transports. For a local account, the owner must personally approve/configure
+OAuth: set the registered Client ID and private Client Secret in gitignored
+`.env`, then explicitly set `TWITCH_INTEGRATION_ENABLED=true`. The server
+remains loopback-only and mock simulation remains available. PR #5 remains
+Draft and unmerged; see [acceptance evidence](docs/ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
 
 See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 [roadmap](docs/ROADMAP.md).
@@ -83,6 +102,6 @@ not yet synchronized to the OBS overlay.
 | `pnpm simulate`     | Send the deterministic local mock event sequence  |
 | `pnpm format:check` | Check repository formatting                       |
 
-Copy `.env.example` to `.env` before starting `pnpm dev`. These values are
-local-only configuration; never add Twitch credentials to the example file or
-browser environment.
+Copy `.env.example` to `.env` before starting `pnpm dev`. Twitch variables are
+empty and disabled in the example. Keep real credentials in gitignored local
+configuration and never place them in the browser environment.

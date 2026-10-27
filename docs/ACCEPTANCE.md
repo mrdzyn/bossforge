@@ -361,3 +361,266 @@ Validation results:
 No browser UI changed. No Twitch endpoints, credentials, OAuth, subscription
 creation, or public endpoints were used. Real Twitch access remains **NOT
 TESTED** and P3-B is not authorized. Independent exact-head C2 review is pending.
+
+## Phase 3-B — local OAuth, EventSub and provider-aware voting
+
+All results below are Codex-run evidence for the P3-B implementation candidate;
+none is an independent security approval.
+
+| Criterion                             | Verification                                                                                                         | Result                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frozen workspace dependencies         | `pnpm --config.store-dir=/workspace/.pnpm-store install --frozen-lockfile`                                           | PASS — lockfile verified and install completed with pnpm 11.25.0                                                                                                                                                                                                                                                                                               |
+| Build and types                       | `pnpm --config.store-dir=/workspace/.pnpm-store build`; `pnpm --config.store-dir=/workspace/.pnpm-store typecheck`   | PASS — shared, server and web build/typecheck completed; Vite reports the existing lazy Phaser chunk advisory (~1.22 MB raw / 337 KB gzip)                                                                                                                                                                                                                     |
+| Lint and formatting                   | `pnpm --config.store-dir=/workspace/.pnpm-store lint`; `pnpm --config.store-dir=/workspace/.pnpm-store format:check` | PASS — ESLint and repository-wide Prettier check passed                                                                                                                                                                                                                                                                                                        |
+| Complete regression suite             | `pnpm --config.store-dir=/workspace/.pnpm-store test`                                                                | PASS — 106 tests (23 shared, 83 server), retaining all 92 P3-A tests                                                                                                                                                                                                                                                                                           |
+| OAuth security                        | `apps/server/test/oauth.test.ts`; local callback/guard integration tests                                             | PASS — opt-in, exact redirect, state mismatch/replay, denial, duplicate callback parameters, client/scope/identity validation, refresh rotation, logout/revocation, no-origin/unauthenticated controls; all network calls injected and fake                                                                                                                    |
+| EventSub integration                  | `apps/server/test/live-eventsub.test.ts`; P3-A normalizer/session tests                                              | PASS — no forwarding before welcome and active subscription; Helix identity/token/session payload checked; rejected subscription fails closed; expired-token 401 refresh retries once; unexpected socket loss creates a new verified subscription; replay, channel and reader rejection remain covered                                                         |
+| Provider isolation and local security | `apps/server/test/forge-session.test.ts`, `server.test.ts`, existing Phase 0 tests                                   | PASS — Twitch mode rejects mock ballots and mock event-generation/injection routes while authenticated start/reset remains available; Twitch controls require owner cookie plus exact local Origin/Fetch Metadata; default mock/CLI simulation protections remain green                                                                                        |
+| Synthetic simulation                  | `BOSSFORGE_URL=http://127.0.0.1:3201 pnpm --config.store-dir=/workspace/.pnpm-store simulate`                        | PASS — all four vote categories received two synthetic votes; deterministic reveal was Thunder Tempest (drake/storm/thunder-dash/light)                                                                                                                                                                                                                        |
+| Browser regression                    | Chromium 154.0.8037.57, real local Vite/Fastify at loopback ports 5201/3201                                          | PASS — dashboard rendered at 1440×900 and 390×844; mobile document width matched 390px and scrolled vertically to 2165px; Twitch setup showed “Not configured” and retained simulation. OBS rendered at 1920×1080 and 1280×720. Arena mounted one Phaser canvas and accepted ArrowRight input. No browser console/page errors or failed requests were observed |
+| Diff whitespace                       | `git diff --check`                                                                                                   | PASS                                                                                                                                                                                                                                                                                                                                                           |
+
+Actual Chromium captures (not edited or generated): [dashboard 1440×900](visual-qa/p3b/p3b-dashboard-1440x900.png), [dashboard 390×844](visual-qa/p3b/p3b-dashboard-390x844.png), [OBS 1920×1080](visual-qa/p3b/p3b-overlay-1920x1080.png), [OBS 1280×720](visual-qa/p3b/p3b-overlay-1280x720.png), and [arena in progress 1440×900](visual-qa/p3b/p3b-arena-in-progress-1440x900.png).
+
+### Not tested and remaining limitations
+
+- Real Twitch OAuth consent, access/refresh token validation against Twitch, Helix subscription, live EventSub messages and channel voting are **NOT TESTED**. No credentials were available to this process and no Twitch endpoint was contacted. Fake transports and fake HTTP responses do not prove production connectivity.
+- The cloud environment draft now declares `TWITCH_CLIENT_ID`, `TWITCH_INTEGRATION_ENABLED=false`, a user-provided `TWITCH_CLIENT_SECRET` requirement, and `id.twitch.tv`, `api.twitch.tv`, and `eventsub.wss.twitch.tv` egress. The draft is saved but not applied. Owner must review/publish it, privately configure credentials, verify the exact callback in Twitch Console, and initiate OAuth in the local browser.
+- The exact OAuth callback on port 3001 was not exercised. Ports 5173 and 3013 were occupied by unknown processes and left untouched; this QA used 5201/3201. No claim is made about callback behavior through an actual Twitch consent cycle.
+- The Phaser arena remains local client-side combat and the large lazy Phaser chunk advisory remains.
+- Keep Draft PR #5 open and unmerged. Independent exact-head security review is pending; Codex-run tests are not approval.
+
+## P3-B-C2 — bounded remediation of independent C1 findings
+
+This remediation stays on `feat/phase3b-live-twitch-integration` and the
+existing Draft PR #5. It fixes the four C1 findings without enabling the
+integration or changing the product scope.
+
+| Finding                          | Remediation and regression evidence                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1-01 — mode transition ordering | Forge replacement transitions advance `serverStartedAt` monotonically and rotate `serverInstanceId`; mock→Twitch connecting and Twitch→mock logout snapshots are published immediately. A server integration test applies those snapshots through the real `ForgeStateReconciler` and proves delayed prior-mode snapshots are rejected. The existing backend restart/revision-zero C5 regression still passes. |
+| C1-02 — stale socket disconnect  | Each WSS transport owns an idempotent close/error handler. Replacement welcome transfers ownership before the old socket closes; stale close/error events are ignored. A fake-socket regression verifies the replacement remains connected and forwards validated chat.                                                                                                                                        |
+| C1-03 — stale Helix verification | Subscription attempts hold a welcome-session generation lease and check it after each asynchronous token, POST, GET, and JSON step. Fake deferred fetch regressions cover stale success, 409 verification, and request error outcomes after a newer session welcomes.                                                                                                                                          |
+| C1-04 — logout fallback          | Authenticated logout shuts down Twitch, clears the owner cookie, creates and publishes a fresh mock forge, and lets the default local simulation endpoints work without a Twitch cookie. An integration regression exercises logout, stale snapshot rejection, and a new synthetic forge start.                                                                                                                |
+
+### C2 verification results
+
+| Criterion                        | Actual result                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frozen workspace install         | PASS — `pnpm install --frozen-lockfile` completed with pnpm 11.25.0; lockfile resolution was skipped. The documented `/workspace` store path is unavailable on this host, so pnpm's standard user cache was used.                                                                                                                |
+| Build                            | PASS — `pnpm build`; shared, server and web compiled. Vite retains the existing lazy Phaser chunk size advisory (~1.22 MB raw / 337 KB gzip).                                                                                                                                                                                    |
+| Typecheck and lint               | PASS — `pnpm typecheck`; `pnpm lint`.                                                                                                                                                                                                                                                                                            |
+| Format                           | PASS — repository-wide `pnpm format:check` (run after the final doc edits).                                                                                                                                                                                                                                                      |
+| Full tests                       | PASS — 110 total (23 shared, 87 server), preserving all 106 tests from C1. New tests cover reconnect close/error handoff and delayed Helix success/409/error completions, plus transition ordering and logout fallback.                                                                                                          |
+| Mock simulation                  | PASS — `BOSSFORGE_VOTE_SECONDS=5 pnpm simulate` completed all four categories with two synthetic votes each and revealed Thunder Tempest (drake/storm/thunder-dash/light).                                                                                                                                                       |
+| Chromium dashboard / OBS / arena | PASS — local dashboard Start and Generate event controls worked and reflected the completed synthetic forge; OBS rendered the revealed state; arena mounted one Phaser canvas. All three stayed within the observed 1512px browser width. No application console errors were observed; browser extension warnings are unrelated. |
+| OAuth local preflight            | PASS — local `/auth/twitch` returned 503 with `Twitch integration is not configured`; the localhost callback without OAuth parameters returned the expected 400. Both used synthetic credential environment values and `TWITCH_INTEGRATION_ENABLED=false`; no Twitch request or consent occurred.                                |
+| Diff check                       | PASS — `git diff --check` (run after final edits).                                                                                                                                                                                                                                                                               |
+
+The focused integration tests use synthetic OAuth strings, fake HTTP responses,
+deferred fake fetches, and fake WebSocket transports. No real Twitch account,
+secret, OAuth consent, Helix request, EventSub connection, public endpoint, or
+production deployment was used. The feature remains disabled by default.
+Independent exact-head P3-B-C2 review is requested on Draft PR #5; no merge or
+activation is authorized.
+
+## P3-B-C3 — bounded remediation of C2 findings
+
+| Criterion                              | C3 evidence                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C2-01 — verified session loss          | PASS — internal keepalive expiry calls the verified-session loss path. It invalidates subscription verification, reports `retry-wait` with `connected: false`, and cancels the active Twitch forge cycle. Fake-scheduler tests trigger expiry without a socket close event and assert no false connected status during retry.   |
+| C2-02 — validated protocol transitions | PASS — welcome and revocation state changes occur only after lifecycle payload validation. Malformed welcomes and revocations leave the valid connection usable; malformed-then-valid frame regressions pass. Session leases attach to validated welcomes; server-directed handoff and stale Helix response protections remain. |
+| Frozen install                         | PASS — `pnpm install --frozen-lockfile` using pnpm 11.25.0.                                                                                                                                                                                                                                                                     |
+| Build, typecheck, lint and formatting  | PASS — `pnpm build`, `pnpm typecheck`, `pnpm lint`, and `pnpm format:check`. Build retains the existing Phaser chunk size advisory (~1.22 MB raw / 337 KB gzip).                                                                                                                                                                |
+| Full tests                             | PASS — 112 total (23 shared, 89 server), retaining the 110-test C2 baseline.                                                                                                                                                                                                                                                    |
+| Mock simulation                        | PASS — `BOSSFORGE_URL=http://127.0.0.1:3301 BOSSFORGE_VOTE_SECONDS=5 pnpm simulate` completed body, element, special, and weakness with two synthetic votes each; revealed Thunder Tempest. The loopback server used synthetic OAuth values and `TWITCH_INTEGRATION_ENABLED=false`.                                             |
+| Diff check                             | PASS — `git diff --check`.                                                                                                                                                                                                                                                                                                      |
+
+Browser smoke check: Chromium loaded the local dashboard through Vite and the
+loopback server; it displayed SIMULATION MODE, SIMULATED DISCONNECTED, and kept
+the Twitch authorization unavailable. No browser errors were observed. Runtime
+timeout itself is exercised deterministically by the server fake-scheduler
+integration tests. No Twitch endpoint, credential, OAuth
+consent, live transport, public endpoint, or production deployment was used.
+Twitch remains disabled by default. Independent exact-head P3-B-C3 review is
+requested on Draft PR #5; do not merge or activate the integration.
+
+## P3-B-C4 — bounded remediation of C3-01
+
+| Criterion                              | C4 evidence                                                                                                                                                                                                                                               |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active verified socket loss            | PASS — an unexpected active socket close now reaches `onSessionLost` while the adapter still holds the matching transport identity. Subscription status is cleared and retry is immediately reported disconnected. Error followed by close is idempotent. |
+| Forge and voting state                 | PASS — the server fake-socket integration starts a Twitch cycle, emits an unexpected socket close, and immediately asserts `connectedToTwitch: false` and idle forge state.                                                                               |
+| Reconnect and fresh Helix verification | PASS — fake retry creates a replacement socket; only its validated welcome plus successful Helix verification restores connected state. The test confirms the new Helix request carries the replacement session ID.                                       |
+| Current versus retired transport       | PASS — current unexpected close/error disables the current lease; close/error from a retired socket after a validated handoff leaves the successor connected and forwarding.                                                                              |
+| Validation                             | PASS — frozen install, build, typecheck, lint, format, full suite (**113 tests: 23 shared, 90 server**), `git diff --check`, and four-category mock simulation. See exact command results recorded with this C4 checkpoint.                               |
+
+Tests use fake sockets, synthetic authorization values and injected fake HTTP;
+the simulation server ran on loopback with `TWITCH_INTEGRATION_ENABLED=false`.
+No real Twitch account, credentials, consent, API request, EventSub connection,
+public endpoint, merge, deployment or publication was used. Keep Draft PR #5
+open and unmerged; independent exact-head P3-B-C4 review is requested.
+
+## P3-B4-C5 — EventSub disconnect investigation
+
+### Owner-controlled live observations
+
+| Observation                                                          | Result                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OAuth completed and EventSub subscription verified                   | PASS — observed in the owner-controlled local runtime                                                                                                                                                                                               |
+| Authenticated forge start                                            | PASS — HTTP 200                                                                                                                                                                                                                                     |
+| Voting progress                                                      | PASS — Body and Element opened; visible timer advanced                                                                                                                                                                                              |
+| Disconnect and cancellation                                          | PASS — Twitch status dropped and authoritative forge returned to idle before the four-stage cycle completed                                                                                                                                         |
+| Reconnect                                                            | PASS — connection returned; voting remained idle by design                                                                                                                                                                                          |
+| Genuine notifications, normalization, callback and ballot acceptance | PASS — 2 accepted EventSub notifications normalized; diagnostics recorded 1 genuine ballot accepted and 1 rejected as `inactive-voting`                                                                                                             |
+| Dashboard vote-total reconciliation and full live cycle              | NOT VERIFIED                                                                                                                                                                                                                                        |
+| Exact disconnect trigger                                             | DIAGNOSTICS POINT TO WATCHDOG — four `keepalive-timeout` losses were recorded, with no socket close/error; the last was at 10,001 ms for a 10,000 ms advertised timeout. This is evidence for a deadline race, not proof of post-fix live behavior. |
+
+The original watchdog scheduled expiry at exactly
+`keepalive_timeout_seconds * 1000`. Twitch's [EventSub WebSocket guidance](https://dev.twitch.tv/docs/eventsub/handling-websocket-events/)
+says to treat silence as loss when it lasts longer than the advertised window.
+Sanitized live diagnostics later recorded four watchdog losses, no socket
+close/error, and a final elapsed value of 10,001 ms against a 10,000 ms
+advertised timeout. This strongly indicates premature exact-deadline expiry;
+the remediation below is still awaiting controlled live confirmation.
+
+### Bounded diagnostics and regression evidence
+
+Diagnostics are disabled by default and require the explicit development
+setting `BOSSFORGE_EVENTSUB_DIAGNOSTICS=true`. When enabled, a volatile
+in-memory snapshot is available only at `/dev/twitch/diagnostics` with a local
+loopback request, allowed same-origin Origin, and the authenticated Twitch
+owner session. There is no public route and nothing is sent to the OBS overlay.
+The snapshot contains only fixed reason codes, numeric close codes, allowlisted
+socket error classes, relative elapsed/timeout milliseconds, fixed forge
+cancellation-cause counters, bounded status counters, and
+notification/normalizer/callback/ballot counts. It retains no raw
+frames, chat text, viewer or session IDs, usernames, URLs, secrets, cookies, or
+full error objects.
+
+| Criterion                                      | Result                                                                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Keepalive just before timeout resets the timer | PASS — deterministic fake monotonic clock at 29,999 ms of a 30,000 ms window                                                         |
+| Genuine keepalive expiry                       | PASS — fake timer records elapsed and advertised timeout, then follows verified loss/retry handling                                  |
+| Socket close and error classification          | PASS — numeric close code and fixed error class only; error-then-close remains idempotent                                            |
+| Reconnect handoff and retired socket           | PASS — successor keeps its verified subscription; retired close/error is not counted                                                 |
+| Forge loss/reconnect                           | PASS — active Twitch cycle cancels on verified loss; fresh verified subscription reconnects without restoring or fabricating ballots |
+| Diagnostics endpoint access                    | PASS — absent by default; when enabled it rejects missing owner session, returns no-store to the authenticated same-origin owner     |
+| Secret/data minimization                       | PASS — tests verify snapshots omit synthetic message, viewer, close-reason and error-text values                                     |
+
+Validation ran in a detached disposable worktree so the active authenticated
+development server was not watched or restarted. All **121 tests passed** in
+two isolated runs: 23 shared and 98 server. The first sandbox run blocked
+socket-binding tests with `EPERM`; they were rerun in the authorized local
+test environment and passed. Server build, typecheck, lint, Prettier, and
+`git diff --check` passed. Web UI code was unchanged by this checkpoint.
+
+## P3-B4-C5-R2 — EventSub keepalive remediation
+
+| Criterion                         | Result                                                                                                                                                                                                                                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Preserve sanitized live evidence  | PASS — 5 valid welcomes, 5 enabled Helix subscriptions, 8 keepalives, 2 accepted and normalized notifications, 1 genuine ballot accepted, 1 `inactive-voting` rejection, 4 keepalive-timeout losses, 0 socket closes/errors, and 1 canceled forge. Last loss: 10,001 ms against 10,000 ms advertised. |
+| Initial keepalive request         | PASS — initial Twitch WSS URL requests `keepalive_timeout_seconds=30`; the implementation still uses each validated welcome’s returned timeout as authoritative.                                                                                                                                      |
+| Timeout boundary and grace        | PASS — deterministic monotonic fake-clock tests verify a keepalive at equality, keepalive and accepted notification during the 250 ms grace reset timing, and absent traffic causes disconnect after the advertised timeout plus grace.                                                               |
+| Stale timer/replacement isolation | PASS — queued old timer callback is ignored after refreshed or replaced transport; server-directed reconnect URL is unchanged.                                                                                                                                                                        |
+| Fail-closed behavior              | PASS — socket close still loses session, revocation and logout still shut down, subscriptions remain session-bound, and no canceled forge is resumed or ballot fabricated.                                                                                                                            |
+| Duplicate protection              | PASS — existing EventSub message replay and Helix subscription generation tests remain passing; no duplicate subscription or ballot path was added.                                                                                                                                                   |
+| Live post-fix verification        | PASS — owner-supplied live results below; these are separate from automated tests and were not independently reproduced.                                                                                                                                                                              |
+
+Official Twitch documentation permits the optional initial WebSocket query
+parameter `keepalive_timeout_seconds` (10–600 seconds) and says the returned
+welcome value governs the keepalive window. The code requests 30 seconds but
+does not assume acceptance. The 250 ms grace is bounded, is measured with
+`performance.now()` by default, and only delays declaring loss; it does not
+disable or remove the timeout safeguard. Full command output and exact commit
+are recorded in the P3-B4-C5-R2 handoff after validation.
+
+**P3-B4-C5-R2 validation:** Node v24.21.0 / pnpm 11.25.0; frozen install,
+workspace build, typecheck, lint, Prettier check, full tests (124 total: 23
+shared / 101 server), and `git diff --check` passed. The four-category mock
+simulation revealed Thunder Tempest using an isolated disposable server bound
+to `127.0.0.1:3301`; the authenticated runtime was not touched. The first
+sandbox full-suite attempt hit existing socket-binding `EPERM`; the complete
+suite passed in the authorized local test environment. Hosted status checks
+were unavailable for the starting head; local command evidence is the manual
+CI evidence for this candidate.
+
+Automated validation used fake transports and did not contact Twitch. The
+separate live evidence below was supplied by the owner and was not
+independently reproduced.
+
+### Owner-supplied live acceptance
+
+| Observation                   | Result                                                                                                                                                                                                    |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OAuth and EventSub connection | PASS — owner verified OAuth and connection; 1 valid welcome and 1 Helix subscription enabled.                                                                                                             |
+| Keepalive stability           | PASS — 11 keepalives received for the 30,000 ms advertised timeout; 0 socket closes/errors, keepalive disconnects, or forge cancellations.                                                                |
+| Message pipeline              | PASS — 6 notifications accepted, 6 messages normalized, and 6 chat callbacks invoked.                                                                                                                     |
+| Ballots                       | PASS — 3 genuine ballots accepted and 3 rejected: 1 `wrong-category`, 2 `invalid-choice`. This does not establish an accepted genuine vote in every category.                                             |
+| Forge                         | PASS — all four stages completed and revealed Cinder Granite: Golem / Fire / Ember Burst (default) / Earth. The Special stage used its default; do not infer that it received an accepted genuine ballot. |
+| Phaser arena                  | PASS — terminal VICTORY; boss HP 0/120, streamer HP 64/100. Connection stability and complete forge-to-victory demonstration PASS based on the owner’s report.                                            |
+| OBS application capture       | UNVERIFIED — Phaser arena result was reported, but a separate capture inside OBS was not reported.                                                                                                        |
+
+**Exact canonical chat syntax:** `!vote <category> <choice>`. The category must
+match the active stage. Valid forms and choices are:
+
+| Category | Valid commands                                                                                                       |
+| -------- | -------------------------------------------------------------------------------------------------------------------- |
+| Body     | `!vote body golem`, `!vote body wraith`, `!vote body drake`, `!vote body mimic`                                      |
+| Element  | `!vote element fire`, `!vote element ice`, `!vote element storm`, `!vote element void`                               |
+| Special  | `!vote special ember-burst`, `!vote special frost-chain`, `!vote special thunder-dash`, `!vote special shadow-pulse` |
+| Weakness | `!vote weakness water`, `!vote weakness light`, `!vote weakness earth`, `!vote weakness wind`                        |
+
+These choices are from `packages/shared/src/index.ts`; the category must match
+the active stage. Recommend showing the syntax and currently valid choices as
+clearer voting instructions in the overlay in a future UX update.
+
+The above live results are owner-supplied, not independent Codex test results.
+Automated checks remain: 124 tests passed at audited implementation HEAD
+`279ff63fc803921310226d9c6903a029af7f0bd5` (23 shared / 101 server), plus the
+build, typecheck, lint, formatting, diff-check and mock-simulation evidence
+above. Final exact-head review of this documentation-only update is pending;
+keep Draft PR #5 open and unmerged.
+
+## P3-B4-C5-R1 — diagnostic browser compatibility
+
+The diagnostics query is now `POST /dev/twitch/diagnostics`, registered only
+when the opt-in development diagnostics flag is enabled. It is a read-only
+snapshot and requires a loopback caller, allowed same-origin `Origin`, exact
+`Sec-Fetch-Site: same-origin`, and valid Twitch owner session. It sends
+`Cache-Control: no-store`; diagnostics remain unavailable by default. The GET
+route is not registered.
+
+**Browser workflow:** open `http://localhost:5173`, authenticate through the
+owner-controlled flow, and use **Read local EventSub diagnostics** in Twitch
+controls. The button submits the same-origin POST and displays only the
+sanitized snapshot. Do not navigate directly to the diagnostics URL. This
+workflow has not been exercised against the authenticated live runtime; no
+restart, reauthorization, Twitch diagnostics query, or real vote was performed
+for this remediation.
+
+### Regression coverage
+
+- Disabled-by-default POST and unsupported GET return not found.
+- Owner-authenticated same-origin POST succeeds and returns `no-store`.
+- Missing Origin, missing Fetch Metadata, cross-site metadata, invalid or
+  absent owner session, and non-loopback requests are rejected.
+- Response omits synthetic session/user IDs, secret/token strings, and private
+  message text; reading diagnostics leaves authoritative forge state unchanged.
+
+### Validation
+
+| Gate                              | Result                                                                                                                                        |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Toolchain                         | PASS — Node v24.21.0 and pnpm 11.25.0                                                                                                         |
+| Frozen install                    | PASS — `pnpm install --frozen-lockfile`; lockfile unchanged, 297 packages linked from the local pnpm store                                    |
+| Build / typecheck / lint / format | PASS — `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`                                                                       |
+| Full tests                        | PASS — 121 tests (23 shared, 98 server); initial sandbox run hit socket-binding `EPERM`, then passed in the authorized local test environment |
+| Mock simulation                   | PASS — four synthetic categories completed on a separate loopback server at port 33301; Twitch integration was disabled                       |
+| Diff check                        | PASS — `git diff --check`                                                                                                                     |
+
+The authenticated dashboard runtime was not restarted, and no real Twitch
+diagnostic query or live browser authentication session was used. The new
+owner-visible button was build-checked; its actual live-session browser click
+remains for the separately coordinated owner QA. No real Twitch endpoint or
+credential was used in tests.

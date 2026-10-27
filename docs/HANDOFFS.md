@@ -259,3 +259,217 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Validation:** Focused suites pass (30: 17 normalizer, 13 lifecycle). Full workspace validation passes with 92 tests (23 shared, 69 server), preserving the previous 85; frozen install, build, typecheck, lint, format, and `git diff --check` passed. Port 3001 was already occupied and left untouched; a loopback server on port 3013 returned health 200 and `BOSSFORGE_URL=http://127.0.0.1:3013 pnpm simulate` completed all four categories. Exact final SHA and independent review request are recorded on Draft PR #4.
 - **Security boundary:** Synthetic fixture inputs and fake transports only. No Twitch endpoints, credentials, OAuth, subscription creation, new route, or live voting. Mock-only `ForgeSession`, `simulated: true`, and `connectedToTwitch: false` are preserved.
 - **Review gate:** Request independent exact-head C2 review on existing Draft PR #4. Keep it open and unmerged; do not deploy, publish, start P3-B, or begin Phase 4.
+
+## Phase 3-A squash merge and Phase 3-B owner authorization
+
+- **Completed previous phase:** Owner explicitly approved squash merge of [PR #4](https://github.com/mrdzyn/bossforge/pull/4) following [independent P3-A-C2 PASS](https://github.com/mrdzyn/bossforge/pull/4#issuecomment-6421367210). Confirmed new `main@5adbd71f5378666e17b805617f37c3bb000505b8`; source HEAD reviewed was `cdc0162c64092439bf64ce7bfaf09d4ed3aec940`. P3-A baseline reports 92 Codex-run passing tests.
+- **External blocker resolved:** Owner confirmed Twitch developer registration now works and created a Twitch application; a Client ID was communicated directly and must be configured locally. Do **not** place the Client ID, Client Secret or tokens into tracked files. Client Secret stays private; this chat does not contain it.
+- **P3-B owner approval:** Explicitly approved starting a **new Draft PR for real local Twitch OAuth + EventSub integration**, without merge/deployment. Branch `feat/phase3b-live-twitch-integration` created from the P3-A squash-merged `main`. Active spec: [P3B-LIVE-TWITCH-INTEGRATION.md](P3B-LIVE-TWITCH-INTEGRATION.md).
+- **Kickoff state:** This is a documentation/architecture authorization handoff. No Phase 3-B runtime/auth/connectivity implementation has yet been committed or tested. Owner must provide local secret in gitignored configuration and personally approve OAuth consent.
+- **Callback planning:** `http://localhost:3001/auth/twitch/callback`, subject to an exact Twitch Console redirect check and safe loopback listener/port preflight; never kill unrelated port-3001 processes.
+- **Implementation stages:** (B1) secure local authorization-code flow, state/CSRF/cookie, token validation/refresh in volatile memory; (B2) real WSS + Helix `channel.chat.message` subscription using a user token, fixing pending-reconnect guard; (B3) explicitly mode-scoped real voting + source-aware client contracts/UI/OBS; (B4) actual owner-run Twitch/manual browser evidence + independent exact-head audit. No production/public deployment or posting to chat.
+- **Gates:** Preserve 92 existing tests, C5 epoch reconciliation, P2 gameplay, and default local mock simulation. Tests/mock fixture runs are not proof of real Twitch integration. Keep P3-B Draft and unmerged; no release, deploy, Phase 4 or squash without separate approval.
+
+## Phase 3-B implementation and independent security handoff
+
+- **Existing delivery target:** `feat/phase3b-live-twitch-integration`, existing Draft PR #5. No new branch/PR; keep Draft and unmerged.
+- **Scope implemented:** Secure local authorization-code OAuth with single-use browser-bound state, local session/CSRF controls, volatile tokens and refresh/validation/logout; outbound EventSub WebSocket plus Helix `channel.chat.message` v1; provider-tagged Twitch ballots; dashboard connection controls; OBS-only mode/status disclosure; mock/Twitch mode isolation; pending reconnect socket cleanup.
+- **Source identity:** Shared `ForgeState.mode` and `forge.state.source` now match the accepted provider. Twitch mode becomes connected only after EventSub welcome and verified active Helix subscription. A disconnect cancels current voting and prevents additional Twitch messages from changing state. Mode changes rotate the local server-instance identity to invalidate stale browser state.
+- **Validation (Codex-reported):** Frozen install, build, typecheck, lint, format check, all 106 tests (23 shared / 83 server), `git diff --check`, and a local four-category `pnpm simulate` cycle passed. The test suite contains all 92 P3-A baseline tests plus 14 focused additions. Chromium 154 rendered dashboard desktop/mobile, both OBS sizes and the arena. Exact screenshots and measurements are in the P3-B section of `docs/ACCEPTANCE.md`.
+- **Real account status:** OAuth consent, Twitch token validation/refresh against Twitch, Helix subscription, live EventSub traffic, and channel votes are **NOT TESTED**. All automated network calls use injected fake HTTP responses and fake WSS transports. No live Twitch endpoint was contacted.
+- **Environment setup:** A cloud environment config draft was saved with `TWITCH_CLIENT_ID`, disabled-by-default `TWITCH_INTEGRATION_ENABLED=false`, a private user-provided `TWITCH_CLIENT_SECRET` requirement and Twitch egress domains. It is saved but not applied. Owner must review/publish the environment changes, confirm the exact callback in Twitch Console, provision the private secret outside Git, and personally initiate local OAuth before real acceptance.
+- **Local QA ports:** Existing listeners on 5173 and 3013 were not modified. Validation ran the local apps at 5201 and 3201; this does not validate the fixed OAuth callback at port 3001.
+- **Independent C1 review request:** Review the exact PR #5 HEAD at that checkpoint for OAuth state/cookie/CSRF/Host handling, token volatility and refresh/revocation, outbound-only WSS and Helix subscription sequencing, reconnect/orphan cleanup, reader/channel/replay validation, source/mode isolation, owner authorization on Twitch controls, accurate UI/OBS status, and the 106-test/security regression evidence. Distinguish code/fake-network coverage from real Twitch operation. That review identified the four findings addressed by P3-B-C2 below.
+- **Remaining gates:** No merge, deployment, release, publishing or Phase 4. Live channel validation requires a separate owner interaction; independent security review must inspect the exact pushed HEAD.
+
+## P3-B-C2 remediation handoff
+
+- **Scope:** Fixed the four independent C1 findings on the existing
+  `feat/phase3b-live-twitch-integration` branch and Draft PR #5. The feature
+  remains disabled by default and the PR remains unmerged.
+- **State ordering:** Mock/Twitch forge replacements receive a monotonic epoch
+  and a fresh instance ID; transition snapshots are published. Real shared
+  reconciliation tests reject stale prior-mode state, and the C5 backend
+  restart regression remains green.
+- **EventSub races:** Socket close/error state is transport-scoped and
+  idempotent. Helix completion is bound to the currently welcomed session;
+  deferred fake-network tests cover stale success, 409 verification, and error
+  responses. Logout clears Twitch authorization and restores mock simulation
+  without requiring another Twitch login.
+- **Validation:** Frozen install, build, typecheck, lint, formatting, full test
+  suite, mock simulation, Chromium dashboard/OBS/arena QA, local disabled OAuth
+  preflight, and diff check are recorded in [ACCEPTANCE](ACCEPTANCE.md). The
+  suite now has 110 tests (23 shared / 87 server), retaining the C1 106-test
+  baseline.
+- **Security boundary:** All Twitch tests use synthetic values, fake HTTP and
+  fake WebSocket transports. No Twitch account, secret, OAuth consent, Twitch
+  request, public endpoint or deployment was used. Live Twitch behavior remains
+  **NOT TESTED**.
+- **Independent review requested:** Please review the exact final pushed HEAD
+  of existing Draft PR #5 for C1-01 through C1-04, C5 restart/reconciliation
+  preservation, OAuth/default-deny/Origin boundaries, provider isolation and
+  fake-network regression coverage. Review request is attached to PR #5.
+  Keep Draft/open/unmerged; do not enable live integration.
+
+## P3-B-C3 remediation handoff
+
+- **Scope:** Resolve only C2-01 and C2-02 on the existing branch and Draft PR
+  #5; retain all four C1 fixes and the C5 restart/reconciliation safeguards.
+- **Timeout integrity:** Verified session loss, including internal keepalive
+  timeout, invalidates subscription verification, immediately disables Twitch
+  vote intake, publishes disconnected retry state, and safely cancels an active
+  Twitch cycle. Deterministic scheduler tests do not depend on socket close.
+- **Protocol integrity:** Welcome and revocation effects are committed only
+  after lifecycle validation. Validated welcomes establish session leases;
+  malformed welcomes/revocations do not poison a usable session. Server
+  handoff and stale Helix completion checks remain covered.
+- **Validation:** Frozen install, build, typecheck, lint, format, 112 tests (23
+  shared / 89 server), four-category mock simulation, and `git diff --check`
+  passed. Details are in [ACCEPTANCE](ACCEPTANCE.md#p3-b-c3--bounded-remediation-of-c2-findings).
+- **Security boundary:** Synthetic values, fake HTTP/WebSocket transports, and
+  fake timers only. No Twitch endpoint, account, credentials, OAuth consent,
+  public endpoint, or deployment was used. Integration remains disabled by
+  default.
+- **Review gate:** Independent P3-B-C3 review is requested against the exact
+  pushed HEAD of existing Draft PR #5. Keep it open and unmerged; do not enable
+  Twitch, deploy, publish, or begin Phase 4.
+
+## P3-B-C4 remediation handoff
+
+- **Scope:** Fix only C3-01 on the existing branch and Draft PR #5, preserving
+  C1/C2 remediations, keepalive-timeout handling, reconnect handoffs and
+  verified Helix subscription gates.
+- **Socket-loss ordering:** Active socket close/error now invokes
+  `EventSubSession.disconnect()` before the adapter releases its current
+  transport identity. The validated session-loss callback can therefore clear
+  the active Helix lease and immediately publish disconnected/retry state.
+  Error then close is idempotent; retired transport events do not affect a
+  replacement.
+- **Forge and recovery:** Server fake-socket coverage confirms the current
+  Twitch forge is immediately disconnected and any active cycle returns to
+  idle. Retry only restores connected after a fresh welcome and Helix response
+  matching the replacement session ID.
+- **Validation:** Frozen install, build, typecheck, lint, format, 113 tests (23
+  shared / 90 server), `git diff --check`, and four-category synthetic mock
+  simulation passed. Exact results are in
+  [ACCEPTANCE](ACCEPTANCE.md#p3-b-c4--bounded-remediation-of-c3-01).
+- **Security and review gate:** Fake sockets and HTTP only; integration remains
+  disabled and no real Twitch traffic or credentials were used. Request
+  independent P3-B-C4 review against exact pushed HEAD; keep Draft PR #5
+  unmerged, with no deployment, publication or Phase 4 work.
+
+## P3-B4-C5 EventSub disconnect handoff
+
+- **Live evidence:** Owner-controlled QA observed OAuth completion, a verified
+  EventSub subscription, HTTP 200 forge start, Body and Element voting with an
+  advancing timer, then an EventSub disconnect that canceled voting. Reconnect
+  restored the connection, not the cycle. A genuine notification and counted
+  vote remain **NOT VERIFIED**.
+- **Root cause:** **Unknown.** The live process did not collect close code or
+  socket error classification, so transport loss cannot be distinguished from
+  application keepalive expiry. The code schedules expiry at exactly the
+  advertised timeout while Twitch guidance specifies silence longer than the
+  timeout. This boundary is plausible but not confirmed; no speculative timer
+  fix was made.
+- **Bounded change:** Added default-off, volatile, owner-authenticated,
+  loopback-only development diagnostics and fake-session tests. The endpoint
+  is absent unless explicitly enabled in development; no public route or OBS
+  data was added. It captures only reason enums, numeric close codes,
+  allowlisted error classes, relative timings and bounded pipeline counters.
+- **Validation:** 121 tests passed (23 shared / 98 server). Server build,
+  typecheck, lint, formatting and diff check passed. The full server suite first
+  hit sandbox socket `EPERM`, then passed in the authorized isolated local
+  environment. Tests used fake sockets, deterministic clocks, and synthetic
+  values; no live diagnostic was activated and no Twitch endpoint was called.
+- **Next owner step:** Separately coordinate a local server restart to load the
+  opt-in diagnostics setting; reauthorize in the browser because OAuth state is
+  process-memory only. At `http://localhost:5173`, verify EventSub, select 60
+  seconds per category, send one genuine Body vote, and compare sanitized
+  counters with the authoritative vote total. Do not resume a canceled cycle.
+- **Review gate:** Independent source review may assess the exact PR #5 head and
+  fake-test evidence. Live root cause and end-to-end voting remain open. Keep
+  Draft PR #5 unmerged; do not deploy, publish, or claim live-vote success.
+
+## P3-B4-C5-R1 diagnostic browser compatibility handoff
+
+- **Finding:** Address-bar GET navigation omits Origin, while the diagnostic
+  endpoint correctly required it, making the documented browser workflow fail.
+- **Correction:** Diagnostics use a read-only POST query with loopback,
+  same-origin Origin, exact `Sec-Fetch-Site: same-origin`, and Twitch owner
+  session checks. The endpoint remains disabled by default and is no-store.
+  An owner-visible dashboard button sends the POST and renders only the
+  sanitized counters; no data is exposed in OBS.
+- **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build,
+  typecheck, lint, format, 121 tests (23 shared / 98 server), four-category
+  mock simulation, and diff check passed. Socket-binding tests needed the
+  authorized local test environment after sandbox `EPERM`. See the R1
+  [acceptance section](ACCEPTANCE.md#p3-b4-c5-r1--diagnostic-browser-compatibility).
+  No authenticated server restart or real Twitch diagnostic query was performed.
+- **Next gate:** After independent exact-head review, separately coordinate
+  owner-controlled restart/reauthorization before enabling diagnostics and
+  conducting the genuine 60-second Body vote check. Keep Draft PR #5 unmerged.
+
+## P3-B4-C5-R2 EventSub keepalive remediation handoff
+
+- **Live evidence preserved:** Owner-controlled sanitized diagnostics recorded
+  5 validated welcomes, 5 enabled Helix subscriptions, 8 keepalives, 2 accepted
+  EventSub notifications and normalized chat messages, 1 genuine ballot
+  accepted, 1 rejected as `inactive-voting`, 4 keepalive-timeout disconnects,
+  no socket closes/errors, and 1 canceled forge. The final disconnect measured
+  10,001 ms against a 10,000 ms advertised timeout. This implicates the
+  watchdog boundary; do not state that the post-fix live run passed.
+- **Correction:** The first Twitch WebSocket URL asks for a 30-second keepalive
+  timeout using Twitch’s supported query parameter. Every validated welcome’s
+  timeout remains authoritative. The watchdog uses monotonic elapsed time,
+  rechecks the newest validated keepalive/accepted notification, and provides
+  250 ms of bounded grace before loss handling. Twitch reconnect URLs pass
+  through unchanged. Verified loss still cancels voting and does not resume it.
+- **Tests:** Fake-clock and fake-socket regressions cover boundary arrival,
+  traffic inside grace, genuine expiry past grace, accepted notification timer
+  reset, queued stale timer isolation, socket close, revocation/logout,
+  reconnect URL preservation, and existing deduplication/session-lease rules.
+- **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build,
+  typecheck, lint, formatting, 124 tests (23 shared / 101 server),
+  `git diff --check`, and a four-category mock simulation passed. The
+  simulation ran against a separate disposable server on 127.0.0.1:3301. The
+  full test suite needed the authorized local environment after sandbox socket
+  binding tests hit `EPERM`. Hosted status checks were empty for the starting
+  head; the local gates provide manual CI evidence.
+- **Runtime/security:** Changes were made in a detached disposable worktree.
+  The active authenticated server was not restarted. No OAuth, Twitch API or
+  WebSocket request, real vote, credential read, public endpoint, merge,
+  deployment or publication was performed.
+- **Next step at that implementation checkpoint:** Owner-controlled live
+  verification, later recorded below, and final exact-head review of the
+  documentation-only evidence update. Keep PR #5 Draft and unmerged.
+
+## P3-B4 C5-R2 owner-supplied live acceptance
+
+- **Evidence source:** The following results were supplied by the owner after
+  the implementation audit. They were not independently reproduced by
+  automated tests. No application restart, OAuth or vote was initiated by
+  Codex during this documentation update.
+- **Connection:** PASS — OAuth/EventSub connected; 1 valid welcome, 1 Helix
+  subscription enabled, 11 keepalives at an advertised 30,000 ms timeout,
+  6 accepted notifications, 6 normalized messages, and 6 chat callbacks. No
+  socket close/error, keepalive disconnect, or forge cancellation occurred.
+- **Ballots and stages:** 3 genuine ballots accepted; 3 rejected (1
+  `wrong-category`, 2 `invalid-choice`). All four stages completed, but this
+  does not imply each category received an accepted genuine vote. Special
+  used its default.
+- **Forge and arena:** PASS — Cinder Granite revealed (Golem / Fire / Ember
+  Burst default / Earth). Phaser terminal result: VICTORY, boss 0/120 HP,
+  streamer 64/100 HP. Connection stability and complete forge-to-victory
+  demonstration pass on the owner’s report. Actual OBS application capture
+  remains unverified.
+- **Chat syntax:** `!vote <category> <choice>`, with the category matching the
+  active stage. The category choices are body (golem, wraith, drake, mimic),
+  element (fire, ice, storm, void), special (ember-burst, frost-chain,
+  thunder-dash, shadow-pulse), and weakness (water, light, earth, wind). Future
+  UX should show the syntax and current valid choices in the overlay.
+- **Independent automated evidence:** C5-R2 implementation validation at
+  `279ff63fc803921310226d9c6903a029af7f0bd5` passed 124 tests (23 shared / 101
+  server), build, typecheck, lint, format, diff check and mock simulation.
+  These are code/test results, not the source of the live Twitch outcome.
+- **Review gate:** Request final independent exact-head audit of the
+  documentation-only commit below. Do not merge, deploy or publish.

@@ -44,6 +44,9 @@ importers:
       fastify:
         specifier: ^5.5.0
         version: 5.12.7
+      ws:
+        specifier: ^8.18.3
+        version: 8.22.0
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -66,9 +69,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@24.19.2)(supports-color@8.1.1)(tsx@4.23.15)
-      ws:
-        specifier: ^8.18.3
-        version: 8.22.0
 
   apps/web:
     dependencies:

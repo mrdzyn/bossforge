@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { type ForgeState } from "@bossforge/shared";
 import { useLiveEvents } from "./hooks/useLiveEvents.js";
+import { FORGE_DURATIONS, forgeCountdownLabel, type ForgeDuration } from "./live-forge-ui.js";
 
 const Arena = lazy(() => import("./arena/Arena.js"));
 
@@ -16,7 +17,13 @@ function Brand() {
     </a>
   );
 }
-function Sidebar({ overlay = false }: { overlay?: boolean }) {
+function Sidebar({
+  overlay = false,
+  mode = "mock",
+}: {
+  overlay?: boolean;
+  mode?: "mock" | "twitch";
+}) {
   return (
     <aside className="sidebar">
       <Brand />
@@ -31,7 +38,7 @@ function Sidebar({ overlay = false }: { overlay?: boolean }) {
         <div className="avatar">M</div>
         <div>
           <strong>Local session</strong>
-          <span>SIMULATION MODE</span>
+          <span>{mode === "mock" ? "SIMULATION MODE" : "TWITCH MODE"}</span>
         </div>
       </div>
     </aside>
@@ -41,7 +48,7 @@ function Connection({ status }: { status: string }) {
   return (
     <span className={`connection-pill ${status}`}>
       <i />
-      {status === "connected" ? "LIVE LINK" : status.toUpperCase()}
+      {status === "connected" ? "SERVER LINK" : status.toUpperCase()}
     </span>
   );
 }
@@ -169,8 +176,67 @@ function CategoryResults({ state }: { state: ForgeState }) {
 }
 
 function Dashboard() {
-  const { events, forge, connection, error, post } = useLiveEvents();
+  const { events, forge, connection, error, notice, post } = useLiveEvents();
   const [seconds, setSeconds] = useState(0);
+  const [durationSeconds, setDurationSeconds] = useState<ForgeDuration>(15);
+  const [diagnostics, setDiagnostics] = useState<string | null>(null);
+  const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null);
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
+  const [twitch, setTwitch] = useState<{
+    configured: boolean;
+    mode: "mock" | "twitch";
+    identity: { login: string; displayName: string } | null;
+    connected: boolean;
+    status: string;
+  } | null>(null);
+  const refreshTwitch = async () => {
+    try {
+      const response = await fetch("/api/twitch/status");
+      if (response.ok) setTwitch(await response.json());
+    } catch {
+      // The regular connection state already reports local server availability.
+    }
+  };
+  const twitchAction = async (path: string) => {
+    try {
+      const response = await fetch(path, { method: "POST" });
+      if (!response.ok) throw new Error("Twitch control request was rejected");
+      await refreshTwitch();
+      return true;
+    } catch {
+      await refreshTwitch();
+      return false;
+    }
+  };
+  const readEventSubDiagnostics = async () => {
+    setDiagnosticsLoading(true);
+    setDiagnosticsError(null);
+    try {
+      const response = await fetch("/api/dev/twitch/diagnostics", { method: "POST" });
+      if (!response.ok) {
+        setDiagnostics(null);
+        setDiagnosticsError(
+          response.status === 404
+            ? "Diagnostics are disabled or unavailable."
+            : response.status === 401
+              ? "Twitch owner authorization is required."
+              : "The local diagnostics request was rejected.",
+        );
+        return;
+      }
+      setDiagnostics(JSON.stringify(await response.json(), null, 2));
+    } catch {
+      setDiagnostics(null);
+      setDiagnosticsError("Unable to read local diagnostics.");
+    } finally {
+      setDiagnosticsLoading(false);
+    }
+  };
+  useEffect(() => {
+    void refreshTwitch();
+    const timer = setInterval(() => void refreshTwitch(), 2000);
+    return () => clearInterval(timer);
+  }, []);
   useEffect(() => {
     const timer = setInterval(
       () =>
@@ -197,7 +263,7 @@ function Dashboard() {
   const isRevealed = forge?.status === "revealed";
   return (
     <div className="app-shell">
-      <Sidebar />
+      <Sidebar mode={forge?.mode ?? "mock"} />
       <main className="main-content">
         <header className="topbar">
           <div className="breadcrumb">
@@ -205,7 +271,12 @@ function Dashboard() {
           </div>
           <div className="topbar-actions">
             <span className="local-badge">
-              <i /> LOCAL SIMULATION
+              <i />{" "}
+              {forge?.connectedToTwitch
+                ? "TWITCH CONNECTED"
+                : forge?.mode === "twitch"
+                  ? "TWITCH DISCONNECTED"
+                  : "SIMULATED"}
             </span>
             <Connection status={connection} />
           </div>
@@ -214,7 +285,8 @@ function Dashboard() {
           <section className="welcome-row">
             <div>
               <p className="eyebrow">
-                STREAMER DASHBOARD <span>•</span> PHASE 1
+                STREAMER DASHBOARD <span>•</span>{" "}
+                {forge?.mode === "twitch" ? "LIVE TWITCH" : "SIMULATED"}
               </p>
               <h1>
                 Make something <em>monstrous.</em>
@@ -222,12 +294,32 @@ function Dashboard() {
               <p className="subheading">Four timed votes. One boss forged by chat.</p>
             </div>
             <div className="dashboard-actions">
+              <label className="duration-control">
+                <span>SECONDS / CATEGORY</span>
+                <select
+                  aria-label="Seconds per voting category"
+                  value={durationSeconds}
+                  disabled={forge?.status === "voting"}
+                  onChange={(event) =>
+                    setDurationSeconds(Number(event.target.value) as ForgeDuration)
+                  }
+                >
+                  {FORGE_DURATIONS.map((duration) => (
+                    <option key={duration} value={duration}>
+                      {duration} seconds
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 className="primary-button"
-                disabled={forge?.status === "voting"}
+                disabled={
+                  forge?.status === "voting" ||
+                  (forge?.mode === "twitch" && !forge.connectedToTwitch)
+                }
                 onClick={async () => {
                   if (isRevealed && !(await post("/api/dev/forge/reset"))) return;
-                  await post("/api/dev/forge/start", { durationSeconds: 15 });
+                  await post("/api/dev/forge/start", { durationSeconds });
                 }}
               >
                 {isRevealed ? "✦ Forge again" : "✦ Start the forge"}
@@ -247,9 +339,78 @@ function Dashboard() {
               )}
             </div>
           </section>
+          <section className="panel twitch-controls" aria-label="Twitch connection controls">
+            <div>
+              <p className="eyebrow">LOCAL TWITCH INTEGRATION</p>
+              <strong>
+                {twitch?.identity
+                  ? `${twitch.identity.displayName} (@${twitch.identity.login}) · ${twitch.connected ? "TWITCH CONNECTED" : twitch.status.toUpperCase()}`
+                  : twitch?.configured
+                    ? "Not authenticated"
+                    : "Not configured · SIMULATED mode remains available"}
+              </strong>
+            </div>
+            {!twitch?.identity ? (
+              <a className="secondary-button" href="http://localhost:3001/auth/twitch">
+                Authorize Twitch
+              </a>
+            ) : (
+              <div className="dashboard-actions">
+                {twitch.mode === "mock" ? (
+                  <button
+                    className="secondary-button"
+                    onClick={() => void twitchAction("/api/twitch/connect")}
+                  >
+                    Connect Twitch
+                  </button>
+                ) : (
+                  <>
+                    {!twitch.connected && (
+                      <button
+                        className="secondary-button"
+                        onClick={() => void twitchAction("/api/twitch/connect")}
+                      >
+                        Retry Twitch connection
+                      </button>
+                    )}
+                    <button
+                      className="secondary-button"
+                      onClick={() => void twitchAction("/api/twitch/mock")}
+                    >
+                      Switch to simulation
+                    </button>
+                  </>
+                )}
+                <button
+                  className="text-button"
+                  onClick={() => void twitchAction("/api/twitch/disconnect")}
+                >
+                  Disconnect / log out
+                </button>
+              </div>
+            )}
+            {twitch?.identity && twitch.mode === "twitch" && (
+              <div className="eventsub-diagnostics">
+                <button
+                  className="text-button"
+                  disabled={diagnosticsLoading}
+                  onClick={() => void readEventSubDiagnostics()}
+                >
+                  {diagnosticsLoading ? "Reading diagnostics…" : "Read local EventSub diagnostics"}
+                </button>
+                {diagnosticsError && <p role="status">{diagnosticsError}</p>}
+                {diagnostics && <pre aria-live="polite">{diagnostics}</pre>}
+              </div>
+            )}
+          </section>
           {error && (
             <div className="inline-error" role="status">
               {error}
+            </div>
+          )}
+          {notice && (
+            <div className="forge-notice" role="status">
+              {notice}
             </div>
           )}
           <section className="stat-strip">
@@ -257,7 +418,15 @@ function Dashboard() {
               <span className="stat-icon cyan">◎</span>
               <div>
                 <span className="stat-label">CHAT CONNECTION</span>
-                <strong>{connection === "connected" ? "Local stream" : "Reconnecting"}</strong>
+                <strong>
+                  {forge?.connectedToTwitch
+                    ? "Twitch chat connected"
+                    : forge?.mode === "twitch"
+                      ? "Twitch chat disconnected"
+                      : connection === "connected"
+                        ? "Local simulated chat"
+                        : "Reconnecting"}
+                </strong>
               </div>
               <Connection status={connection} />
             </div>
@@ -286,7 +455,11 @@ function Dashboard() {
                   votes cast
                 </strong>
               </div>
-              <span className="stat-value">{activeCategory ? `${seconds}s` : "—"}</span>
+              <span className="stat-value">
+                {activeCategory && forge?.status === "voting"
+                  ? forgeCountdownLabel(activeCategory.category, seconds)
+                  : "—"}
+              </span>
             </div>
           </section>
           <section className="workspace-grid">
@@ -362,7 +535,11 @@ function Dashboard() {
                   </div>
                   <span className="live-indicator">
                     <i />
-                    {forge?.status === "voting" ? `${seconds}s` : isRevealed ? "COMPLETE" : "READY"}
+                    {forge?.status === "voting" && forge.activeCategory
+                      ? forgeCountdownLabel(forge.activeCategory, seconds)
+                      : isRevealed
+                        ? "COMPLETE"
+                        : "READY"}
                   </span>
                 </div>
                 {forge ? (
@@ -374,15 +551,19 @@ function Dashboard() {
               <article className="panel controls-panel">
                 <div className="panel-heading">
                   <div>
-                    <p className="eyebrow">SIMULATION FEED</p>
+                    <p className="eyebrow">
+                      {forge?.mode === "twitch" ? "LIVE TWITCH CHAT" : "SIMULATION FEED"}
+                    </p>
                     <h2>Recent chat</h2>
                   </div>
-                  <button
-                    className="text-button"
-                    onClick={() => void post("/api/dev/simulation/next")}
-                  >
-                    Generate event
-                  </button>
+                  {forge?.mode !== "twitch" && (
+                    <button
+                      className="text-button"
+                      onClick={() => void post("/api/dev/simulation/next")}
+                    >
+                      Generate event
+                    </button>
+                  )}
                 </div>
                 <div className="event-feed">
                   {events
@@ -415,7 +596,11 @@ function Dashboard() {
               BOSSFORGE LIVE <b>•</b> CHAT CREATES THE BOSS.
             </span>
             <span>
-              SIMULATED <b>•</b> NOT CONNECTED TO TWITCH
+              {forge?.connectedToTwitch
+                ? "TWITCH CONNECTED"
+                : forge?.mode === "mock"
+                  ? "SIMULATED • NOT CONNECTED TO TWITCH"
+                  : "TWITCH DISCONNECTED · LIVE VOTING PAUSED"}
             </span>
           </footer>
         </div>
@@ -452,7 +637,12 @@ function OverlayPreview() {
         </div>
         <div className="overlay-round">
           <span className="round-live">
-            <i /> SIMULATED / NOT CONNECTED TO TWITCH
+            <i />
+            {forge?.connectedToTwitch
+              ? "LIVE TWITCH"
+              : forge?.mode === "mock"
+                ? "SIMULATED / NOT CONNECTED TO TWITCH"
+                : "TWITCH DISCONNECTED / VOTING PAUSED"}
           </span>
           <span>
             {forge?.cycleId?.toUpperCase() ?? "AWAITING FORGE"} <b>•</b> {connection.toUpperCase()}
@@ -529,9 +719,11 @@ function OverlayPreview() {
       </section>
       <div className="overlay-activity">
         <span className="activity-dot" />
-        {forge?.simulated
-          ? "LOCAL SYNTHETIC CHAT · VOTES ARE SERVER AUTHORITATIVE"
-          : "WAITING FOR LOCAL SIMULATION"}
+        {forge?.connectedToTwitch
+          ? "LIVE TWITCH CHAT · VOTES ARE SERVER AUTHORITATIVE"
+          : forge?.simulated
+            ? "LOCAL SYNTHETIC CHAT · VOTES ARE SERVER AUTHORITATIVE"
+            : "TWITCH DISCONNECTED · LIVE VOTING PAUSED"}
       </div>
       <div className="overlay-safe-label">
         BROADCAST OVERLAY <b>•</b> SAFE AREA

@@ -121,14 +121,15 @@ export const ForgeCategoryStateSchema = z.object({
 });
 export type ForgeCategoryState = z.infer<typeof ForgeCategoryStateSchema>;
 
-export const ForgeStateSchema = z.object({
+const ForgeStateBaseSchema = z.object({
   serverInstanceId: z.string().min(1).max(100),
   serverStartedAt: z.string().datetime(),
   revision: z.number().int().min(0),
   cycleId: z.string().min(1).max(100).nullable(),
   status: z.enum(["idle", "voting", "revealed"]),
-  simulated: z.literal(true),
-  connectedToTwitch: z.literal(false),
+  mode: ProviderSchema,
+  simulated: z.boolean(),
+  connectedToTwitch: z.boolean(),
   durationSeconds: z.number().int().min(5).max(60),
   startedAt: z.string().datetime().nullable(),
   activeCategory: VoteCategorySchema.nullable(),
@@ -136,22 +137,39 @@ export const ForgeStateSchema = z.object({
   categories: z.array(ForgeCategoryStateSchema).length(4),
   boss: BossSchema.nullable(),
 });
+
+function refineForgeMode(
+  state: z.infer<typeof ForgeStateBaseSchema>,
+  context: z.RefinementCtx,
+): void {
+  if (state.simulated !== (state.mode === "mock"))
+    context.addIssue({ code: "custom", message: "Simulation label must match forge mode" });
+  if (state.connectedToTwitch && state.mode !== "twitch")
+    context.addIssue({ code: "custom", message: "Twitch connection requires Twitch mode" });
+}
+
+export const ForgeStateSchema = ForgeStateBaseSchema.superRefine(refineForgeMode);
 export type ForgeState = z.infer<typeof ForgeStateSchema>;
 
-export const RevealedForgeStateSchema = ForgeStateSchema.extend({
+export const RevealedForgeStateSchema = ForgeStateBaseSchema.extend({
   cycleId: z.string().min(1).max(100),
   status: z.literal("revealed"),
   activeCategory: z.null(),
   progress: z.literal(4),
   boss: BossSchema,
-});
+}).superRefine(refineForgeMode);
 export type RevealedForgeState = z.infer<typeof RevealedForgeStateSchema>;
 
-export const ForgeStateEventSchema = z.object({
-  kind: z.literal("forge.state"),
-  source: z.literal("mock"),
-  state: ForgeStateSchema,
-});
+export const ForgeStateEventSchema = z
+  .object({
+    kind: z.literal("forge.state"),
+    source: ProviderSchema,
+    state: ForgeStateSchema,
+  })
+  .superRefine((event, context) => {
+    if (event.source !== event.state.mode)
+      context.addIssue({ code: "custom", message: "Forge event source must match forge mode" });
+  });
 export type ForgeStateEvent = z.infer<typeof ForgeStateEventSchema>;
 
 export const BattlePlayerSchema = z.object({

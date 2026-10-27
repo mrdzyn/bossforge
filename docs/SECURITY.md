@@ -80,3 +80,89 @@ or coding agent.
 No payments, unsolicited chat posting, user tracking, production deployment,
 production account storage, Twitch authentication, or playable combat is
 introduced in Phase 1.
+
+## Phase 3-B — authorized local live integration security gates
+
+- Owner has explicitly authorized **development** of server-side OAuth and actual Twitch chat connection; this does **not** authorize production exposure, merge or deployment. P3-A remains offline until the P3-B implementation is complete and tested.
+- Twitch app Client ID must be environment-configurable, not hardcoded; Client Secret, user access/refresh tokens, OAuth code and state must never enter GitHub, browser bundles, logs, screenshots or chat. Local MVP tokens are process-memory only and logout/restart must clear them.
+- Registered/intended redirect `http://localhost:3001/auth/twitch/callback`; exact match and loopback/Host validation are required. Browser callback is a top-level cross-site GET, so bind a high-entropy single-use `state` to the initiating browser, short expiry, cookie `HttpOnly; SameSite=Lax` or equivalent, and reject callback spoofing, replay, denial and mismatches.
+- Twitch `/oauth2/validate` is required at startup and at least hourly; only accept the right Client ID, numeric user identity and `user:read:chat` scope. Refresh/rotate tokens securely and fail closed on 401/revocation. Twitch WS subscriptions require **user** access tokens and verified `session_id`; create `channel.chat.message` v1 using `broadcaster_user_id` and authenticated `user_id`. Outbound WSS only, no public webhook.
+- OAuth/session/forge mode operations are authorized **local streamer controls**, not unprotected loopback mutations. Apply browser-bound owner session controls plus CSRF/Origin protection; do not bypass Phase 0 effective-host, socket-peer, Origin, rate limit and production restrictions. OBS must have no auth controls or tokens.
+- Real-mode votes and mock-mode votes must be mutually exclusive per forge cycle and marked accurately. The P3-B source-aware state migration enforces this provider boundary.
+- Control Ping/Pong must not reset application keepalive; no real notification may be forwarded until verified welcome and active Helix subscription. Never infer `connectedToTwitch` from a local browser socket.
+- Owner must opt in to local OAuth authorization and provide the secret through private local configuration. Never force browser login or make real Twitch API calls in tests. **Owner-supplied C5-R2 live QA:** OAuth/EventSub PASS; 1 valid welcome, 1 enabled Helix subscription, 11 keepalives at a 30,000 ms advertised timeout, 6 accepted notifications, 6 normalized messages and 6 chat callbacks. Three genuine ballots were accepted and three rejected (1 `wrong-category`, 2 `invalid-choice`); keepalive disconnects, socket closes/errors and forge cancellations: 0. The four-stage forge revealed Cinder Granite (Golem / Fire / Ember Burst default / Earth); Special used its no-vote default, so acceptance in all categories is not claimed. Phaser result was VICTORY (boss 0/120 HP; streamer 64/100 HP). These results were supplied by the owner, not independently reproduced; actual OBS application capture remains **UNVERIFIED**. Automated fake-network results are separate: 124 tests passed at implementation commit `279ff63fc803921310226d9c6903a029af7f0bd5`.
+- Full [active implementation and test gates](P3B-LIVE-TWITCH-INTEGRATION.md).
+
+### P3-B implementation status
+
+- The implementation uses `TWITCH_INTEGRATION_ENABLED=true` only in
+  development and still requires both Client ID and Client Secret. Missing
+  configuration leaves OAuth disabled; no browser action automatically starts
+  consent or contacts Twitch.
+- OAuth uses the exact `localhost:3001` callback, one-time state bound to an
+  HttpOnly SameSite=Lax cookie, loopback peer and exact Host checks, then
+  validates the returned client, numeric account ID and minimum scope. Tokens
+  stay in process memory, refresh tokens rotate, validation runs hourly, and
+  logout/revocation invalidates local access. Auth responses are no-store and
+  return no tokens or authorization codes to the frontend.
+- Twitch mode changes shared event/state provenance to `twitch`; it does not
+  relabel real messages as mock. The EventSub adapter requires a welcomed
+  transport and verified enabled Helix subscription before forwarding. It
+  validates channel, reader, type/version, timestamp and replay through the
+  P3-A normalizer/session code. Revocation/disconnect disables the intake and
+  cancels any active voting cycle.
+- Twitch-mode start/reset/connect/disconnect/mode-switch controls require the
+  process-memory OAuth session plus exact local Origin and Fetch Metadata.
+  Loopback peer checks remain in force. Mock event-generation/injection
+  endpoints are rejected while a Twitch forge is selected; authenticated live
+  start/reset controls remain available. OBS receives only provider mode,
+  verified connection status and forge state, never credentials or controls.
+- B1/B2/B3 automated tests use fake fetch responses and fake WSS sockets;
+  this evidence is not proof of live service operation. Separate owner-supplied
+  C5-R2 live QA observed genuine notifications and ballots, as summarized above
+  and detailed in [acceptance evidence](ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
+- P3-B-C2 scopes disconnect/error state to the current socket and invalidates
+  Helix verification when the welcomed EventSub session changes. Deferred fake
+  HTTP tests cover stale success, HTTP 409 verification, and request failure.
+- Forge replacements advance `serverStartedAt` monotonically, rotate
+  `serverInstanceId`, and publish the authoritative transition snapshot. The
+  C5 backend-restart guard remains active and delayed previous-mode snapshots
+  are rejected. Authenticated logout clears the Twitch cookie and restores a
+  fresh mock forge so local simulation remains available.
+- Local auth-start and callback preflight used synthetic credentials with
+  `TWITCH_INTEGRATION_ENABLED=false`. The server returned disabled/invalid
+  responses without contacting Twitch. See [C2 acceptance evidence](ACCEPTANCE.md#p3-b-c2--bounded-remediation-of-independent-c1-findings).
+- P3-B-C3 routes verified EventSub session loss, including internal keepalive
+  expiry, through the adapter's authoritative loss callback. It clears stale
+  subscription verification, stops Twitch intake, reports disconnected retry
+  state, and cancels an active Twitch cycle. Welcome and revocation state is
+  committed only after lifecycle validation; malformed frames cannot poison a
+  welcomed session. Fake scheduler/socket tests cover timeout without a close
+  event and malformed-then-valid sequences. No live Twitch network was used.
+  See [C3 acceptance evidence](ACCEPTANCE.md#p3-b-c3--bounded-remediation-of-c2-findings).
+- P3-B-C4 preserves the adapter's active transport identity until the lifecycle
+  disconnect handler reports verified session loss. This lets unexpected
+  active socket close/error invalidate Helix verification and publish
+  disconnected retry state immediately; the forge cancels Twitch voting. A
+  retired transport remains unable to affect its successor. Fake-socket tests
+  cover close, error-then-close, current/retired transports, and fresh Helix
+  verification after reconnect. No live Twitch traffic was used. See
+  [C4 acceptance evidence](ACCEPTANCE.md#p3-b-c4--bounded-remediation-of-c3-01).
+
+### P3-B4-C5 diagnostic containment
+
+- EventSub diagnostics are opt-in (`BOSSFORGE_EVENTSUB_DIAGNOSTICS=true`),
+  development-only, in-memory, and disabled by default. When enabled, the
+  read-only `POST /dev/twitch/diagnostics` route is exposed only in the
+  development server. It requires a loopback peer, allowed same-origin Origin,
+  `Sec-Fetch-Site: same-origin`, and authenticated Twitch owner session. It
+  returns `Cache-Control: no-store`; no diagnostic route or data is added to
+  OBS. The dashboard's owner-visible **Read local EventSub diagnostics** button
+  performs this POST; address-bar GET is not supported.
+- Recorded fields are fixed counters/reason enums, numeric WebSocket close
+  codes, allowlisted socket error classes, and relative millisecond timings.
+  The implementation stores no raw frames, chat text, usernames, viewer or
+  session IDs, URLs, OAuth data, cookies, secrets, or full error objects.
+- The active authenticated runtime was not restarted to activate diagnostics.
+  No diagnostics were observed from the real disconnect, so its root cause
+  remains unknown. See [C5 evidence](ACCEPTANCE.md#p3-b4-c5--eventsub-disconnect-investigation).

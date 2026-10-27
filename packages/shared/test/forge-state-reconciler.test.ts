@@ -19,6 +19,7 @@ const state = (
     revision,
     cycleId: status === "idle" ? null : `${serverInstanceId}-cycle`,
     status,
+    mode: "mock",
     simulated: true,
     connectedToTwitch: false,
     durationSeconds: 15,

@@ -115,7 +115,34 @@ introduced. SQLite may be considered only if a later milestone needs persistence
 - Plan a future **server-side outbound Twitch EventSub WebSocket** for `channel.chat.message` v1. Local hosted bots use WebSocket transport and must use a user access token; OAuth scope/authorized broadcaster and chat-reader pairing require official verification at activation.
 - Offline readiness uses synthetic official-shaped messages, a pure EventSub chat normalizer into `NormalizedChatEvent(provider: "twitch")`, a deterministic session state-machine test harness and no real Twitch connection.
 - Production Twitch votes **cannot** enter current `ForgeSession` as implemented because it accepts only `mock`. Similarly `ForgeState` is tagged `simulated: true`/`connectedToTwitch: false`, and `forge.state` envelopes have `source: "mock"`. P3-A preserves these invariants. A separate versioned, authenticated provider-mode migration in P3-B is required before live ingestion, to protect identity, session isolation and honest UI labels.
-- P3-B is blocked by Twitch account 2FA/developer registration and requires an independent owner authorization. No OAuth secrets, tokens, subscription requests or public inbound endpoint are introduced in P3-A. Details and acceptance gates: [P3 readiness specification](P3-TWITCH-INTEGRATION-READINESS.md).
+- At the time of P3-A, real integration was blocked pending account registration and separate owner approval. That approval is now recorded in the active [P3-B specification](P3B-LIVE-TWITCH-INTEGRATION.md); P3-A itself remains fixture-only and no behavior was added to its branch.
 - The offline `EventSubChatNormalizer` validates `channel.chat.message` v1-shaped packets, bounds the serialized frame and chat text, checks the configured broadcaster, retains Twitch user/message IDs, normalizes EventSub timestamps, rejects replay/out-of-order/stale events, and emits `provider: "twitch"`. It has no socket or network dependency.
 - `EventSubSession` is an uninstantiated dependency-injected lifecycle harness. It handles welcome/keepalive, notification callbacks, server-directed reconnect handoff (same configured WSS host, unchanged URL), bounded unexpected-disconnect retry, resubscription planning, revocation, WebSocket control ping/pong, and shutdown. It reports subscription plans through an injected callback; it never sends subscription commands over the WebSocket. Tests use fake transports and timers only.
 - Neither component is wired into `createBossForgeApp`, `TwitchChatAdapter`, `ForgeSession`, or an HTTP route. `ForgeSession` still rejects Twitch-provider events, while state remains `simulated: true` and `connectedToTwitch: false`.
+
+## Phase 3-B local Twitch runtime
+
+- `TwitchOAuth` is created disabled unless the app runs in development with
+  `TWITCH_INTEGRATION_ENABLED=true`, a Client ID, and a Client Secret. It owns
+  short-lived OAuth state and in-memory access/refresh tokens. The fixed local
+  callback and streamer controls require loopback peer access; state-changing
+  Twitch controls additionally require the HttpOnly browser session, an exact
+  permitted local Vite Origin, and same-origin Fetch Metadata.
+- `LiveEventSub` owns one outbound `wss://eventsub.wss.twitch.tv/ws` transport.
+  It reuses `EventSubSession` and `EventSubChatNormalizer`. A successful welcome
+  causes a user-token Helix `channel.chat.message` v1 WebSocket subscription;
+  notifications are forwarded only after the matching subscription is verified
+  active. Reconnect handoff retains the current receiver; unexpected socket
+  loss retries and creates a new subscription. The reader and broadcaster are
+  the validated local OAuth identity for this MVP.
+- `ForgeState` has a `mode` tag. `source`, state mode and event provider must
+  agree; `simulated` reflects mock mode and `connectedToTwitch` reflects the
+  verified subscription. `ForgeSession` accepts only its configured provider,
+  and Twitch mode rejects events while disconnected. Mode switches allocate a
+  new instance identity so browser reconciliation cannot retain an earlier
+  provider's state.
+- OAuth/Helix requests use injected fetch in tests; WebSocket tests use fake
+  sockets. No test contacts Twitch. Tokens are not in React, OBS, EventHub
+  payloads, API responses, logs, screenshots, or persistent storage.
+- Real OAuth consent, EventSub connectivity and channel voting remain untested
+  until the owner applies private configuration and initiates local consent.
