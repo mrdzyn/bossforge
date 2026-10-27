@@ -53,7 +53,7 @@ export interface EventSubScheduler {
   schedule(callback: () => void, delayMs: number): () => void;
 }
 
-export type SubscriptionPlan = "initial" | "resubscribe";
+export type SubscriptionPlan = "initial" | "resubscribe" | "handoff";
 
 export interface EventSubSessionOptions {
   /** Supplied by the caller. Production Twitch transport is intentionally absent. */
@@ -167,7 +167,9 @@ export class EventSubSession {
       this.statusValue = "connected";
       this.retries = 0;
       this.resetKeepalive(transportId, welcome.data.session.keepalive_timeout_seconds);
-      if (!wasReconnect) {
+      if (wasReconnect) {
+        this.options.onSubscriptionPlan?.(welcome.data.session.id, "handoff");
+      } else {
         this.options.onSubscriptionPlan?.(
           welcome.data.session.id,
           this.hasWelcomed ? "resubscribe" : "initial",

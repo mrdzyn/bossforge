@@ -149,7 +149,10 @@ export class LiveEventSub {
         this.options.onChat(result.event);
         return true;
       },
-      onSubscriptionPlan: (sessionId) => void this.subscribe(sessionId),
+      onSubscriptionPlan: (sessionId, plan) => {
+        if (plan === "handoff" && this.subscriptionActive) return;
+        void this.subscribe(sessionId);
+      },
     });
     this.session.start();
   }

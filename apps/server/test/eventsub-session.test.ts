@@ -158,7 +158,10 @@ describe("offline injected EventSub lifecycle", () => {
     h.welcome(h.sockets[1]!, "welcome-new", "new-session");
     expect(oldSocket.closed).toBe(true);
     expect(h.session.status).toBe("connected");
-    expect(h.plans).toHaveLength(1);
+    expect(h.plans).toEqual([
+      { sessionId: "old-session", plan: "initial" },
+      { sessionId: "new-session", plan: "handoff" },
+    ]);
     oldSocket.handlers.message(
       JSON.stringify(message("late-old-socket", "notification", { event: { text: "stale" } })),
     );
@@ -181,7 +184,10 @@ describe("offline injected EventSub lifecycle", () => {
     expect(h.timers.filter((timer) => !timer.cancelled)).toHaveLength(1);
     h.welcome(h.sockets[1]!, "welcome-new", "new-session");
     expect(h.session.status).toBe("connected");
-    expect(h.plans).toHaveLength(1);
+    expect(h.plans).toEqual([
+      { sessionId: "session-1", plan: "initial" },
+      { sessionId: "new-session", plan: "handoff" },
+    ]);
     h.sockets[1]!.handlers.disconnect();
     expect(h.session.status).toBe("retry-wait");
   });
