@@ -165,6 +165,26 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
     if (!oauth.identityFor(cookie(request, "bossforge_twitch_session")))
       reply.code(401).send({ error: "Twitch streamer authorization required" });
   };
+  const requireSameOriginTwitchOwnerPost = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    if (!requestIsLocal(request)) {
+      reply.code(403).send({ error: "Local development access only" });
+      return;
+    }
+    if (
+      request.method !== "POST" ||
+      !isAllowedViteOrigin(request.headers.origin, allowedViteOrigins) ||
+      request.headers.origin === undefined ||
+      request.headers["sec-fetch-site"] !== "same-origin"
+    ) {
+      reply.code(403).send({ error: "Twitch control origin is not allowed" });
+      return;
+    }
+    if (!oauth.identityFor(cookie(request, "bossforge_twitch_session")))
+      reply.code(401).send({ error: "Twitch streamer authorization required" });
+  };
   const secureLocalAuthRequest = (request: FastifyRequest): boolean =>
     requestIsLocal(request) && request.headers.host === "localhost:3001";
   const twitchStatus = () => ({
@@ -369,9 +389,9 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       forge.getState(),
     );
     if (eventSubDiagnostics) {
-      app.get(
+      app.post(
         "/dev/twitch/diagnostics",
-        { onRequest: requireTwitchOwner },
+        { onRequest: requireSameOriginTwitchOwnerPost },
         async (_request, reply) => {
           reply.header("cache-control", "no-store");
           return eventSubDiagnostics.snapshot();

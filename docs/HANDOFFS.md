@@ -389,3 +389,22 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Review gate:** Independent source review may assess the exact PR #5 head and
   fake-test evidence. Live root cause and end-to-end voting remain open. Keep
   Draft PR #5 unmerged; do not deploy, publish, or claim live-vote success.
+
+## P3-B4-C5-R1 diagnostic browser compatibility handoff
+
+- **Finding:** Address-bar GET navigation omits Origin, while the diagnostic
+  endpoint correctly required it, making the documented browser workflow fail.
+- **Correction:** Diagnostics use a read-only POST query with loopback,
+  same-origin Origin, exact `Sec-Fetch-Site: same-origin`, and Twitch owner
+  session checks. The endpoint remains disabled by default and is no-store.
+  An owner-visible dashboard button sends the POST and renders only the
+  sanitized counters; no data is exposed in OBS.
+- **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build,
+  typecheck, lint, format, 121 tests (23 shared / 98 server), four-category
+  mock simulation, and diff check passed. Socket-binding tests needed the
+  authorized local test environment after sandbox `EPERM`. See the R1
+  [acceptance section](ACCEPTANCE.md#p3-b4-c5-r1--diagnostic-browser-compatibility).
+  No authenticated server restart or real Twitch diagnostic query was performed.
+- **Next gate:** After independent exact-head review, separately coordinate
+  owner-controlled restart/reauthorization before enabling diagnostics and
+  conducting the genuine 60-second Body vote check. Keep Draft PR #5 unmerged.

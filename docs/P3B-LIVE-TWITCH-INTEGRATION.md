@@ -130,14 +130,14 @@ forge or synthesize missing ballots.
 ### Next controlled live check
 
 After the owner separately coordinates a safe local restart and reauthorization,
-verify the dashboard is at `http://localhost:5173`, confirm the actual EventSub
-subscription is enabled, and read the protected diagnostics through the
-authenticated same-origin browser session at
-`http://localhost:5173/api/dev/twitch/diagnostics` (Vite proxies it to Fastify).
-Start a forge with **60 seconds per
-category**, send one genuine `!vote body drake` during Body from the intended
-viewer, and confirm notification, normalization, callback, accepted ballot,
-Body total, and dashboard count. Record only the fixed counters and relative
-timings. Continue observing the status counters; if a disconnect occurs, do
-not resume the cycle or claim a pass. Reconnect must again require a fresh
-verified subscription. No fake event is live evidence.
+open the dashboard at `http://localhost:5173` and confirm the actual EventSub
+subscription is enabled. In the Twitch controls, click **Read local EventSub
+diagnostics**; this sends an authenticated same-origin POST and renders only the
+sanitized snapshot in the dashboard. Do not open the diagnostics path in the
+address bar. Start a forge with **60 seconds per category**, send one genuine
+`!vote body drake` during Body from the intended viewer, and confirm
+notification, normalization, callback, accepted ballot, Body total, and
+dashboard count. Record only fixed counters and relative timings. Continue
+observing status counters; if a disconnect occurs, do not resume the cycle or
+claim a pass. Reconnect must again require a fresh verified subscription. No
+fake event is live evidence.

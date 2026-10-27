@@ -179,6 +179,9 @@ function Dashboard() {
   const { events, forge, connection, error, notice, post } = useLiveEvents();
   const [seconds, setSeconds] = useState(0);
   const [durationSeconds, setDurationSeconds] = useState<ForgeDuration>(15);
+  const [diagnostics, setDiagnostics] = useState<string | null>(null);
+  const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null);
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
   const [twitch, setTwitch] = useState<{
     configured: boolean;
     mode: "mock" | "twitch";
@@ -203,6 +206,30 @@ function Dashboard() {
     } catch {
       await refreshTwitch();
       return false;
+    }
+  };
+  const readEventSubDiagnostics = async () => {
+    setDiagnosticsLoading(true);
+    setDiagnosticsError(null);
+    try {
+      const response = await fetch("/api/dev/twitch/diagnostics", { method: "POST" });
+      if (!response.ok) {
+        setDiagnostics(null);
+        setDiagnosticsError(
+          response.status === 404
+            ? "Diagnostics are disabled or unavailable."
+            : response.status === 401
+              ? "Twitch owner authorization is required."
+              : "The local diagnostics request was rejected.",
+        );
+        return;
+      }
+      setDiagnostics(JSON.stringify(await response.json(), null, 2));
+    } catch {
+      setDiagnostics(null);
+      setDiagnosticsError("Unable to read local diagnostics.");
+    } finally {
+      setDiagnosticsLoading(false);
     }
   };
   useEffect(() => {
@@ -360,6 +387,19 @@ function Dashboard() {
                 >
                   Disconnect / log out
                 </button>
+              </div>
+            )}
+            {twitch?.identity && twitch.mode === "twitch" && (
+              <div className="eventsub-diagnostics">
+                <button
+                  className="text-button"
+                  disabled={diagnosticsLoading}
+                  onClick={() => void readEventSubDiagnostics()}
+                >
+                  {diagnosticsLoading ? "Reading diagnostics…" : "Read local EventSub diagnostics"}
+                </button>
+                {diagnosticsError && <p role="status">{diagnosticsError}</p>}
+                {diagnostics && <pre aria-live="polite">{diagnostics}</pre>}
               </div>
             )}
           </section>

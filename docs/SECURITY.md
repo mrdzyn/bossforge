@@ -153,10 +153,12 @@ introduced in Phase 1.
 
 - EventSub diagnostics are opt-in (`BOSSFORGE_EVENTSUB_DIAGNOSTICS=true`),
   development-only, in-memory, and disabled by default. When enabled, the
-  diagnostic route is exposed only in the development server and requires a
-  loopback peer, allowed same-origin Origin, and authenticated Twitch owner
-  session. It returns `Cache-Control: no-store`; no diagnostic route or data is
-  added to OBS.
+  read-only `POST /dev/twitch/diagnostics` route is exposed only in the
+  development server. It requires a loopback peer, allowed same-origin Origin,
+  `Sec-Fetch-Site: same-origin`, and authenticated Twitch owner session. It
+  returns `Cache-Control: no-store`; no diagnostic route or data is added to
+  OBS. The dashboard's owner-visible **Read local EventSub diagnostics** button
+  performs this POST; address-bar GET is not supported.
 - Recorded fields are fixed counters/reason enums, numeric WebSocket close
   codes, allowlisted socket error classes, and relative millisecond timings.
   The implementation stores no raw frames, chat text, usernames, viewer or

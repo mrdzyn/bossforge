@@ -49,6 +49,26 @@
   build, typecheck, lint and formatting passed. No Twitch endpoint or live vote
   was used. Details are in [ACCEPTANCE](ACCEPTANCE.md).
 
+## P3-B4-C5-R1 — diagnostic browser compatibility
+
+- Fixed C5-01 by making diagnostics a read-only POST query. It requires the
+  development loopback server, an allowed Origin, exact
+  `Sec-Fetch-Site: same-origin`, and a valid Twitch owner session; it remains
+  absent by default and returns `Cache-Control: no-store`.
+- The authenticated dashboard now provides an owner-visible button to issue
+  this same-origin request and render the sanitized response. Address-bar GET
+  is unsupported. No diagnostics were activated against Twitch and the
+  authenticated runtime was not restarted.
+- Added route tests for enabled/disabled behavior, authenticated and invalid
+  sessions, missing Origin/Fetch Metadata, cross-site and non-loopback callers,
+  no-store, response minimization, and unchanged forge state. Under Node
+  v24.21.0 / pnpm 11.25.0, frozen install, build, typecheck, lint, formatting,
+  all 121 tests, four-category mock simulation, and diff check passed. The
+  initial sandbox test attempt hit socket-binding `EPERM`; the full suite passed
+  in the authorized local environment. See [R1 acceptance](ACCEPTANCE.md#p3-b4-c5-r1--diagnostic-browser-compatibility).
+- No authenticated browser session was restarted or used to query diagnostics;
+  live click-through remains pending owner-coordinated QA.
+
 ## P3-B-C4 remediation checkpoint
 
 - Fixed C3-01 on the existing Draft PR #5 branch: unexpected close/error of

@@ -102,18 +102,25 @@ describe("BossForge server", () => {
     expect(response.json()).toEqual({ error: "Not found" });
   });
 
-  it("keeps Twitch diagnostics absent by default and owner-protected when enabled", async () => {
+  it("keeps Twitch diagnostics absent by default and owner-protected on same-origin POST", async () => {
     const absent = await server.app.inject({
+      method: "POST",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin: "http://localhost:5173", "sec-fetch-site": "same-origin" },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(absent.statusCode).toBe(404);
+    const getIsNotRegistered = await server.app.inject({
       method: "GET",
       url: "/dev/twitch/diagnostics",
       headers: { origin: "http://localhost:5173" },
       remoteAddress: "127.0.0.1",
     });
-    expect(absent.statusCode).toBe(404);
+    expect(getIsNotRegistered.statusCode).toBe(404);
 
     const enabled = await createBossForgeApp({ mode: "development", eventSubDiagnostics: true });
     const unauthenticated = await enabled.app.inject({
-      method: "GET",
+      method: "POST",
       url: "/dev/twitch/diagnostics",
       headers: { origin: "http://localhost:5173", "sec-fetch-site": "same-origin" },
       remoteAddress: "127.0.0.1",
@@ -293,12 +300,58 @@ describe("BossForge server", () => {
     });
     expect(connected.statusCode).toBe(202);
     const diagnosticsWithoutOwner = await live.app.inject({
-      method: "GET",
+      method: "POST",
       url: "/dev/twitch/diagnostics",
       headers: { origin, "sec-fetch-site": "same-origin" },
       remoteAddress: "127.0.0.1",
     });
     expect(diagnosticsWithoutOwner.statusCode).toBe(401);
+    const diagnosticsMissingOrigin = await live.app.inject({
+      method: "POST",
+      url: "/dev/twitch/diagnostics",
+      headers: { "sec-fetch-site": "same-origin", cookie: sessionCookie },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(diagnosticsMissingOrigin.statusCode).toBe(403);
+    const diagnosticsMissingFetchMetadata = await live.app.inject({
+      method: "POST",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin, cookie: sessionCookie },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(diagnosticsMissingFetchMetadata.statusCode).toBe(403);
+    const diagnosticsCrossSite = await live.app.inject({
+      method: "POST",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin, "sec-fetch-site": "cross-site", cookie: sessionCookie },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(diagnosticsCrossSite.statusCode).toBe(403);
+    const diagnosticsInvalidSession = await live.app.inject({
+      method: "POST",
+      url: "/dev/twitch/diagnostics",
+      headers: {
+        origin,
+        "sec-fetch-site": "same-origin",
+        cookie: "bossforge_twitch_session=invalid-session",
+      },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(diagnosticsInvalidSession.statusCode).toBe(401);
+    const diagnosticsNonLoopback = await live.app.inject({
+      method: "POST",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin, "sec-fetch-site": "same-origin", cookie: sessionCookie },
+      remoteAddress: "203.0.113.8",
+    });
+    expect(diagnosticsNonLoopback.statusCode).toBe(403);
+    const getIsUnsupported = await live.app.inject({
+      method: "GET",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin, "sec-fetch-site": "same-origin", cookie: sessionCookie },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(getIsUnsupported.statusCode).toBe(404);
     const connectingState = (await live.app.inject({ method: "GET", url: "/forge/state" })).json();
     expect(connectingState).toMatchObject({ mode: "twitch", connectedToTwitch: false });
     expect(Date.parse(connectingState.serverStartedAt)).toBeGreaterThan(
@@ -342,8 +395,11 @@ describe("BossForge server", () => {
     expect(twitchConnectedState).toMatchObject({ mode: "twitch", connectedToTwitch: true });
     expect(reconciler.apply(twitchConnectedState, generation)).toBe(true);
     expect(reconciler.apply(connectingState, generation)).toBe(false);
+    const forgeStateBeforeDiagnostics = (
+      await live.app.inject({ method: "GET", url: "/forge/state" })
+    ).json();
     const ownerDiagnostics = await live.app.inject({
-      method: "GET",
+      method: "POST",
       url: "/dev/twitch/diagnostics",
       headers: { origin, "sec-fetch-site": "same-origin", cookie: sessionCookie },
       remoteAddress: "127.0.0.1",
@@ -353,8 +409,20 @@ describe("BossForge server", () => {
     expect(ownerDiagnostics.json()).toMatchObject({
       counters: { rawFrames: 1, validWelcomes: 1, subscriptionAttempts: 1, subscriptionEnabled: 1 },
     });
-    expect(ownerDiagnostics.body).not.toContain("live-session");
-    expect(ownerDiagnostics.body).not.toContain("12345");
+    for (const sensitiveValue of [
+      "live-session",
+      "12345",
+      "test-only-secret",
+      "access-token",
+      "refresh-token",
+      "private chat message",
+    ]) {
+      expect(ownerDiagnostics.body).not.toContain(sensitiveValue);
+    }
+    const forgeStateAfterDiagnostics = (
+      await live.app.inject({ method: "GET", url: "/forge/state" })
+    ).json();
+    expect(forgeStateAfterDiagnostics).toEqual(forgeStateBeforeDiagnostics);
     const started = await live.app.inject({
       method: "POST",
       url: "/dev/forge/start",
@@ -444,7 +512,7 @@ describe("BossForge server", () => {
     });
     expect(droppedSocketStatus.json()).toMatchObject({ connected: false, status: "retry-wait" });
     const closeDiagnostics = await live.app.inject({
-      method: "GET",
+      method: "POST",
       url: "/dev/twitch/diagnostics",
       headers: { origin, "sec-fetch-site": "same-origin", cookie: sessionCookie },
       remoteAddress: "127.0.0.1",
@@ -525,7 +593,7 @@ describe("BossForge server", () => {
     });
     expect(disconnectedStatus.json()).toMatchObject({ connected: false, status: "retry-wait" });
     const timeoutDiagnostics = await live.app.inject({
-      method: "GET",
+      method: "POST",
       url: "/dev/twitch/diagnostics",
       headers: { origin, "sec-fetch-site": "same-origin", cookie: sessionCookie },
       remoteAddress: "127.0.0.1",

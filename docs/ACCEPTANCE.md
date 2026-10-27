@@ -519,3 +519,46 @@ vote check requires separate owner coordination to restart and reauthorize;
 the procedure is in [the active P3-B specification](P3B-LIVE-TWITCH-INTEGRATION.md#next-controlled-live-check).
 Keep Draft PR #5 open and unmerged pending independent exact-head review and
 verified live vote evidence.
+
+## P3-B4-C5-R1 — diagnostic browser compatibility
+
+The diagnostics query is now `POST /dev/twitch/diagnostics`, registered only
+when the opt-in development diagnostics flag is enabled. It is a read-only
+snapshot and requires a loopback caller, allowed same-origin `Origin`, exact
+`Sec-Fetch-Site: same-origin`, and valid Twitch owner session. It sends
+`Cache-Control: no-store`; diagnostics remain unavailable by default. The GET
+route is not registered.
+
+**Browser workflow:** open `http://localhost:5173`, authenticate through the
+owner-controlled flow, and use **Read local EventSub diagnostics** in Twitch
+controls. The button submits the same-origin POST and displays only the
+sanitized snapshot. Do not navigate directly to the diagnostics URL. This
+workflow has not been exercised against the authenticated live runtime; no
+restart, reauthorization, Twitch diagnostics query, or real vote was performed
+for this remediation.
+
+### Regression coverage
+
+- Disabled-by-default POST and unsupported GET return not found.
+- Owner-authenticated same-origin POST succeeds and returns `no-store`.
+- Missing Origin, missing Fetch Metadata, cross-site metadata, invalid or
+  absent owner session, and non-loopback requests are rejected.
+- Response omits synthetic session/user IDs, secret/token strings, and private
+  message text; reading diagnostics leaves authoritative forge state unchanged.
+
+### Validation
+
+| Gate                              | Result                                                                                                                                        |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Toolchain                         | PASS — Node v24.21.0 and pnpm 11.25.0                                                                                                         |
+| Frozen install                    | PASS — `pnpm install --frozen-lockfile`; lockfile unchanged, 297 packages linked from the local pnpm store                                    |
+| Build / typecheck / lint / format | PASS — `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`                                                                       |
+| Full tests                        | PASS — 121 tests (23 shared, 98 server); initial sandbox run hit socket-binding `EPERM`, then passed in the authorized local test environment |
+| Mock simulation                   | PASS — four synthetic categories completed on a separate loopback server at port 33301; Twitch integration was disabled                       |
+| Diff check                        | PASS — `git diff --check`                                                                                                                     |
+
+The authenticated dashboard runtime was not restarted, and no real Twitch
+diagnostic query or live browser authentication session was used. The new
+owner-visible button was build-checked; its actual live-session browser click
+remains for the separately coordinated owner QA. No real Twitch endpoint or
+credential was used in tests.
