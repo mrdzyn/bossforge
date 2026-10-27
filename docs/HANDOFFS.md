@@ -439,8 +439,37 @@ only after they exist. Do not invent a Codex session ID; use the session's
   The active authenticated server was not restarted. No OAuth, Twitch API or
   WebSocket request, real vote, credential read, public endpoint, merge,
   deployment or publication was performed.
-- **Next step:** A controlled owner-authorized local run may verify the welcome
-  timeout actually returned by Twitch, then observe a fresh cycle and
-  diagnostics. Do not reactivate a canceled cycle or use synthetic ballots as
-  live evidence. Keep PR #5 Draft and request independent review of the exact
-  pushed SHA.
+- **Next step at that implementation checkpoint:** Owner-controlled live
+  verification, later recorded below, and final exact-head review of the
+  documentation-only evidence update. Keep PR #5 Draft and unmerged.
+
+## P3-B4 C5-R2 owner-supplied live acceptance
+
+- **Evidence source:** The following results were supplied by the owner after
+  the implementation audit. They were not independently reproduced by
+  automated tests. No application restart, OAuth or vote was initiated by
+  Codex during this documentation update.
+- **Connection:** PASS — OAuth/EventSub connected; 1 valid welcome, 1 Helix
+  subscription enabled, 11 keepalives at an advertised 30,000 ms timeout,
+  6 accepted notifications, 6 normalized messages, and 6 chat callbacks. No
+  socket close/error, keepalive disconnect, or forge cancellation occurred.
+- **Ballots and stages:** 3 genuine ballots accepted; 3 rejected (1
+  `wrong-category`, 2 `invalid-choice`). All four stages completed, but this
+  does not imply each category received an accepted genuine vote. Special
+  used its default.
+- **Forge and arena:** PASS — Cinder Granite revealed (Golem / Fire / Ember
+  Burst default / Earth). Phaser terminal result: VICTORY, boss 0/120 HP,
+  streamer 64/100 HP. Connection stability and complete forge-to-victory
+  demonstration pass on the owner’s report. Actual OBS application capture
+  remains unverified.
+- **Chat syntax:** `!vote <category> <choice>`, with the category matching the
+  active stage. The category choices are body (golem, wraith, drake, mimic),
+  element (fire, ice, storm, void), special (ember-burst, frost-chain,
+  thunder-dash, shadow-pulse), and weakness (water, light, earth, wind). Future
+  UX should show the syntax and current valid choices in the overlay.
+- **Independent automated evidence:** C5-R2 implementation validation at
+  `279ff63fc803921310226d9c6903a029af7f0bd5` passed 124 tests (23 shared / 101
+  server), build, typecheck, lint, format, diff check and mock simulation.
+  These are code/test results, not the source of the live Twitch outcome.
+- **Review gate:** Request final independent exact-head audit of the
+  documentation-only commit below. Do not merge, deploy or publish.

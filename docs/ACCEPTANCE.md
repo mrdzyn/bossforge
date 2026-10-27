@@ -525,7 +525,7 @@ test environment and passed. Server build, typecheck, lint, Prettier, and
 | Stale timer/replacement isolation | PASS — queued old timer callback is ignored after refreshed or replaced transport; server-directed reconnect URL is unchanged.                                                                                                                                                                        |
 | Fail-closed behavior              | PASS — socket close still loses session, revocation and logout still shut down, subscriptions remain session-bound, and no canceled forge is resumed or ballot fabricated.                                                                                                                            |
 | Duplicate protection              | PASS — existing EventSub message replay and Helix subscription generation tests remain passing; no duplicate subscription or ballot path was added.                                                                                                                                                   |
-| Live post-fix verification        | PENDING — no Twitch connection, endpoint, OAuth, or real vote was used for this code remediation.                                                                                                                                                                                                     |
+| Live post-fix verification        | PASS — owner-supplied live results below; these are separate from automated tests and were not independently reproduced.                                                                                                                                                                              |
 
 Official Twitch documentation permits the optional initial WebSocket query
 parameter `keepalive_timeout_seconds` (10–600 seconds) and says the returned
@@ -545,12 +545,42 @@ suite passed in the authorized local test environment. Hosted status checks
 were unavailable for the starting head; local command evidence is the manual
 CI evidence for this candidate.
 
-No live diagnostic was activated, no Twitch endpoint was contacted during
-automated tests, and no genuine vote is claimed. A subsequent 60-second Body
-vote check requires separate owner coordination to restart and reauthorize;
-the procedure is in [the active P3-B specification](P3B-LIVE-TWITCH-INTEGRATION.md#next-controlled-live-check).
-Keep Draft PR #5 open and unmerged pending independent exact-head review and
-verified live vote evidence.
+Automated validation used fake transports and did not contact Twitch. The
+separate live evidence below was supplied by the owner and was not
+independently reproduced.
+
+### Owner-supplied live acceptance
+
+| Observation                   | Result                                                                                                                                                                                                    |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OAuth and EventSub connection | PASS — owner verified OAuth and connection; 1 valid welcome and 1 Helix subscription enabled.                                                                                                             |
+| Keepalive stability           | PASS — 11 keepalives received for the 30,000 ms advertised timeout; 0 socket closes/errors, keepalive disconnects, or forge cancellations.                                                                |
+| Message pipeline              | PASS — 6 notifications accepted, 6 messages normalized, and 6 chat callbacks invoked.                                                                                                                     |
+| Ballots                       | PASS — 3 genuine ballots accepted and 3 rejected: 1 `wrong-category`, 2 `invalid-choice`. This does not establish an accepted genuine vote in every category.                                             |
+| Forge                         | PASS — all four stages completed and revealed Cinder Granite: Golem / Fire / Ember Burst (default) / Earth. The Special stage used its default; do not infer that it received an accepted genuine ballot. |
+| Phaser arena                  | PASS — terminal VICTORY; boss HP 0/120, streamer HP 64/100. Connection stability and complete forge-to-victory demonstration PASS based on the owner’s report.                                            |
+| OBS application capture       | UNVERIFIED — Phaser arena result was reported, but a separate capture inside OBS was not reported.                                                                                                        |
+
+**Exact canonical chat syntax:** `!vote <category> <choice>`. The category must
+match the active stage. Valid forms and choices are:
+
+| Category | Valid commands                                                                                                       |
+| -------- | -------------------------------------------------------------------------------------------------------------------- |
+| Body     | `!vote body golem`, `!vote body wraith`, `!vote body drake`, `!vote body mimic`                                      |
+| Element  | `!vote element fire`, `!vote element ice`, `!vote element storm`, `!vote element void`                               |
+| Special  | `!vote special ember-burst`, `!vote special frost-chain`, `!vote special thunder-dash`, `!vote special shadow-pulse` |
+| Weakness | `!vote weakness water`, `!vote weakness light`, `!vote weakness earth`, `!vote weakness wind`                        |
+
+These choices are from `packages/shared/src/index.ts`; the category must match
+the active stage. Recommend showing the syntax and currently valid choices as
+clearer voting instructions in the overlay in a future UX update.
+
+The above live results are owner-supplied, not independent Codex test results.
+Automated checks remain: 124 tests passed at audited implementation HEAD
+`279ff63fc803921310226d9c6903a029af7f0bd5` (23 shared / 101 server), plus the
+build, typecheck, lint, formatting, diff-check and mock-simulation evidence
+above. Final exact-head review of this documentation-only update is pending;
+keep Draft PR #5 open and unmerged.
 
 ## P3-B4-C5-R1 — diagnostic browser compatibility
 
