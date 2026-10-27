@@ -219,4 +219,305 @@ describe("live EventSub adapter with fake Twitch transports", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
     live.shutdown();
   });
+
+  it("ignores close and error events from the retired socket after a welcomed reconnect", async () => {
+    const sockets: FakeSocket[] = [];
+    const events: unknown[] = [];
+    const fetcher = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      const requestBody = JSON.parse(String(init?.body)) as { transport: { session_id: string } };
+      return new Response(
+        JSON.stringify({
+          data: [
+            {
+              type: "channel.chat.message",
+              version: "1",
+              status: "enabled",
+              condition: { broadcaster_user_id: "12345", user_id: "12345" },
+              transport: { session_id: requestBody.transport.session_id },
+            },
+          ],
+        }),
+        { status: 202 },
+      );
+    }) as typeof fetch;
+    const live = new LiveEventSub({
+      clientId: "client-id",
+      identity: { id: "12345", login: "owner", displayName: "Owner" },
+      getAccessToken: async () => "access-token",
+      fetch: fetcher,
+      createSocket: () => {
+        const socket = new FakeSocket();
+        sockets.push(socket);
+        return socket as unknown as WebSocket;
+      },
+      onStatus: () => undefined,
+      onChat: (event) => events.push(event),
+    });
+    live.start();
+    sockets[0]!.sendFrame(
+      frame("handoff-first", "session_welcome", {
+        session: { id: "handoff-a", keepalive_timeout_seconds: 30 },
+      }),
+    );
+    await vi.waitFor(() => expect(live.connected).toBe(true));
+    sockets[0]!.sendFrame(
+      frame("handoff-reconnect", "session_reconnect", {
+        session: { reconnect_url: "wss://eventsub.wss.twitch.tv/ws?handoff=1" },
+      }),
+    );
+    expect(sockets).toHaveLength(2);
+    sockets[1]!.sendFrame(
+      frame("handoff-second", "session_welcome", {
+        session: { id: "handoff-b", keepalive_timeout_seconds: 30 },
+      }),
+    );
+    sockets[0]!.emit("close");
+    sockets[0]!.emit("error", new Error("retired socket"));
+    expect(live.connected).toBe(true);
+    sockets[1]!.sendFrame(
+      frame("handoff-chat", "notification", {
+        subscription: {
+          type: "channel.chat.message",
+          version: "1",
+          condition: { broadcaster_user_id: "12345", user_id: "12345" },
+        },
+        event: {
+          broadcaster_user_id: "12345",
+          chatter_user_id: "777",
+          chatter_user_login: "viewer",
+          chatter_user_name: "Viewer",
+          message_id: "handoff-chat-message",
+          message: { text: "!vote body drake" },
+        },
+      }),
+    );
+    expect(events).toHaveLength(1);
+    expect(fetcher).toHaveBeenCalledOnce();
+    live.shutdown();
+  });
+
+  it("discards a delayed Helix success from an earlier welcomed session", async () => {
+    const sockets: FakeSocket[] = [];
+    let resolveFirst!: (response: Response) => void;
+    let resolveSecond!: (response: Response) => void;
+    const fetcher = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => (resolveFirst = resolve)))
+      .mockImplementation(async (_input: string | URL | Request, init?: RequestInit) => {
+        const requestBody = JSON.parse(String(init?.body)) as {
+          transport: { session_id: string };
+        };
+        if (requestBody.transport.session_id === "delayed-b")
+          return new Promise<Response>((resolve) => (resolveSecond = resolve));
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                type: "channel.chat.message",
+                version: "1",
+                status: "enabled",
+                condition: { broadcaster_user_id: "12345", user_id: "12345" },
+                transport: { session_id: requestBody.transport.session_id },
+              },
+            ],
+          }),
+          { status: 202 },
+        );
+      }) as typeof fetch;
+    const live = new LiveEventSub({
+      clientId: "client-id",
+      identity: { id: "12345", login: "owner", displayName: "Owner" },
+      getAccessToken: async () => "access-token",
+      fetch: fetcher,
+      createSocket: () => {
+        const socket = new FakeSocket();
+        sockets.push(socket);
+        return socket as unknown as WebSocket;
+      },
+      onStatus: () => undefined,
+      onChat: () => undefined,
+    });
+    live.start();
+    sockets[0]!.sendFrame(
+      frame("delayed-a-welcome", "session_welcome", {
+        session: { id: "delayed-a", keepalive_timeout_seconds: 30 },
+      }),
+    );
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
+    sockets[0]!.emit("close");
+    await vi.waitFor(() => expect(sockets).toHaveLength(2), { timeout: 2_000 });
+    sockets[1]!.sendFrame(
+      frame("delayed-b-welcome", "session_welcome", {
+        session: { id: "delayed-b", keepalive_timeout_seconds: 30 },
+      }),
+    );
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+    resolveFirst(
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              type: "channel.chat.message",
+              version: "1",
+              status: "enabled",
+              condition: { broadcaster_user_id: "12345", user_id: "12345" },
+              transport: { session_id: "delayed-a" },
+            },
+          ],
+        }),
+        { status: 202 },
+      ),
+    );
+    await Promise.resolve();
+    expect(live.connected).toBe(false);
+    resolveSecond(
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              type: "channel.chat.message",
+              version: "1",
+              status: "enabled",
+              condition: { broadcaster_user_id: "12345", user_id: "12345" },
+              transport: { session_id: "delayed-b" },
+            },
+          ],
+        }),
+        { status: 202 },
+      ),
+    );
+    await vi.waitFor(() => expect(live.connected).toBe(true));
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    live.shutdown();
+  });
+
+  it("discards a delayed 409 verification from an earlier welcomed session", async () => {
+    const sockets: FakeSocket[] = [];
+    let resolveOldVerification!: (response: Response) => void;
+    let resolveCurrentPost!: (response: Response) => void;
+    const subscription = (sessionId: string) => ({
+      type: "channel.chat.message",
+      version: "1",
+      status: "enabled",
+      condition: { broadcaster_user_id: "12345", user_id: "12345" },
+      transport: { session_id: sessionId },
+    });
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("{}", { status: 409 }))
+      .mockImplementationOnce(
+        () => new Promise<Response>((resolve) => (resolveOldVerification = resolve)),
+      )
+      .mockImplementationOnce(
+        () => new Promise<Response>((resolve) => (resolveCurrentPost = resolve)),
+      ) as typeof fetch;
+    const live = new LiveEventSub({
+      clientId: "client-id",
+      identity: { id: "12345", login: "owner", displayName: "Owner" },
+      getAccessToken: async () => "access-token",
+      fetch: fetcher,
+      createSocket: () => {
+        const socket = new FakeSocket();
+        sockets.push(socket);
+        return socket as unknown as WebSocket;
+      },
+      onStatus: () => undefined,
+      onChat: () => undefined,
+    });
+    live.start();
+    sockets[0]!.sendFrame(
+      frame("delayed-409-a", "session_welcome", {
+        session: { id: "delayed-409-a", keepalive_timeout_seconds: 30 },
+      }),
+    );
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+    sockets[0]!.emit("close");
+    await vi.waitFor(() => expect(sockets).toHaveLength(2), { timeout: 2_000 });
+    sockets[1]!.sendFrame(
+      frame("delayed-409-b", "session_welcome", {
+        session: { id: "delayed-409-b", keepalive_timeout_seconds: 30 },
+      }),
+    );
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(3));
+    resolveOldVerification(
+      new Response(JSON.stringify({ data: [subscription("delayed-409-a")] }), { status: 200 }),
+    );
+    await Promise.resolve();
+    expect(live.connected).toBe(false);
+    resolveCurrentPost(
+      new Response(JSON.stringify({ data: [subscription("delayed-409-b")] }), { status: 202 }),
+    );
+    await vi.waitFor(() => expect(live.connected).toBe(true));
+    live.shutdown();
+  });
+
+  it("does not let a stale Helix error fail the current welcomed session", async () => {
+    const sockets: FakeSocket[] = [];
+    let rejectOldRequest!: (error: Error) => void;
+    let resolveCurrentRequest!: (response: Response) => void;
+    const fetcher = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((_resolve, reject) => {
+            rejectOldRequest = reject;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveCurrentRequest = resolve;
+          }),
+      ) as typeof fetch;
+    const live = new LiveEventSub({
+      clientId: "client-id",
+      identity: { id: "12345", login: "owner", displayName: "Owner" },
+      getAccessToken: async () => "access-token",
+      fetch: fetcher,
+      createSocket: () => {
+        const socket = new FakeSocket();
+        sockets.push(socket);
+        return socket as unknown as WebSocket;
+      },
+      onStatus: () => undefined,
+      onChat: () => undefined,
+    });
+    live.start();
+    sockets[0]!.sendFrame(
+      frame("stale-error-a", "session_welcome", {
+        session: { id: "stale-error-a", keepalive_timeout_seconds: 30 },
+      }),
+    );
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
+    sockets[0]!.emit("close");
+    await vi.waitFor(() => expect(sockets).toHaveLength(2), { timeout: 2_000 });
+    sockets[1]!.sendFrame(
+      frame("stale-error-b", "session_welcome", {
+        session: { id: "stale-error-b", keepalive_timeout_seconds: 30 },
+      }),
+    );
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+    rejectOldRequest(new Error("stale session failed"));
+    await Promise.resolve();
+    expect(live.status).toBe("subscribing");
+    expect(live.connected).toBe(false);
+    resolveCurrentRequest(
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              type: "channel.chat.message",
+              version: "1",
+              status: "enabled",
+              condition: { broadcaster_user_id: "12345", user_id: "12345" },
+              transport: { session_id: "stale-error-b" },
+            },
+          ],
+        }),
+        { status: 202 },
+      ),
+    );
+    await vi.waitFor(() => expect(live.connected).toBe(true));
+    live.shutdown();
+  });
 });

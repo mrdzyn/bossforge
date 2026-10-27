@@ -11,6 +11,22 @@
 - **Current truthful behavior:** Runtime now supports explicit `mock` and authenticated local `twitch` forge modes. Mock mode remains default. Twitch mode requires OAuth identity validation, owner-bound local control, a welcomed EventSub session and verified Helix subscription before any live chat is forwarded. Only fake-network tests were run; real OAuth, subscription, chat ballots and live Twitch browser QA remain **NOT TESTED**.
 - **Review/merge gates:** Keep the P3-B PR Draft and unmerged. Require independent exact-head review, manual secure local OAuth consent, and separate owner approval before merge. No public binding, deployment, release or Phase 4.
 
+## P3-B-C2 remediation checkpoint
+
+- Addressed all four C1 findings on the existing Draft PR #5 branch: ordered
+  mode transition epochs and snapshots; transport-specific idempotent
+  disconnect handling; welcomed-session leases for Helix verification; and a
+  fresh mock simulation fallback after authenticated Twitch logout.
+- Regression suite: 110 tests (23 shared / 87 server), preserving the 106-test
+  C1 baseline and the C5 backend-restart safeguard. Full command outcomes,
+  synthetic simulation, browser QA and disabled localhost auth preflight are in
+  [ACCEPTANCE](ACCEPTANCE.md).
+- Twitch remains disabled by default. QA used synthetic credential strings and
+  fake transports; no real Twitch account or endpoint, public route or
+  deployment was used. Live behavior remains **NOT TESTED**.
+- Request independent exact-head P3-B-C2 review on existing Draft PR #5. Keep
+  it open, Draft and unmerged; do not enable the integration.
+
 ## P3-B implementation checkpoint
 
 - **B1:** Added default-disabled confidential-client authorization-code OAuth at the exact local callback. Browser-bound single-use state, HttpOnly/SameSite cookies, exact Host/loopback checks, `user:read:chat` scope, validated numeric identity/client ID, in-memory access/rotating refresh tokens, refresh, hourly validation, revocation, logout and safe error responses are covered with deterministic fake HTTP tests.

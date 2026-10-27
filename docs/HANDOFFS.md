@@ -279,5 +279,34 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Real account status:** OAuth consent, Twitch token validation/refresh against Twitch, Helix subscription, live EventSub traffic, and channel votes are **NOT TESTED**. All automated network calls use injected fake HTTP responses and fake WSS transports. No live Twitch endpoint was contacted.
 - **Environment setup:** A cloud environment config draft was saved with `TWITCH_CLIENT_ID`, disabled-by-default `TWITCH_INTEGRATION_ENABLED=false`, a private user-provided `TWITCH_CLIENT_SECRET` requirement and Twitch egress domains. It is saved but not applied. Owner must review/publish the environment changes, confirm the exact callback in Twitch Console, provision the private secret outside Git, and personally initiate local OAuth before real acceptance.
 - **Local QA ports:** Existing listeners on 5173 and 3013 were not modified. Validation ran the local apps at 5201 and 3201; this does not validate the fixed OAuth callback at port 3001.
-- **Independent C1 review request:** Review the exact current PR #5 HEAD for OAuth state/cookie/CSRF/Host handling, token volatility and refresh/revocation, outbound-only WSS and Helix subscription sequencing, reconnect/orphan cleanup, reader/channel/replay validation, source/mode isolation, owner authorization on Twitch controls, accurate UI/OBS status, and the 105-test/security regression evidence. Distinguish code/fake-network coverage from real Twitch operation. The requested review is pending; Codex validation is not approval.
+- **Independent C1 review request:** Review the exact PR #5 HEAD at that checkpoint for OAuth state/cookie/CSRF/Host handling, token volatility and refresh/revocation, outbound-only WSS and Helix subscription sequencing, reconnect/orphan cleanup, reader/channel/replay validation, source/mode isolation, owner authorization on Twitch controls, accurate UI/OBS status, and the 106-test/security regression evidence. Distinguish code/fake-network coverage from real Twitch operation. That review identified the four findings addressed by P3-B-C2 below.
 - **Remaining gates:** No merge, deployment, release, publishing or Phase 4. Live channel validation requires a separate owner interaction; independent security review must inspect the exact pushed HEAD.
+
+## P3-B-C2 remediation handoff
+
+- **Scope:** Fixed the four independent C1 findings on the existing
+  `feat/phase3b-live-twitch-integration` branch and Draft PR #5. The feature
+  remains disabled by default and the PR remains unmerged.
+- **State ordering:** Mock/Twitch forge replacements receive a monotonic epoch
+  and a fresh instance ID; transition snapshots are published. Real shared
+  reconciliation tests reject stale prior-mode state, and the C5 backend
+  restart regression remains green.
+- **EventSub races:** Socket close/error state is transport-scoped and
+  idempotent. Helix completion is bound to the currently welcomed session;
+  deferred fake-network tests cover stale success, 409 verification, and error
+  responses. Logout clears Twitch authorization and restores mock simulation
+  without requiring another Twitch login.
+- **Validation:** Frozen install, build, typecheck, lint, formatting, full test
+  suite, mock simulation, Chromium dashboard/OBS/arena QA, local disabled OAuth
+  preflight, and diff check are recorded in [ACCEPTANCE](ACCEPTANCE.md). The
+  suite now has 110 tests (23 shared / 87 server), retaining the C1 106-test
+  baseline.
+- **Security boundary:** All Twitch tests use synthetic values, fake HTTP and
+  fake WebSocket transports. No Twitch account, secret, OAuth consent, Twitch
+  request, public endpoint or deployment was used. Live Twitch behavior remains
+  **NOT TESTED**.
+- **Independent review requested:** Please review the exact final pushed HEAD
+  of existing Draft PR #5 for C1-01 through C1-04, C5 restart/reconciliation
+  preservation, OAuth/default-deny/Origin boundaries, provider isolation and
+  fake-network regression coverage. Review request is attached to PR #5.
+  Keep Draft/open/unmerged; do not enable live integration.

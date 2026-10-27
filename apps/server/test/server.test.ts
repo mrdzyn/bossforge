@@ -2,6 +2,7 @@ import { once } from "node:events";
 import { EventEmitter } from "node:events";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
+import { ForgeStateReconciler } from "@bossforge/shared";
 import { createBossForgeApp, type BossForgeApp } from "../src/app.js";
 import { getAllowedViteOrigins } from "../src/security/local-access.js";
 import { TwitchOAuth } from "../src/twitch/oauth.js";
@@ -236,6 +237,10 @@ describe("BossForge server", () => {
       remoteAddress: "127.0.0.1",
     });
     expect(foreignOrigin.statusCode).toBe(403);
+    const reconciler = new ForgeStateReconciler();
+    const generation = reconciler.beginConnection();
+    const mockBefore = (await live.app.inject({ method: "GET", url: "/forge/state" })).json();
+    expect(reconciler.apply(mockBefore, generation)).toBe(true);
     const connected = await live.app.inject({
       method: "POST",
       url: "/twitch/connect",
@@ -248,6 +253,13 @@ describe("BossForge server", () => {
       remoteAddress: "127.0.0.1",
     });
     expect(connected.statusCode).toBe(202);
+    const connectingState = (await live.app.inject({ method: "GET", url: "/forge/state" })).json();
+    expect(connectingState).toMatchObject({ mode: "twitch", connectedToTwitch: false });
+    expect(Date.parse(connectingState.serverStartedAt)).toBeGreaterThan(
+      Date.parse(mockBefore.serverStartedAt),
+    );
+    expect(reconciler.apply(connectingState, generation)).toBe(true);
+    expect(reconciler.apply(mockBefore, generation)).toBe(false);
     expect(sockets).toHaveLength(1);
 
     const noOriginControl = await live.app.inject({
@@ -318,6 +330,42 @@ describe("BossForge server", () => {
     });
     expect(reset.statusCode).toBe(200);
     expect(reset.json()).toMatchObject({ mode: "twitch", status: "idle", connectedToTwitch: true });
+    const twitchState = (await live.app.inject({ method: "GET", url: "/forge/state" })).json();
+    expect(reconciler.apply(twitchState, generation)).toBe(true);
+    const logout = await live.app.inject({
+      method: "POST",
+      url: "/twitch/disconnect",
+      headers: {
+        host: "localhost:3001",
+        origin,
+        "sec-fetch-site": "same-origin",
+        cookie: sessionCookie,
+      },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(logout.statusCode).toBe(200);
+    expect(logout.json()).toMatchObject({ disconnected: true, mode: "mock" });
+    expect(String(logout.headers["set-cookie"])).toContain("Max-Age=0");
+    const mockAfterLogout = (await live.app.inject({ method: "GET", url: "/forge/state" })).json();
+    expect(mockAfterLogout).toMatchObject({ mode: "mock", simulated: true, status: "idle" });
+    expect(Date.parse(mockAfterLogout.serverStartedAt)).toBeGreaterThan(
+      Date.parse(twitchState.serverStartedAt),
+    );
+    expect(reconciler.apply(mockAfterLogout, generation)).toBe(true);
+    expect(reconciler.apply(twitchState, generation)).toBe(false);
+    const simulateAfterLogout = await live.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      headers: {
+        host: "localhost:3001",
+        origin,
+        "sec-fetch-site": "same-origin",
+      },
+      remoteAddress: "127.0.0.1",
+      payload: { durationSeconds: 5 },
+    });
+    expect(simulateAfterLogout.statusCode).toBe(200);
+    expect(simulateAfterLogout.json()).toMatchObject({ mode: "mock", simulated: true });
     await live.close();
   });
 

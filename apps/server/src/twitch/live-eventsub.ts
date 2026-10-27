@@ -49,6 +49,9 @@ export class LiveEventSub {
   private subscriptionActive = false;
   private stopped = false;
   private statusValue: LiveEventSubStatus = "idle";
+  private subscriptionGeneration = 0;
+  private welcomedSessionId: string | undefined;
+  private activeTransport: { closed: boolean; welcomed: boolean } | undefined;
 
   constructor(private readonly options: LiveEventSubOptions) {
     this.fetcher = options.fetch ?? fetch;
@@ -77,11 +80,35 @@ export class LiveEventSub {
       initialUrl: "wss://eventsub.wss.twitch.tv/ws",
       createTransport: (url, handlers) => {
         const socket = this.makeSocket(url);
+        const transport = { closed: false, welcomed: false };
+        if (!this.activeTransport) this.activeTransport = transport;
         socket.on("message", (data) => {
+          if (transport.closed || this.stopped) return;
           const raw = data.toString();
           try {
-            const packet = JSON.parse(raw) as { metadata?: { message_type?: unknown } };
-            if (packet.metadata?.message_type === "revocation") {
+            const packet = JSON.parse(raw) as {
+              metadata?: { message_type?: unknown };
+              payload?: { session?: { id?: unknown } };
+            };
+            if (
+              packet.metadata?.message_type === "session_welcome" &&
+              typeof packet.payload?.session?.id === "string" &&
+              !transport.welcomed
+            ) {
+              const wasConnected = this.subscriptionActive;
+              this.subscriptionGeneration += 1;
+              this.welcomedSessionId = packet.payload.session.id;
+              transport.welcomed = true;
+              this.activeTransport = transport;
+              if (!wasConnected) this.subscriptionActive = false;
+            }
+            if (
+              packet.metadata?.message_type === "revocation" &&
+              this.activeTransport === transport &&
+              transport.welcomed
+            ) {
+              this.subscriptionGeneration += 1;
+              this.welcomedSessionId = undefined;
               this.subscriptionActive = false;
               this.setStatus("revoked", false);
             }
@@ -94,15 +121,21 @@ export class LiveEventSub {
         });
         socket.on("ping", () => handlers.ping());
         const disconnected = () => {
-          handlers.disconnect();
+          if (transport.closed) return;
+          transport.closed = true;
+          if (this.activeTransport !== transport || this.stopped) return;
+          this.activeTransport = undefined;
+          this.welcomedSessionId = undefined;
+          this.subscriptionGeneration += 1;
           this.subscriptionActive = false;
-          if (this.stopped) return;
+          handlers.disconnect();
           this.setStatus(this.session?.status === "failed" ? "failed" : "reconnecting", false);
         };
         socket.once("close", disconnected);
         socket.once("error", disconnected);
         return {
           close: () => {
+            transport.closed = true;
             if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)
               socket.close();
           },
@@ -123,6 +156,9 @@ export class LiveEventSub {
 
   shutdown(): void {
     this.stopped = true;
+    this.subscriptionGeneration += 1;
+    this.welcomedSessionId = undefined;
+    this.activeTransport = undefined;
     this.subscriptionActive = false;
     this.session?.shutdown();
     this.session = undefined;
@@ -131,18 +167,27 @@ export class LiveEventSub {
 
   private async subscribe(sessionId: string): Promise<void> {
     if (this.stopped) return;
+    const generation = ++this.subscriptionGeneration;
+    const isCurrent = () =>
+      !this.stopped &&
+      generation === this.subscriptionGeneration &&
+      this.welcomedSessionId === sessionId;
     this.subscriptionActive = false;
     this.setStatus("subscribing", false);
     try {
       const token = await this.options.getAccessToken();
+      if (!isCurrent()) return;
       if (!token) throw new Error("No active Twitch authorization");
       let response = await this.createSubscription(token, sessionId);
+      if (!isCurrent()) return;
       let activeToken = token;
       if (response.status === 401 && this.options.refreshAccessToken) {
         const refreshed = await this.options.refreshAccessToken();
+        if (!isCurrent()) return;
         if (!refreshed) throw new Error("Twitch authorization expired");
         activeToken = refreshed;
         response = await this.createSubscription(activeToken, sessionId);
+        if (!isCurrent()) return;
       }
       if (response.status === 409) {
         const controller = new AbortController();
@@ -164,8 +209,10 @@ export class LiveEventSub {
         } finally {
           clearTimeout(timeout);
         }
+        if (!isCurrent()) return;
         if (!check.ok) throw new Error("Existing subscription could not be verified");
         const body = (await check.json()) as { data?: HelixSubscription[] };
+        if (!isCurrent()) return;
         if (
           !body.data?.some((item) => verifiedSubscription(item, this.options.identity, sessionId))
         )
@@ -174,15 +221,17 @@ export class LiveEventSub {
         throw new Error("Twitch subscription request was rejected");
       } else {
         const body = (await response.json()) as { data?: HelixSubscription[] };
+        if (!isCurrent()) return;
         if (
           !body.data?.some((item) => verifiedSubscription(item, this.options.identity, sessionId))
         )
           throw new Error("Twitch subscription was not enabled for this session");
       }
-      if (this.stopped) return;
+      if (!isCurrent()) return;
       this.subscriptionActive = true;
       this.setStatus("connected", true);
     } catch {
+      if (!isCurrent()) return;
       this.subscriptionActive = false;
       this.setStatus("failed", false);
     }

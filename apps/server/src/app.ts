@@ -51,18 +51,25 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
   let provider: "mock" | "twitch" = "mock";
   let liveEventSub: LiveEventSub | undefined;
   const serverInstanceId = options.serverInstanceId ?? randomUUID();
-  const serverStartedAt = options.serverStartedAt ?? new Date().toISOString();
+  let forgeEpoch = Date.parse(options.serverStartedAt ?? new Date().toISOString());
+  let forgeStartedAt = new Date(forgeEpoch).toISOString();
   let forgeGeneration = 0;
-  const createForge = (mode: "mock" | "twitch", connected = false) =>
-    new ForgeSession(
+  const createForge = (mode: "mock" | "twitch", connected = false) => {
+    if (forgeGeneration > 0) {
+      forgeEpoch = Math.max(now().getTime(), forgeEpoch + 1);
+      forgeStartedAt = new Date(forgeEpoch).toISOString();
+    }
+    const instanceId = forgeGeneration++ === 0 ? serverInstanceId : randomUUID();
+    return new ForgeSession(
       now,
       options.forgeScheduler,
       (state) => hub.publish({ kind: "forge.state", source: mode, state }),
-      forgeGeneration++ === 0 ? serverInstanceId : randomUUID(),
-      serverStartedAt,
+      instanceId,
+      forgeStartedAt,
       mode,
       connected,
     );
+  };
   let forge = createForge("mock");
   const oauth =
     options.twitchOAuth ??
@@ -233,6 +240,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       provider = "twitch";
       forge.close();
       forge = createForge("twitch", false);
+      hub.publish({ kind: "forge.state", source: "twitch", state: forge.getState() });
       liveEventSub = new LiveEventSub({
         clientId: process.env.TWITCH_CLIENT_ID ?? "",
         identity,
@@ -270,8 +278,13 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       const sessionCookie = cookie(request, "bossforge_twitch_session");
       liveEventSub?.shutdown();
       liveEventSub = undefined;
-      if (provider === "twitch") forge.setTwitchConnected(false);
       await oauth.logout(sessionCookie);
+      if (provider === "twitch") {
+        forge.close();
+        provider = "mock";
+        forge = createForge("mock");
+        hub.publish({ kind: "forge.state", source: "mock", state: forge.getState() });
+      }
       reply.header(
         "set-cookie",
         "bossforge_twitch_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0",
