@@ -1,6 +1,6 @@
 # Phase 3-B — Authenticated Local Twitch Chat + EventSub Voting
 
-**Status:** B1–B3 implementation candidate on Draft PR #5. Owner-controlled local QA observed successful OAuth, verified EventSub, and forge start; a later EventSub loss canceled voting after Body and Element opened. Reconnect restored connection only. Genuine notification delivery and vote counting remain **NOT VERIFIED**. See [C5 acceptance evidence](ACCEPTANCE.md#p3-b4-c5--eventsub-disconnect-investigation).
+**Status:** C5-R2 implementation and owner-supplied live acceptance are recorded on Draft PR #5. The owner reported successful OAuth/EventSub, stable keepalives, genuine notifications and ballots, all four forge stages, and a Phaser victory. These live results were not independently reproduced; actual OBS application capture remains **UNVERIFIED**. Full owner-supplied results and automated-test separation are in [C5-R2 acceptance evidence](ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
 **Base:** `main@5adbd71f5378666e17b805617f37c3bb000505b8` (P3-A independently audited and squash-merged via PR #4)  
 **Working branch:** `feat/phase3b-live-twitch-integration`  
 **Delivery:** One Draft PR, bounded implementation checkpoints, independent exact-head review, **separate explicit owner squash-merge decision**.  
@@ -76,7 +76,7 @@ Local MVP: authenticate the **broadcaster's own Twitch account** with `user:read
 
 **No-credential CI:** injectable fake OAuth HTTP client, fake WSS/Helix, fake clock and deterministic fixtures; no test must hit the real Twitch API or require the owner's secret. Do not place tokens in test output.
 
-**Manual local owner QA:** Owner-controlled QA has observed OAuth, verified subscription, forge start, and a disconnect cancellation. The genuine EventSub notification and counted chat-vote stages remain **NOT VERIFIED**. Continue only with the controlled, redacted procedure below; owner must participate in OAuth and real chat posting.
+**Manual local owner QA (owner-supplied C5-R2 results):** OAuth and EventSub PASS; 1 valid welcome, 1 enabled Helix subscription, 11 keepalives at a 30,000 ms advertised timeout, 6 accepted notifications, 6 normalized messages, and 6 chat callbacks. The owner reported 3 genuine ballots accepted and 3 rejected (1 `wrong-category`, 2 `invalid-choice`); keepalive disconnects, socket closes/errors, and forge cancellations were all 0. All four stages completed and Cinder Granite was revealed (Golem / Fire / Ember Burst default / Earth); Special used its no-vote default, so successful genuine ballots in all four categories are **not** claimed. The Phaser arena ended in VICTORY (boss 0/120 HP; streamer 64/100 HP). Connection stability and the forge-to-victory demonstration PASS based on owner-supplied results, not independent reproduction. Actual OBS application capture remains **UNVERIFIED**. See the detailed [acceptance evidence](ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
 
 **Browser QA:** Chromium 1440×900 dashboard, 390×844 no overflow, OBS 1920×1080 + 1280×720, arena combat, disconnect/reconnect states. Capture screenshots only with identifiers and sensitive data redacted or absent, and report actual errors/limitations.
 
@@ -94,15 +94,18 @@ Local MVP: authenticate the **broadcaster's own Twitch account** with `user:read
 
 ### Observed live evidence
 
-Owner-controlled local testing observed OAuth completion, a verified EventSub
-subscription, a successful authenticated forge start, Body and Element voting,
-and an advancing timer. EventSub then disconnected; the authoritative forge
-canceled to idle. Reconnection restored Twitch connection state but did not
-resume the canceled cycle. No genuine chat notification or counted vote is
-verified. This is partial operational evidence, not end-to-end acceptance.
+At the time of this initial investigation, owner-controlled local testing
+observed OAuth completion, a verified EventSub subscription, a successful
+authenticated forge start, Body and Element voting, and an advancing timer.
+EventSub then disconnected; the authoritative forge canceled to idle.
+Reconnection restored Twitch connection state but did not resume the canceled
+cycle. This historical incident did not verify a genuine notification or
+counted vote. The later, owner-supplied C5-R2 live acceptance below supersedes
+that earlier partial-QA status without erasing the disconnect evidence.
 
-The live run did not retain a numeric WebSocket close code or socket error
-classification. The exact trigger therefore remains unknown. Source inspection
+For that initial disconnect, the live run did not retain a numeric WebSocket
+close code or socket error classification, so its exact trigger remains
+unknown. Source inspection
 shows an internal watchdog scheduled at exactly
 `keepalive_timeout_seconds * 1000`; Twitch's [WebSocket guidance](https://dev.twitch.tv/docs/eventsub/handling-websocket-events/)
 says to infer a lost connection when silence lasts **longer than** the timeout.
@@ -121,16 +124,20 @@ normalization/chat-callback/ballot counters. Raw frames, message text, IDs,
 usernames, URLs, credentials, and full error objects are never stored or
 returned.
 
-The diagnostics were exercised only with fake sockets and synthetic fixtures.
-They were not enabled in the authenticated runtime; enabling the flag requires
-a separately coordinated server restart and owner reauthorization because
-OAuth state is process-memory only. Do not automatically resume a canceled
-forge or synthesize missing ballots.
+At this initial investigation checkpoint, diagnostics had only been exercised
+with fake sockets and synthetic fixtures and were not enabled in the
+authenticated runtime. Enabling the flag required a separately coordinated
+server restart and owner reauthorization because OAuth state is process-memory
+only. Do not automatically resume a canceled forge or synthesize missing
+ballots.
 
-### Next controlled live check
+### Reusable controlled live diagnostic procedure
 
-After the owner separately coordinates a safe local restart and reauthorization,
-open the dashboard at `http://localhost:5173` and confirm the actual EventSub
+This is a reusable controlled diagnostic procedure; it was followed by the
+owner-supplied C5-R2 acceptance results above and is not a pending prerequisite
+for that recorded run. For a future repeat, after the owner separately
+coordinates any required local restart and reauthorization, open the dashboard
+at `http://localhost:5173` and confirm the actual EventSub
 subscription is enabled. In the Twitch controls, click **Read local EventSub
 diagnostics**; this sends an authenticated same-origin POST and renders only the
 sanitized snapshot in the dashboard. Do not open the diagnostics path in the

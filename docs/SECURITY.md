@@ -90,7 +90,7 @@ introduced in Phase 1.
 - OAuth/session/forge mode operations are authorized **local streamer controls**, not unprotected loopback mutations. Apply browser-bound owner session controls plus CSRF/Origin protection; do not bypass Phase 0 effective-host, socket-peer, Origin, rate limit and production restrictions. OBS must have no auth controls or tokens.
 - Real-mode votes and mock-mode votes must be mutually exclusive per forge cycle and marked accurately. The P3-B source-aware state migration enforces this provider boundary.
 - Control Ping/Pong must not reset application keepalive; no real notification may be forwarded until verified welcome and active Helix subscription. Never infer `connectedToTwitch` from a local browser socket.
-- Owner must opt in to local OAuth authorization and provide the secret through private local configuration. Never force browser login or make real Twitch API calls in tests. Owner-controlled QA observed OAuth and verified EventSub; genuine notification delivery and vote counting remain **NOT VERIFIED**.
+- Owner must opt in to local OAuth authorization and provide the secret through private local configuration. Never force browser login or make real Twitch API calls in tests. **Owner-supplied C5-R2 live QA:** OAuth/EventSub PASS; 1 valid welcome, 1 enabled Helix subscription, 11 keepalives at a 30,000 ms advertised timeout, 6 accepted notifications, 6 normalized messages and 6 chat callbacks. Three genuine ballots were accepted and three rejected (1 `wrong-category`, 2 `invalid-choice`); keepalive disconnects, socket closes/errors and forge cancellations: 0. The four-stage forge revealed Cinder Granite (Golem / Fire / Ember Burst default / Earth); Special used its no-vote default, so acceptance in all categories is not claimed. Phaser result was VICTORY (boss 0/120 HP; streamer 64/100 HP). These results were supplied by the owner, not independently reproduced; actual OBS application capture remains **UNVERIFIED**. Automated fake-network results are separate: 124 tests passed at implementation commit `279ff63fc803921310226d9c6903a029af7f0bd5`.
 - Full [active implementation and test gates](P3B-LIVE-TWITCH-INTEGRATION.md).
 
 ### P3-B implementation status
@@ -117,10 +117,10 @@ introduced in Phase 1.
   endpoints are rejected while a Twitch forge is selected; authenticated live
   start/reset controls remain available. OBS receives only provider mode,
   verified connection status and forge state, never credentials or controls.
-- B1/B2/B3 automated tests use fake fetch responses and fake WSS sockets.
-  Owner-controlled local QA later observed OAuth completion and a verified
-  live subscription. No genuine chat notification or counted vote has been
-  verified; fake test traffic is not operational proof.
+- B1/B2/B3 automated tests use fake fetch responses and fake WSS sockets;
+  this evidence is not proof of live service operation. Separate owner-supplied
+  C5-R2 live QA observed genuine notifications and ballots, as summarized above
+  and detailed in [acceptance evidence](ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
 - P3-B-C2 scopes disconnect/error state to the current socket and invalidates
   Helix verification when the welcomed EventSub session changes. Deferred fake
   HTTP tests cover stale success, HTTP 409 verification, and request failure.

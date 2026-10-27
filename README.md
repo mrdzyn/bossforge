@@ -29,12 +29,23 @@ branch; P3-A itself remains offline and mock-only.
 
 **Phase 3-B:** [Real local Twitch integration](docs/P3B-LIVE-TWITCH-INTEGRATION.md)
 is implemented on existing Draft PR #5, with OAuth/EventSub gated by explicit
-local configuration. Automated tests use fake HTTP and WebSocket transports;
-real Twitch consent, subscription and chat voting remain **NOT TESTED**. To
-enable a local account, review/apply the cloud environment configuration draft,
-set the registered Client ID and private Client Secret in gitignored `.env`,
-then set `TWITCH_INTEGRATION_ENABLED=true`. The server remains loopback-only.
-Until OAuth and EventSub are actually verified, use the visible SIMULATED mode.
+local configuration. The owner reports live OAuth/EventSub PASS, one valid
+welcome, one enabled Helix subscription, 11 keepalives for the advertised
+30-second timeout, 6 accepted/normalized notifications and 6 chat callbacks.
+Three genuine ballots were accepted and three rejected (one wrong-category,
+two invalid-choice), with no disconnects, socket closes/errors, or forge
+cancellations. The four-stage forge revealed Cinder Granite (Golem / Fire /
+Ember Burst default / Earth); Special used its no-vote default, so accepted
+genuine ballots in all four categories are not claimed. The owner reports a
+Phaser VICTORY (boss 0/120 HP; streamer 64/100 HP). These results are
+owner-supplied and not independently reproduced; actual OBS application capture
+remains **UNVERIFIED**. Automated validation is separate: 124 tests passed at
+implementation commit `279ff63fc803921310226d9c6903a029af7f0bd5` using fake
+transports. For a local account, the owner must personally approve/configure
+OAuth: set the registered Client ID and private Client Secret in gitignored
+`.env`, then explicitly set `TWITCH_INTEGRATION_ENABLED=true`. The server
+remains loopback-only and mock simulation remains available. PR #5 remains
+Draft and unmerged; see [acceptance evidence](docs/ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
 
 See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 [roadmap](docs/ROADMAP.md).

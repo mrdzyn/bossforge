@@ -23,7 +23,7 @@ or Twitch authentication.
 
 **P3-A completed and squash-merged** via PR #4; offline EventSub fixtures/harness are available.
 
-**P3-B implementation candidate:** B1–B3 add local OAuth, outbound user-token EventSub, and mode-separated voting/UI on Draft PR #5. Fake-network tests and Chromium regressions pass; real Twitch QA remains NOT TESTED until the owner applies private environment configuration and initiates OAuth. Keep the PR Draft and unmerged; no deployment/release is authorized. See [active P3-B spec](P3B-LIVE-TWITCH-INTEGRATION.md).
+**P3-B implementation and owner-supplied live QA:** On Draft PR #5, the owner reports OAuth/EventSub PASS, one valid welcome, one enabled Helix subscription, 11 keepalives at a 30-second advertised timeout, 6 accepted/normalized notifications and 6 chat callbacks. Three genuine ballots were accepted and three rejected (wrong-category: 1; invalid-choice: 2); no disconnects, socket closes/errors, or forge cancellations occurred. All four stages completed, revealing Cinder Granite (Golem / Fire / Ember Burst default / Earth), and the Phaser arena ended in VICTORY (boss 0/120 HP, streamer 64/100 HP). These live results are owner-supplied and not independently reproduced. Special used its no-vote default, so successful genuine votes in all categories are not claimed. Actual OBS application capture remains UNVERIFIED. Automated fake-network validation is separate: 124 tests passed at implementation commit `279ff63fc803921310226d9c6903a029af7f0bd5`. Keep the PR Draft and unmerged; no deployment/release is authorized. See [active P3-B spec](P3B-LIVE-TWITCH-INTEGRATION.md) and [acceptance evidence](ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
 
 ## Phase 4 — Streamer UX and OBS Integration
 
