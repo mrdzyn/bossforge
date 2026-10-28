@@ -86,6 +86,30 @@ Each cell is `sample damage / recommended HP for the matching band`.
 
 Under this paced sample, the minimum cohort in each band exceeds the proposed HP by 20% or more at all three durations, so a Community Victory is plausible before the deadline if that activity continues. That is a design target, not a win guarantee. Missed commands, chat delivery, queue contention, cooldown timing, or fewer active participants can cause **BOSS SURVIVED**. The perfect-cadence table is a theoretical ceiling; this sample is a stated cadence; neither has been simulated or tuned.
 
+### Processing, replay and memory bounds
+
+- Parse only normalized, size-bounded chat messages. A dedicated ingress budget should cap all normalized chat considered by the battle router at 50 messages/second with burst 100; only a strictly parsed `!hit` candidate enters the battle command queue. Never log raw messages.
+- Accepted-command token bucket: refill at 8 commands/second, burst capacity 16. Queue at most 64 commands; maximum queue age 500 ms. Order by server monotonic receipt time and a server sequence number. On bucket exhaustion, queue overflow, or queue-age expiry, reject with a fixed aggregate reason and no HP/cooldown mutation.
+- Deduplicate syntactically valid attack message IDs for 10 minutes, across reconnects and encounter transitions. Maximum 10,000 retained IDs. Record the ID before queueing so retrying a dropped/rejected copy cannot later apply damage. If capacity is exhausted before entries expire, fail closed for new attack candidates until capacity is available; do not evict an unexpired ID to make room.
+- Keep at most 5,000 active cooldown entries for the current encounter. Derive an opaque per-process HMAC pseudonym from the provider and viewer ID; keep no display name. Expire cooldown entries at 2 seconds and clear encounter cooldowns on terminal state. At capacity, reject unknown viewers with fixed `busy` status until entries expire.
+- Bound event/text payloads by the existing EventSub normalizer limits, battle command grammar to exact `!hit` or `!hit <water|light|earth|wind>` with no trailing content, and profile values to strict schemas. Keep only bounded fixed-code counters and aggregates for diagnostics.
+
+### Exact ordering and rejected-hit semantics
+
+1. First validate provider/session/subscription and normalized event schema; reject cross-provider, wrong broadcaster/session, invalid timestamp, malformed, oversized, or stale input before battle handling. Use the existing EventSub validation and freshness rules.
+2. Record a server monotonic receipt time and sequence. Deduplicate attack message IDs before enqueue. A duplicate never applies damage, increments accepted aggregates, or changes cooldown.
+3. At processing, accept only when status is `active`, the current encounter/provider/session matches, receipt time is strictly before the server deadline, the hit is well-formed, and limits permit it. Unknown element words are rejected. A recognized but nonmatching element is recommended to count as a base attack (no multiplier) with a fixed `weakness_mismatch` aggregate reason/metric; it must not be silently described as a weakness bonus.
+4. **Deadline rule:** hits with server receipt time `< deadline` may drain from the bounded queue in sequence order before the expiry transition. At receipt time `>= deadline`, first close intake and resolve expiry after all earlier in-deadline queued items have either been applied or explicitly rejected as queue-expired. No message arriving at the exact deadline can count. A scheduler callback firing late cannot extend the acceptance window.
+5. Apply an accepted hit as one serialized, atomic battle-state transition: consume the viewer cooldown, increment aggregate accepted/base/weakness hit counts and damage, clamp HP to zero, and increment battle revision together. If HP becomes zero, close intake and transition once to `victory` before any later queued event can mutate state. Terminal states are immutable; no late queue item or callback may revise a terminal outcome.
+6. Rejected hits never consume per-viewer cooldown, reduce HP, increase accepted aggregates, or alter outcome. Security-level ingress/global budgets may still count attempts. Reserve dedup IDs for valid `!hit` candidates even when they are subsequently rejected or queue-dropped. Expose only fixed rejection aggregates to the dashboard.
+
+### Initial replay and reconnection policy
+
+- After M2-A introduces authoritative battle state, a verified Twitch transport/subscription disconnect, owner logout, OAuth revocation, or session invalidation immediately pauses intake and cancels a `ready` or `active` Twitch encounter as `cancelled` with a fixed reason such as `twitch_disconnected` or `twitch_session_invalidated`. Keep fail-closed semantics; do not automatically resume or fall back to mock.
+- A fresh validated EventSub welcome and enabled Helix subscription are necessary before an owner can start a new Twitch battle. Reconnect by itself cannot reopen the canceled encounter.
+- Keep message-ID deduplication through reconnect for its 10-minute TTL; the same viewer/message cannot be applied twice. Per-viewer cooldown remains process-memory-only and encounter-scoped. Backend restart creates a new server epoch and empty state; it never resumes HP, cooldowns, or an encounter. Stale old-epoch events and frames are rejected.
+- Keep raw viewer IDs only transiently at ingress and in the private, bounded pseudonymization step. Do not serialize pseudonyms, viewer/message IDs, names, or chat text to dashboard, OBS, snapshots, diagnostics, or logs.
+
 ## 4. Battle state and reconciliation contract
 
 Use a new server contract, tentatively `CommunityBattleStateV1`, in `packages/shared`. Do not reinterpret the existing Phaser-oriented `BattleStateSchema`: it contains named player records and statuses `lobby`, `voting`, `active`, `streamer-won`, and `community-won`, which are not this cooperative server battle.
