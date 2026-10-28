@@ -4,6 +4,12 @@ Status vocabulary: **PASS** ran successfully; **FAIL** ran and failed;
 **NOT TESTED** was not run or could not be observed. Update this matrix with
 actual outcomes; do not infer a pass from a configured script.
 
+The older Phase 3-B remediation sections below retain historical results and
+review gates as recorded at those checkpoints. PR #5 merged to `main` at
+`76a5dde`, and Phase 4-A PR #6 subsequently merged into the current main
+baseline `5655dea53e3eba5425b6ead8926659a0bb72ae5e`. P4A acceptance and owner
+OBS evidence are recorded in the final closure below.
+
 ## Required checks
 
 | Criterion                                        | Verification                                                        | Result                                |
@@ -551,15 +557,15 @@ independently reproduced.
 
 ### Owner-supplied live acceptance
 
-| Observation                   | Result                                                                                                                                                                                                    |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| OAuth and EventSub connection | PASS — owner verified OAuth and connection; 1 valid welcome and 1 Helix subscription enabled.                                                                                                             |
-| Keepalive stability           | PASS — 11 keepalives received for the 30,000 ms advertised timeout; 0 socket closes/errors, keepalive disconnects, or forge cancellations.                                                                |
-| Message pipeline              | PASS — 6 notifications accepted, 6 messages normalized, and 6 chat callbacks invoked.                                                                                                                     |
-| Ballots                       | PASS — 3 genuine ballots accepted and 3 rejected: 1 `wrong-category`, 2 `invalid-choice`. This does not establish an accepted genuine vote in every category.                                             |
-| Forge                         | PASS — all four stages completed and revealed Cinder Granite: Golem / Fire / Ember Burst (default) / Earth. The Special stage used its default; do not infer that it received an accepted genuine ballot. |
-| Phaser arena                  | PASS — terminal VICTORY; boss HP 0/120, streamer HP 64/100. Connection stability and complete forge-to-victory demonstration PASS based on the owner’s report.                                            |
-| OBS application capture       | UNVERIFIED — Phaser arena result was reported, but a separate capture inside OBS was not reported.                                                                                                        |
+| Observation                      | Result                                                                                                                                                                                                    |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OAuth and EventSub connection    | PASS — owner verified OAuth and connection; 1 valid welcome and 1 Helix subscription enabled.                                                                                                             |
+| Keepalive stability              | PASS — 11 keepalives received for the 30,000 ms advertised timeout; 0 socket closes/errors, keepalive disconnects, or forge cancellations.                                                                |
+| Message pipeline                 | PASS — 6 notifications accepted, 6 messages normalized, and 6 chat callbacks invoked.                                                                                                                     |
+| Ballots                          | PASS — 3 genuine ballots accepted and 3 rejected: 1 `wrong-category`, 2 `invalid-choice`. This does not establish an accepted genuine vote in every category.                                             |
+| Forge                            | PASS — all four stages completed and revealed Cinder Granite: Golem / Fire / Ember Burst (default) / Earth. The Special stage used its default; do not infer that it received an accepted genuine ballot. |
+| Phaser arena                     | PASS — terminal VICTORY; boss HP 0/120, streamer HP 64/100. Connection stability and complete forge-to-victory demonstration PASS based on the owner’s report.                                            |
+| OBS capture during P3-B live run | Not included in that P3-B report; separate P4A owner-supplied OBS visual results are recorded below.                                                                                                      |
 
 **Exact canonical chat syntax:** `!vote <category> <choice>`. The category must
 match the active stage. Valid forms and choices are:
@@ -572,15 +578,16 @@ match the active stage. Valid forms and choices are:
 | Weakness | `!vote weakness water`, `!vote weakness light`, `!vote weakness earth`, `!vote weakness wind`                        |
 
 These choices are from `packages/shared/src/index.ts`; the category must match
-the active stage. Recommend showing the syntax and currently valid choices as
-clearer voting instructions in the overlay in a future UX update.
+the active stage. At the time of this checkpoint the overlay prompt was a
+recommended UX improvement; Phase 4-A now presents the active choices and
+exact commands as documented below.
 
 The above live results are owner-supplied, not independent Codex test results.
 Automated checks remain: 124 tests passed at audited implementation HEAD
 `279ff63fc803921310226d9c6903a029af7f0bd5` (23 shared / 101 server), plus the
 build, typecheck, lint, formatting, diff-check and mock-simulation evidence
-above. Final exact-head review of this documentation-only update is pending;
-keep Draft PR #5 open and unmerged.
+above. The final exact-head review request was pending at this checkpoint; PR
+#5 was subsequently squash-merged to `main` at `76a5dde`.
 
 ## P3-B4-C5-R1 — diagnostic browser compatibility
 
@@ -624,3 +631,194 @@ diagnostic query or live browser authentication session was used. The new
 owner-visible button was build-checked; its actual live-session browser click
 remains for the separately coordinated owner QA. No real Twitch endpoint or
 credential was used in tests.
+
+## Phase 4-A — streamer voting UX and OBS readiness
+
+This phase starts from merged main `76a5ddeeea0986aae2ed073deaeb1a5b02fb6280`.
+It does not touch the authenticated local runtime, start OAuth, or contact
+Twitch. See [P4-A checklist](P4A-STREAMER-OBS-READINESS.md).
+
+| Criterion                                            | Verification                                                                  | Result                                                                          |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Exact vote command formatting and category mapping   | Shared helper tests use `FORGE_VOTE_CHOICES`                                  | PASS                                                                            |
+| Hyphenated special values preserve exact wire syntax | Regression test for `!vote special ember-burst`; human label `Ember Burst`    | PASS                                                                            |
+| Countdown and timeout boundary presentation          | Deterministic timestamp tests plus rendered countdown in Chromium             | PASS                                                                            |
+| Current leader does not imply early winner           | Regression tests cover no votes, unique leader, and tie                       | PASS                                                                            |
+| Default versus genuine winning-ballot attribution    | Regression tests distinguish default and community-vote copy                  | PASS                                                                            |
+| Live / simulated / disconnected separation           | React presentation regression; mock-mode Chromium state was SIMULATED         | PASS                                                                            |
+| Overlay has no vote-submission controls              | Read-only React render regression; no controls in browser rendering           | PASS                                                                            |
+| Dashboard and overlay responsive layout              | Post-C2 Chromium at 360/375/390/430px and 1280×720; overlay also at 1920×1080 | PASS — visible bounds checked at each viewport                                  |
+| Actual visual rendering in OBS Studio                | Owner-supplied screenshots and Browser Source clarification                   | PASS — rendered at 1920×1080 and 1280×720; source fit and scene boundaries pass |
+
+**Initial Phase 4-A checkpoint validation:** Node v24.21.0 / pnpm 11.25.0;
+frozen install, build, typecheck, lint, Prettier, and 134 tests (29 shared, 4
+web presentation, 101 server) passed at that earlier checkpoint, preserving the
+124 P3-B tests. This historical count was superseded by the final P4A-C1/C2
+suite of 149 tests (29 shared / 19 web / 101 server), recorded below. The
+four-category `pnpm simulate` completed in the disposable mock-only server and
+revealed Thunder Tempest; that synthetic outcome is not live Twitch evidence.
+
+**Post-C1 browser QA:** Disposable mock-only server `127.0.0.1:33301` and Vite
+`127.0.0.1:5201`; the authenticated owner runtime on ports 3001/5173 was not
+touched. Desktop dashboard and overlay renders fit at 1280×720; overlay also
+fit at 1920×1080. At 390×844, the dashboard action row and overlay
+prompt/options visibly clip at the right edge. Although `scrollWidth` is 390px,
+that metric does not detect this visual clipping. The mobile visual gate is
+therefore **FAIL**. Connection-loss/recovery browser checks passed: after the
+isolated server stopped, dashboard and overlay showed **SERVER LINK
+UNAVAILABLE / LIVE VOTE STATUS UNKNOWN** and hid cached prompts, counts and
+countdown; after the isolated server returned, each restored fresh state.
+Screenshots: [dashboard 1280×720](visual-qa/p4a-c1/dashboard-1280x720.jpg),
+[dashboard 390×844](visual-qa/p4a-c1/dashboard-390x844.jpg),
+[overlay 1920×1080](visual-qa/p4a-c1/overlay-1920x1080.jpg),
+[overlay 1280×720](visual-qa/p4a-c1/overlay-1280x720.jpg), and
+[overlay 390×844](visual-qa/p4a-c1/overlay-390x844.jpg). These are browser
+renders, not OBS application capture. See the exact owner OBS steps in
+[the readiness checklist](P4A-STREAMER-OBS-READINESS.md#owner-obs-browser-source-checklist).
+
+**Proposed bounded UI fix:** constrain dashboard actions and overlay voting
+content to the mobile available width and allow their controls/options to wrap.
+No application source was changed during this visual QA pass. Re-run all five
+viewport checks after remediation before accepting responsive layout.
+
+The Phase 3-B live evidence is owner-supplied, not a Phase 4-A automated test:
+OAuth/EventSub and stable connection passed in the owner's run; 3 genuine
+ballots were accepted and 3 rejected; all four stages completed; Special used
+its no-vote default; the Phaser arena ended in victory. This does not establish
+an accepted genuine vote in every category. The P3-B live run itself did not
+include OBS capture; separate P4A owner-supplied OBS visual QA is recorded
+below. The earlier 124 fake-network tests belong to commit
+`279ff63fc803921310226d9c6903a029af7f0bd5` and must not be attributed to live
+Twitch or the Phase 4-A change.
+
+### P4A-C1 — stale live-voting prompt remediation
+
+The independent P4A-C1 review found that `useLiveEvents` retained its last
+forge snapshot after local WebSocket loss, while the dashboard and OBS overlay
+continued rendering live Twitch commands, totals, leaders, and countdowns from
+that cached state. The frontend now invalidates snapshot freshness immediately
+on socket close/error and at the start of each connection generation. A
+validated HTTP snapshot or forge-state event from the current open socket must
+be accepted by `ForgeStateReconciler` before the UI restores current state.
+
+Both actual dashboard and overlay compositions require a connected local event
+feed and a fresh authoritative snapshot. On feed loss they show
+**SERVER LINK UNAVAILABLE / LIVE VOTE STATUS UNKNOWN**; while reconnecting or
+waiting for an authoritative HTTP refresh they show **WAITING FOR FRESH SERVER
+STATE / LIVE VOTE STATUS UNKNOWN**. Cached counts, leaders, active prompts, and
+countdowns are hidden. A fresh Twitch-disconnected snapshot remains distinct
+from local server loss, and fresh mock mode remains explicitly simulated. The
+overlay remains read-only. No backend, OAuth, EventSub, or vote-intake boundary
+changed; no real Twitch or authenticated runtime was used.
+
+Deterministic React render regressions exercise the actual exported Dashboard
+and OverlayPreview compositions for fresh verified live voting, WebSocket loss
+with a cached Twitch-connected snapshot, unavailable HTTP refresh, fresh state
+after reconnect, actual Twitch disconnect, mock/simulated state, and the
+read-only overlay. The shared live-vote surface tests also assert that stale
+counts, commands, and countdowns are not rendered. These are frontend
+state-composition tests, distinct from genuine Twitch live evidence.
+
+**P4A-C1 validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build,
+typecheck, lint, Prettier, full suite (**149 tests: 29 shared / 19 web / 101
+server**) and `git diff --check` passed. The 19 web tests include seven renders
+of the actual Dashboard/OverlayPreview compositions plus eight live-surface
+gate tests and the four existing vote-instruction tests. A disposable
+loopback-only mock server completed `BOSSFORGE_VOTE_SECONDS=5 pnpm simulate`
+across Body, Element, Special, and Weakness with two synthetic votes per stage;
+it revealed Thunder Tempest (drake / storm / thunder-dash / light). This is
+synthetic regression evidence, not Twitch QA. The build retains the existing
+large Phaser arena chunk advisory. No authenticated runtime restart, OAuth,
+real Twitch request, or live vote occurred during this P4A-C1 work. At that
+checkpoint OBS application capture was still unverified; the later owner-
+supplied P4A OBS visual results are recorded in the final acceptance closure
+below. The prior Phase 4-A baseline above remains separately recorded.
+
+### P4A-C2 — mobile clipping remediation
+
+The owner-reported C1 visual check found the dashboard action row and overlay
+prompt/options clipped at 390×844 even though the document width did not
+overflow. The mobile rules now allow dashboard action controls to shrink and
+wrap with their labels intact, and give the overlay a zero-minimum single grid
+track so nested content cannot expand beyond the viewport. Changes are scoped
+to widths up to 650px; desktop layout rules are unchanged.
+
+**Browser visual QA:** On the credential-free mock instance at
+`127.0.0.1:33301` with Vite at `127.0.0.1:5201`, Chromium tested Dashboard at
+360×800, 375×812, 390×844, 430×932 and 1280×720; Overlay at those same sizes and
+1920×1080. Visible element bounds were checked against each CSS viewport, not
+only document `scrollWidth`. No relevant visible element crossed the viewport
+edge. Dashboard controls wrap to a second row when needed; overlay options,
+choice labels, counts and countdown remain within the content width. At 360px,
+the disconnected server warning measured 298px inside its parent, and the
+overlay warning measured 332px inside its parent. Connection-loss checks used
+the isolated mock server only; both surfaces displayed **SERVER LINK
+UNAVAILABLE / LIVE VOTE STATUS UNKNOWN**. Recovery returned the mock app to a
+fresh idle state. The first C2 screenshot set is preserved in
+[`visual-qa/p4a-c2`](visual-qa/p4a-c2/); final captures after all CSS
+adjustments are in [`visual-qa/p4a-c2-verified`](visual-qa/p4a-c2-verified/),
+including per-viewport dashboard and overlay images and separate 360px
+disconnect-warning captures. All are mock-mode browser evidence; no real Twitch
+commands were sent. In simulated mode, canonical Twitch commands are correctly
+not shown.
+
+**Historical OBS interpretation, superseded by owner clarification:** The
+initial C2 assessment reported the 1920×1080 source visible and interpreted
+the 1280×720 screenshot's approximate 640×360 on-screen size as a smaller
+Browser Source viewport, leaving full-frame acceptance pending. The owner later
+clarified that Browser 2's native Browser Source Properties were already
+1280×720 and **Transform → Fit to Screen** had already been applied. The
+640×360 appearance was scaled OBS preview/display size, not the source viewport.
+This clarification closes the prior retest request; the historical
+misinterpretation is retained for audit traceability. See [the final OBS
+results](P4A-STREAMER-OBS-READINESS.md#owner-supplied-obs-visual-qa-results).
+
+**P4A-C2 validation:** Node v24.21.0 / pnpm 11.25.0. Frozen install, workspace
+build, typecheck, lint, format check, targeted web tests (19), full suite (149:
+29 shared / 19 web / 101 server), four-category five-second mock simulation
+(2 synthetic ballots per category), and `git diff --check` passed. The mock
+simulation revealed Thunder Tempest (drake / storm / thunder-dash / light); it
+is synthetic evidence only. The full suite ran outside the sandbox after
+default sandbox writes were denied with `EPERM`. No OAuth, live Twitch vote,
+authenticated runtime restart, merge, deployment or publication occurred.
+
+### P4A final acceptance closure — owner-supplied OBS visual QA
+
+**Phase 4-A acceptance status: PASS** for the scoped dashboard and read-only
+overlay work. The independent P4A-C2 source audit passed at implementation HEAD
+`0296f115d4b9b0aa3baae2d6220db05fc34bb2d6`; its review confirms the mobile CSS
+fix and committed QA scope. This final documentation update records the
+owner's OBS clarification and does not change source.
+
+| Acceptance area                | Evidence                                                                                                                                                                                                                                                                                   | Result                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| Canonical voting UX            | Exact active-stage syntax `!vote <category> <choice>` for `body`, `element`, `special`, and `weakness`; human labels preserve canonical slugs.                                                                                                                                             | PASS                                            |
+| State and attribution          | LIVE TWITCH, SIMULATED, TWITCH DISCONNECTED, and SERVER LINK UNAVAILABLE / LIVE VOTE STATUS UNKNOWN are distinct; live presentation requires connected feed plus fresh authoritative state. Leaders are tie-aware; final outcomes distinguish COMMUNITY VOTE and DEFAULT · No valid votes. | PASS                                            |
+| Mobile clipping                | P4A-C2 mobile-only sizing and wrapping fix; earlier 390×844 right-edge clipping remains documented as the finding that was fixed.                                                                                                                                                          | PASS                                            |
+| Responsive Chromium QA         | Dashboard 360×800, 375×812, 390×844, 430×932, 1280×720; overlay at those sizes plus 1920×1080. Visible element bounds and disconnect warnings were checked; post-fix evidence is in `visual-qa/p4a-c2-verified/`.                                                                          | PASS — Chromium evidence, not OBS evidence      |
+| Automated tests                | Previously passed full workspace suite: 149 tests (29 shared / 19 web / 101 server), with the P4A-C1/C2 command record above.                                                                                                                                                              | PASS — not rerun for this docs-only closure     |
+| Synthetic simulation           | Four mock categories completed with two synthetic ballots each and Thunder Tempest revealed.                                                                                                                                                                                               | PASS — synthetic only, not Twitch evidence      |
+| OBS Studio visual presentation | Owner-supplied actual OBS screenshots and configuration clarification described below.                                                                                                                                                                                                     | PASS — owner-verified at 1920×1080 and 1280×720 |
+
+**Owner-supplied OBS results:** Browser Source visual rendering PASS at
+1920×1080 and 1280×720; source fitting PASS; no visible scene-boundary
+clipping; SIMULATED disclosure PASS; default-boss outcomes correctly labeled;
+no overlay administration controls visible. For Browser 2, the owner confirms
+native Browser Source Properties width 1280 and height 720 and **Transform →
+Fit to Screen**. The previous approximate 640×360 appearance was the OBS
+preview/display scaling, not a 640×360 Browser Source viewport. This is owner-
+supplied visual QA from the actual OBS Studio application; it was not
+independently reproduced.
+
+**Evidence boundaries:** Automated results, mock simulation, Chromium renders,
+OBS screenshots, and historical genuine Twitch QA are separate. The historic
+P3-B run remains owner-supplied and reported three accepted plus three rejected
+genuine ballots; it is not new P4A live testing and does not show an accepted
+genuine vote in every category. OBS testing was in simulated mode and does not
+prove new real Twitch voting, live HP synchronization, or continuous animation
+performance. The Any-Game `!hit` battle system is not implemented in PR #6.
+
+No application tests were rerun for the documentation-only acceptance update
+at the time of the original closure. PR #6 has since been squash-merged into
+`main`; this record preserves the acceptance evidence and its original audit
+history.

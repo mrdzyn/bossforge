@@ -2,7 +2,7 @@
 
 **Status:** Proposed product-direction specification; planning only. No implementation is authorized by this document or its review.
 **Repository:** `mrdzyn/bossforge`
-**Planning baseline:** `main` at `76a5ddeeea0986aae2ed073deaeb1a5b02fb6280` (PR #5). This is separate from the open Phase 4-A Draft PR #6, which is based on the same main commit and must be reviewed and decided independently.
+**Planning baseline:** Reconciled against `main` at `5655dea53e3eba5425b6ead8926659a0bb72ae5e`, which includes the completed and accepted Phase 4-A work from PR #6. The prior independent PDCP-001 exact-head delta audit passed at `adfaa6f5000b330c393a6e50dcc20c7125d1519e` ([PASS review](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234); [earlier findings](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6460843038)). This baseline reconciliation preserves that planning review and requests a separate exact-head delta audit. PR #7 remains Draft and unmerged.
 **Product promise:** **Chat creates the boss. Chat fights the boss. The streamer keeps playing their game.**
 
 ## 1. Direction and scope
@@ -93,7 +93,7 @@ The battle session is authoritative and bounded. Its lifecycle is explicit; forg
 
 ## 5. Milestones M0–M5
 
-Each milestone requires a separate implementation scope, tests, acceptance record, and independent review before merge. This document is not authorization to start any milestone. Sequence after the owner decides the current P4A PR #6 and this proposal.
+Each milestone requires a separate implementation scope, tests, acceptance record, and independent review before merge. This document is not authorization to start any milestone. Phase 4-A is complete and merged through PR #6; implementation of M0–M5 still requires separate explicit owner authorization, followed by the milestone-specific review and merge gates.
 
 ### M0 — Product and contract lock
 
@@ -189,6 +189,8 @@ Before M2 merge, require independent exact-head review of battle authority, spam
 
 ## 10. Current gates
 
-- Current `main` is `76a5dde`; PR #6 is a separate open Draft for P4A-C2 at `0296f11`. This proposal does not change that branch or decide its merge.
-- Phase 4-A remains in progress until its existing review and owner acceptance gates are resolved. PDCP-001 is a proposed future direction, not a redefinition of already merged behavior.
-- M0–M5 implementation, live QA, release, publication, and Phase 5 submission are not started or authorized by this planning document.
+- The reconciliation baseline is `main` at `5655dea53e3eba5425b6ead8926659a0bb72ae5e`; it contains Phase 4-A PR #6, including the completed frontend scope, mobile remediation and owner-supplied OBS visual acceptance. See [P4A acceptance](ACCEPTANCE.md#p4a-final-acceptance-closure--owner-supplied-obs-visual-qa) and [OBS evidence](P4A-STREAMER-OBS-READINESS.md#owner-supplied-obs-visual-qa-results).
+- The prior independent PDCP-001 exact-head delta review passed at `adfaa6f5000b330c393a6e50dcc20c7125d1519e` ([review](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234)). The present PR #7 delta only reconciles docs with the new main baseline; it does not claim a new implementation review.
+- The current EventHub broadcasts normalized chat containing viewer identity and message text to browser WebSocket clients. The server-side privacy migration and strict recipient projections specified in M1 are **not implemented** and block M2. Do not claim browser privacy from hidden UI or schemas that have not been added and tested.
+- `!hit` combat, server-authoritative boss HP, and Generic/Arena profiles are **not implemented**. Phase 4-A voting and the optional Phaser demo remain the current shipped experience.
+- M0–M5 implementation, live battle QA, release, publication, and Phase 5 submission are not started or authorized by this planning document. Keep PR #7 Draft and unmerged; preserve separate owner authorization and exact-head independent review gates.
