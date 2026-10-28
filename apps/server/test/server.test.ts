@@ -2,7 +2,11 @@ import { once } from "node:events";
 import { EventEmitter } from "node:events";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
-import { ForgeStateReconciler } from "@bossforge/shared";
+import {
+  DashboardEventEnvelopeSchema,
+  ForgeStateReconciler,
+  OverlayEventEnvelopeSchema,
+} from "@bossforge/shared";
 import { createBossForgeApp, type BossForgeApp } from "../src/app.js";
 import { getAllowedViteOrigins } from "../src/security/local-access.js";
 import { TwitchOAuth } from "../src/twitch/oauth.js";
@@ -497,6 +501,100 @@ describe("BossForge server", () => {
     expect(secondVotingState).toMatchObject({ status: "voting", connectedToTwitch: true });
     expect(reconciler.apply(secondVotingState, generation)).toBe(true);
 
+    const liveAddress = await live.app.listen({ host: "127.0.0.1", port: 0 });
+    const liveOrigin = `http://127.0.0.1:${process.env.VITE_PORT ?? "5173"}`;
+    const dashboardSocket = new WebSocket(liveAddress.replace("http", "ws") + "/events/dashboard", {
+      headers: { origin: liveOrigin },
+    });
+    const overlaySocket = new WebSocket(liveAddress.replace("http", "ws") + "/events/overlay", {
+      headers: { origin: liveOrigin },
+    });
+    const outbound: string[] = [];
+    dashboardSocket.on("message", (frame) => outbound.push(frame.toString()));
+    overlaySocket.on("message", (frame) => outbound.push(frame.toString()));
+    await Promise.all([once(dashboardSocket, "open"), once(overlaySocket, "open")]);
+    const privateSentinels = [
+      "987654321",
+      "SENTINEL_TWITCH_VIEWER_9af2",
+      "SENTINEL_TWITCH_MESSAGE_6b20",
+      "SENTINEL_OAUTH_ACCESS_TOKEN_112a",
+      "SENTINEL_SESSION_COOKIE_0f47",
+      "SENTINEL_CLIENT_SECRET_c9d1",
+      "SENTINEL_REJECTED_TWITCH_FRAME_48d0",
+    ];
+    sockets[0]!.sendFrame({
+      metadata: {
+        message_id: "eventsub-frame-id",
+        message_type: "notification",
+        message_timestamp: new Date().toISOString(),
+        subscription_type: "channel.chat.message",
+        subscription_version: "1",
+      },
+      payload: {
+        subscription: {
+          type: "channel.chat.message",
+          version: "1",
+          condition: { broadcaster_user_id: "12345", user_id: "12345" },
+          cookie: privateSentinels[4],
+        },
+        event: {
+          broadcaster_user_id: "12345",
+          chatter_user_id: privateSentinels[0],
+          chatter_user_login: "private_viewer",
+          chatter_user_name: privateSentinels[1],
+          message_id: privateSentinels[2],
+          message: { text: "!vote body drake", access_token: privateSentinels[3] },
+        },
+        client_secret: privateSentinels[5],
+      },
+      oauth_access_token: privateSentinels[3],
+    });
+    sockets[0]!.sendFrame({
+      metadata: {
+        message_id: "SENTINEL_REJECTED_TWITCH_FRAME_48d0",
+        message_type: "notification",
+        message_timestamp: new Date().toISOString(),
+        subscription_type: "channel.chat.message",
+        subscription_version: "1",
+      },
+      payload: {
+        subscription: {
+          type: "channel.chat.message",
+          version: "1",
+          condition: { broadcaster_user_id: "12345", user_id: "12345" },
+        },
+        event: {
+          broadcaster_user_id: "12345",
+          chatter_user_id: "not-a-valid-viewer",
+          chatter_user_login: "private_viewer",
+          chatter_user_name: "RejectedViewer",
+          message_id: "rejected-message",
+          message: { text: "!vote body golem" },
+        },
+      },
+    });
+    await vi.waitFor(async () => {
+      const stateResponse = await live.app.inject({ method: "GET", url: "/forge/state" });
+      expect(stateResponse.json().categories[0].totalVotes).toBe(1);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 330));
+    const liveSnapshot = await live.app.inject({ method: "GET", url: "/forge/state" });
+    const liveDiagnostics = await live.app.inject({
+      method: "POST",
+      url: "/dev/twitch/diagnostics",
+      headers: { origin: liveOrigin, "sec-fetch-site": "same-origin", cookie: sessionCookie },
+      remoteAddress: "127.0.0.1",
+    });
+    expect(liveDiagnostics.json().counters.normalizedRejected).toBeGreaterThan(0);
+    const twitchSerialized = [...outbound, liveSnapshot.body, liveDiagnostics.body].join("\n");
+    for (const sentinel of privateSentinels) expect(twitchSerialized).not.toContain(sentinel);
+    expect(outbound.some((frame) => frame.includes("dashboard.activity"))).toBe(true);
+    const dashboardClose = once(dashboardSocket, "close");
+    const overlayClose = once(overlaySocket, "close");
+    dashboardSocket.close();
+    overlaySocket.close();
+    await Promise.all([dashboardClose, overlayClose]);
+
     sockets[0]!.emit("close", 4006, Buffer.from("ignored close reason"));
     const droppedSocketState = (
       await live.app.inject({ method: "GET", url: "/forge/state" })
@@ -682,31 +780,38 @@ describe("BossForge server", () => {
     await once(client, "close");
   });
 
-  it("delivers validated mock events to a browser websocket client", async () => {
+  it("sends only strict public dashboard events and aggregate mock activity", async () => {
     const address = await server.app.listen({ host: "127.0.0.1", port: 0 });
     const allowedOrigin = `http://127.0.0.1:${process.env.VITE_PORT ?? "5173"}`;
     expect(getAllowedViteOrigins().has(allowedOrigin)).toBe(true);
     const client = new WebSocket(address.replace("http", "ws") + "/events", {
       headers: { origin: allowedOrigin },
     });
-    const connectionMessagePromise = once(client, "message");
+    const received: string[] = [];
+    client.on("message", (message) => received.push(message.toString()));
     await once(client, "open");
-    const connectionMessage = await connectionMessagePromise;
-    expect(JSON.parse(connectionMessage[0].toString())).toMatchObject({
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    const initial = received.slice(0, 3).map((frame) => JSON.parse(frame));
+    expect(initial[0]).toMatchObject({
+      type: "forge.state",
+      schemaVersion: 1,
+      payload: { kind: "forge.state", state: { status: "idle", mode: "mock" } },
+    });
+    expect(initial[1]).toMatchObject({
       type: "connection.status",
       schemaVersion: 1,
       payload: { kind: "connection.status", status: "connected" },
     });
 
-    const eventPromise = once(client, "message");
     const response = await server.app.inject({ method: "POST", url: "/dev/simulation/next" });
     expect(response.statusCode).toBe(202);
-    const [message] = await eventPromise;
-    expect(JSON.parse(message.toString())).toMatchObject({
-      type: "chat.event",
-      schemaVersion: 1,
-      payload: { kind: "viewer.connected", provider: "mock" },
-    });
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    const output = received.slice(3).join("\n");
+    expect(output).not.toContain("EmberFan");
+    expect(output).not.toContain("mock-ember-01");
+    expect(output).not.toContain("chat.event");
+    for (const frame of received)
+      expect(DashboardEventEnvelopeSchema.safeParse(JSON.parse(frame)).success).toBe(true);
     client.close();
     await once(client, "close");
   });
@@ -730,6 +835,180 @@ describe("BossForge server", () => {
     expect(statusCode).toBe(403);
     const health = await server.app.inject({ method: "GET", url: "/health" });
     expect(health.json().connections.websocketClients).toBe(0);
+  });
+
+  it("isolates dashboard and OBS wire contracts and never serializes private chat sentinels", async () => {
+    const address = await server.app.listen({ host: "127.0.0.1", port: 0 });
+    const base = address.replace("http", "ws");
+    const origin = `http://127.0.0.1:${process.env.VITE_PORT ?? "5173"}`;
+    const dashboard = new WebSocket(`${base}/events/dashboard`, { headers: { origin } });
+    const overlay = new WebSocket(`${base}/events/overlay?recipient=dashboard`, {
+      headers: { origin },
+    });
+    const dashboardFrames: string[] = [];
+    const overlayFrames: string[] = [];
+    dashboard.on("message", (frame) => dashboardFrames.push(frame.toString()));
+    overlay.on("message", (frame) => overlayFrames.push(frame.toString()));
+    await Promise.all([once(dashboard, "open"), once(overlay, "open")]);
+    await new Promise((resolve) => setTimeout(resolve, 25));
+
+    const started = await server.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      payload: { durationSeconds: 15 },
+    });
+    expect(started.statusCode).toBe(200);
+    const event = {
+      kind: "chat.message",
+      provider: "mock",
+      oauth_token: "SENTINEL_MOCK_OAUTH_TOKEN_0c73",
+      cookie: "SENTINEL_MOCK_COOKIE_23d9",
+      provider_error: {
+        message: "SENTINEL_PROVIDER_ERROR_OBJECT_40e1",
+        secret: "SENTINEL_MOCK_SECRET_781b",
+      },
+      message: {
+        id: "SENTINEL_MESSAGE_ID_80ac",
+        viewer: { id: "SENTINEL_VIEWER_ID_d2a1", displayName: "SENTINEL_DISPLAY_491f" },
+        text: "!vote body golem",
+        occurredAt: "2026-10-26T12:00:00.000Z",
+        access_token: "SENTINEL_NESTED_TOKEN_18cb",
+      },
+    };
+    const malformed = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/events",
+      payload: {
+        kind: "chat.message",
+        provider: "mock",
+        message: { id: "malformed", text: "SENTINEL_MALFORMED_PRIVATE_TEXT_7d11" },
+      },
+    });
+    expect(malformed.statusCode).toBe(400);
+    expect(malformed.body).not.toContain("SENTINEL_MALFORMED_PRIVATE_TEXT_7d11");
+    const accepted = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/events",
+      payload: event,
+    });
+    expect(accepted.statusCode).toBe(202);
+    const replay = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/events",
+      payload: event,
+    });
+    expect(replay.statusCode).toBe(202);
+    await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/events",
+      payload: {
+        ...event,
+        message: {
+          ...event.message,
+          id: "SENTINEL_PRIVATE_MESSAGE_f283",
+          text: "SENTINEL_PRIVATE_CHAT_4a90",
+        },
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 350));
+
+    const snapshot = await server.app.inject({ method: "GET", url: "/forge/state" });
+    const serialized = [...dashboardFrames, ...overlayFrames, snapshot.body, started.body].join(
+      "\n",
+    );
+    for (const sentinel of [
+      "SENTINEL_MESSAGE_ID_80ac",
+      "SENTINEL_VIEWER_ID_d2a1",
+      "SENTINEL_DISPLAY_491f",
+      "SENTINEL_PRIVATE_CHAT_4a90",
+      "SENTINEL_MOCK_OAUTH_TOKEN_0c73",
+      "SENTINEL_MOCK_COOKIE_23d9",
+      "SENTINEL_PROVIDER_ERROR_OBJECT_40e1",
+      "SENTINEL_MOCK_SECRET_781b",
+      "SENTINEL_NESTED_TOKEN_18cb",
+    ])
+      expect(serialized).not.toContain(sentinel);
+    expect(snapshot.headers["cache-control"]).toContain("no-store");
+    expect(snapshot.json().categories[0].totalVotes).toBe(1);
+    const dash = dashboardFrames.map((frame) => JSON.parse(frame));
+    const obs = overlayFrames.map((frame) => JSON.parse(frame));
+    for (const envelope of dash)
+      expect(DashboardEventEnvelopeSchema.safeParse(envelope).success).toBe(true);
+    for (const envelope of obs)
+      expect(OverlayEventEnvelopeSchema.safeParse(envelope).success).toBe(true);
+    expect(
+      dash.some(
+        (envelope) => envelope.type === "dashboard.activity" && envelope.payload.accepted === 1,
+      ),
+    ).toBe(true);
+    expect(
+      dash.some(
+        (envelope) => envelope.type === "dashboard.activity" && envelope.payload.rejected === 2,
+      ),
+    ).toBe(true);
+    expect(obs.some((envelope) => envelope.type === "dashboard.activity")).toBe(false);
+    const reset = await server.app.inject({ method: "POST", url: "/dev/forge/reset" });
+    expect(reset.statusCode).toBe(200);
+    expect(reset.body).not.toContain("SENTINEL_");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(
+      dashboardFrames
+        .map((frame) => JSON.parse(frame))
+        .some(
+          (envelope) =>
+            envelope.type === "dashboard.activity" &&
+            envelope.payload.accepted === 0 &&
+            envelope.payload.rejected === 0,
+        ),
+    ).toBe(true);
+    dashboard.close();
+    overlay.close();
+    await Promise.all([once(dashboard, "close"), once(overlay, "close")]);
+  });
+
+  it("keeps initial connection state targeted to its subscribing recipient", async () => {
+    const address = await server.app.listen({ host: "127.0.0.1", port: 0 });
+    const origin = `http://127.0.0.1:${process.env.VITE_PORT ?? "5173"}`;
+    const overlay = new WebSocket(address.replace("http", "ws") + "/events/overlay", {
+      headers: { origin },
+    });
+    const overlayFrames: string[] = [];
+    overlay.on("message", (frame) => overlayFrames.push(frame.toString()));
+    await once(overlay, "open");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const dashboard = new WebSocket(
+      address.replace("http", "ws") + "/events/dashboard?recipient=overlay",
+      { headers: { origin } },
+    );
+    const dashboardFrames: string[] = [];
+    dashboard.on("message", (frame) => dashboardFrames.push(frame.toString()));
+    await once(dashboard, "open");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(overlayFrames).toHaveLength(2);
+    expect(dashboardFrames).toHaveLength(3);
+    expect(dashboardFrames.some((frame) => frame.includes("dashboard.activity"))).toBe(true);
+    const overlayClose = once(overlay, "close");
+    const dashboardClose = once(dashboard, "close");
+    overlay.close();
+    dashboard.close();
+    await Promise.all([overlayClose, dashboardClose]);
+  });
+
+  it("logs only fixed error classifications and returns sanitized parser failures", async () => {
+    const warn = vi.spyOn(server.app.log, "warn");
+    const response = await server.app.inject({
+      method: "POST",
+      url: "/dev/simulation/events",
+      headers: { "content-type": "application/json" },
+      payload: '{"message":"SENTINEL_FULL_PROVIDER_ERROR_2c11"',
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.body).not.toContain("SENTINEL_FULL_PROVIDER_ERROR_2c11");
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("SENTINEL_FULL_PROVIDER_ERROR_2c11");
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("SyntaxError");
+    expect(warn.mock.calls[0]?.[0]).toMatchObject({ classification: "request-rejected" });
+    expect(warn.mock.calls[0]?.[0]).not.toHaveProperty("err");
+    warn.mockRestore();
   });
 
   it("rejects invalid simulation events", async () => {

@@ -822,3 +822,56 @@ No application tests were rerun for the documentation-only acceptance update
 at the time of the original closure. PR #6 has since been squash-merged into
 `main`; this record preserves the acceptance evidence and its original audit
 history.
+
+## M1-A privacy-safe outbound events — candidate validation
+
+**Scope:** remove normalized mock/Twitch chat from browser serialization while
+preserving forge, voting, OAuth/EventSub handling, simulation, and P4A
+freshness. Implemented on branch `feat/m1a-privacy-safe-events`, based on
+`d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. The exact implementation SHA is
+the branch HEAD recorded in the PR handoff; no independent audit has passed.
+
+| Check          | Actual result                                                                                                                                                                                                                                                                                      |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Environment    | Node `v24.19.0`; pnpm `11.25.0`; Chromium `154.0.8037.57`; Linux Debian 13 cloud workspace. `AGENTS.md` and `config/project-profile.json` were absent.                                                                                                                                             |
+| Frozen install | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm --store-dir /tmp/bossforge-pnpm-store install --frozen-lockfile` — passed; lockfile unchanged and 297 packages installed. The explicit temporary pnpm store is required by this restricted cloud filesystem. |
+| Build          | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm build` — passed. Existing Vite warning remains for the large Phaser arena chunk.                                                                                                                             |
+| Typecheck      | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm typecheck` — passed.                                                                                                                                                                                         |
+| Lint           | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm lint` — passed.                                                                                                                                                                                              |
+| Format         | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm format:check` — passed.                                                                                                                                                                                      |
+| Full tests     | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm test` — passed: 151 tests (26 shared, 19 web, 106 server).                                                                                                                                                   |
+| Simulation     | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store BOSSFORGE_URL=http://127.0.0.1:3123 pnpm simulate` against a loopback development server — passed. Four categories completed with two synthetic votes each; Thunder Tempest was revealed.                         |
+| Diff check     | `git diff --check` — passed after documentation and evidence updates.                                                                                                                                                                                                                              |
+
+**Wire privacy evidence:** tests inspect serialized Dashboard and OBS WebSocket
+frames, HTTP state snapshots and mutation responses, owner diagnostics, and
+captured request-log arguments. Unique sentinels for mock/Twitch viewer IDs and
+names, message IDs and text, OAuth token/cookie/secret fields, and a complete
+provider-error object are absent. The fake Twitch EventSub notification still
+changes the correct server-side vote total. Dashboard accepts strict forge,
+connection, and aggregate envelopes; OBS accepts only forge and connection
+envelopes. Nested identity injection, legacy `chat.event`, and unknown public
+fields fail schema validation. Recipient query-parameter attempts do not alter
+the fixed route projection. Initial state is delivered only to the subscribing
+socket. The mock integration verifies accepted, rejected, replayed and
+malformed events, with accurate aggregate counts and reset on forge lifecycle.
+
+**Chromium smoke:** actual headless Chromium rendered the dashboard at 1440×900
+and 390×844 and `/overlay` at 1920×1080 and 1280×720. Dashboard mobile
+`scrollWidth` matched its 390px viewport; both overlay viewports matched their
+viewport widths and heights. Dashboard controls and simulated status were
+present; OBS had no buttons. No browser console exceptions, console errors,
+failed requests, or HTTP responses ≥400 were recorded during captures.
+Screenshots: [dashboard desktop](visual-qa/m1a-dashboard-1440x900.png),
+[dashboard mobile](visual-qa/m1a-dashboard-390x844.png),
+[overlay 1920×1080](visual-qa/m1a-overlay-1920x1080.png),
+[overlay 1280×720](visual-qa/m1a-overlay-1280x720.png). These are browser
+captures, not native OBS Studio QA. Browser renders used a completed synthetic
+forge cycle; no live Twitch or credentials were used.
+
+**Limitations and gate:** GitHub Actions was unavailable; these are cloud
+workspace results, not hosted CI. No live Twitch OAuth/EventSub connection or
+native OBS application was used. The app test's captured error-log assertion
+proves only the exercised Fastify request-failure path. Independent GPT-6
+security review of the exact pushed head is still required. M1-A is not
+accepted until that independent review passes; do not start M1-B/M2 or merge.

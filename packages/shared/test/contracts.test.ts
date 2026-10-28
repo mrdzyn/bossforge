@@ -1,63 +1,99 @@
 import { describe, expect, it } from "vitest";
 import {
-  AppEventEnvelopeSchema,
   BossSchema,
-  NormalizedChatEventSchema,
-  createEventEnvelope,
+  DashboardEventEnvelopeSchema,
+  OverlayEventEnvelopeSchema,
   parseVoteCommand,
 } from "../src/index.js";
 
-const viewer = { id: "mock-ember", displayName: "EmberFan" };
 const timestamp = "2026-10-26T12:00:00.000Z";
+const state = {
+  serverInstanceId: "server-test",
+  serverStartedAt: timestamp,
+  revision: 0,
+  cycleId: null,
+  status: "idle",
+  mode: "mock",
+  simulated: true,
+  connectedToTwitch: false,
+  durationSeconds: 15,
+  startedAt: null,
+  activeCategory: null,
+  progress: 0,
+  categories: ["body", "element", "special", "weakness"].map((category) => ({
+    category,
+    status: "pending",
+    options: [
+      { choice: "a", count: 0, percentage: 0 },
+      { choice: "b", count: 0, percentage: 0 },
+    ],
+    totalVotes: 0,
+    openedAt: null,
+    closesAt: null,
+    winner: null,
+    noVoteFallback: false,
+  })),
+  boss: null,
+};
 
 describe("shared contracts", () => {
-  it("accepts a valid normalized chat event", () => {
-    const event = {
-      kind: "chat.message",
-      provider: "mock",
-      message: {
-        id: "mock-message-1",
-        viewer,
-        text: "!vote element fire",
-        occurredAt: timestamp,
-        command: { category: "element", choice: "fire" },
-      },
+  it("strictly rejects raw chat, unknown envelope fields, and nested identity injection", () => {
+    const base = {
+      type: "forge.state",
+      schemaVersion: 1,
+      id: "a29eaa04-d2a0-4f4d-bf84-152fe4c7e9cb",
+      timestamp,
+      payload: { kind: "forge.state", source: "mock", state },
     };
-    expect(NormalizedChatEventSchema.parse(event)).toEqual(event);
-  });
-
-  it("rejects malformed chat payloads", () => {
     expect(
-      NormalizedChatEventSchema.safeParse({
-        kind: "chat.message",
-        provider: "mock",
-        message: { id: "", viewer, text: "x".repeat(501), occurredAt: "yesterday" },
+      DashboardEventEnvelopeSchema.safeParse({
+        ...base,
+        type: "chat.event",
+        payload: { kind: "chat.event", message: "SENTINEL_PRIVATE_CHAT" },
       }).success,
     ).toBe(false);
-  });
-
-  it("round-trips a versioned event envelope through JSON", () => {
-    const envelope = createEventEnvelope(
-      {
-        kind: "viewer.connected",
-        provider: "mock",
-        viewer,
-        occurredAt: timestamp,
-      },
-      "a29eaa04-d2a0-4f4d-bf84-152fe4c7e9cb",
-      timestamp,
-    );
-    expect(AppEventEnvelopeSchema.parse(JSON.parse(JSON.stringify(envelope)))).toEqual(envelope);
-  });
-
-  it("rejects an envelope whose type does not match its payload", () => {
     expect(
-      AppEventEnvelopeSchema.safeParse({
-        type: "chat.event",
+      DashboardEventEnvelopeSchema.safeParse({ ...base, viewerId: "SENTINEL_ID" }).success,
+    ).toBe(false);
+    expect(
+      DashboardEventEnvelopeSchema.safeParse({
+        ...base,
+        payload: {
+          ...base.payload,
+          state: {
+            ...state,
+            categories: state.categories.map((item, index) =>
+              index
+                ? item
+                : {
+                    ...item,
+                    options: [
+                      { ...item.options[0], viewer: { id: "SENTINEL_ID" } },
+                      item.options[1],
+                    ],
+                  },
+            ),
+          },
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      OverlayEventEnvelopeSchema.safeParse({
+        ...base,
+        payload: { ...base.payload, state: { ...state, chat: "SENTINEL_CHAT" } },
+      }).success,
+    ).toBe(false);
+    expect(
+      OverlayEventEnvelopeSchema.safeParse({
+        type: "dashboard.activity",
         schemaVersion: 1,
         id: "a29eaa04-d2a0-4f4d-bf84-152fe4c7e9cb",
         timestamp,
-        payload: { kind: "connection.status", source: "mock", status: "connected" },
+        payload: {
+          accepted: 1,
+          rejected: 0,
+          reasons: { invalid: 0, duplicate: 0, inactive: 0, other: 0 },
+        },
       }).success,
     ).toBe(false);
   });

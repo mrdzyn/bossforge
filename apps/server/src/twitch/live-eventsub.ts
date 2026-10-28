@@ -1,5 +1,5 @@
 import WebSocket from "ws";
-import type { NormalizedChatEvent } from "@bossforge/shared";
+import type { NormalizedChatEvent } from "../events/normalized-chat-event.js";
 import { EventSubChatNormalizer } from "./eventsub-normalizer.js";
 import {
   EventSubSession,

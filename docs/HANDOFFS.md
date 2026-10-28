@@ -634,3 +634,34 @@ only after they exist. Do not invent a Codex session ID; use the session's
   independent exact-head M0 review; require separate owner authorization before
   M1. No OAuth, Twitch activity, runtime restart, merge, deployment, publication
   or submission is part of this work.
+
+## M1-A privacy-safe outbound events — independent exact-head review
+
+Implementation is on `feat/m1a-privacy-safe-events`, based on M0 main
+`d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. Review the exact pushed Draft PR
+HEAD before approval. Scope is limited to removing raw normalized chat from
+outbound channels, strict versioned dashboard/overlay serialization, safe
+aggregate activity, HTTP/log privacy, and regression evidence. No M1-B, M2,
+combat, live Twitch session, deployment, publication, or merge is included.
+
+Please independently verify:
+
+- `NormalizedChatEvent` has no path to browser serialization; recipient DTOs
+  are explicit, strict at every nesting level, and validated immediately
+  before sending.
+- Dashboard/OBS routing is fixed by the server endpoint, cannot be changed by
+  query/role input, and initial provider status is sent to one client only.
+- Dashboard aggregates reveal no event-level viewer activity; counters are
+  bounded, coalesced, and reset with forge/provider lifecycle changes.
+- HTTP snapshots/mutation responses and diagnostics/log error handling do not
+  carry raw identities, content, tokens, cookies, or uncontrolled errors.
+- Sentinel tests inspect actual serialized frames and HTTP/log output and
+  preserve accepted/rejected votes, provider isolation, OAuth ownership,
+  reconnect/reset behavior, and P4A freshness.
+- Run CI-equivalent commands and review browser evidence recorded in
+  `docs/ACCEPTANCE.md`. GitHub Actions is currently unavailable; do not treat
+  cloud checks as hosted CI.
+
+Codex's tests and browser captures are implementation evidence, not an
+independent approval. M1-A remains pending until a GPT-6 independent exact-head
+security audit passes and the owner separately authorizes any merge.

@@ -57,7 +57,11 @@ function installHookState({
   forge?: ForgeState | null;
 } = {}) {
   mockedHook.value = {
-    events: [],
+    activity: {
+      accepted: 2,
+      rejected: 0,
+      reasons: { invalid: 0, duplicate: 0, inactive: 0, other: 0 },
+    },
     forge,
     connection,
     error: "",

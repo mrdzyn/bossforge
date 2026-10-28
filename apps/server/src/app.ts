@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import type WebSocket from "ws";
-import { ForgeStartRequestSchema, NormalizedChatEventSchema } from "@bossforge/shared";
+import { ForgeStartRequestSchema, type ForgeState } from "@bossforge/shared";
 import { MockChatAdapter } from "./adapters/mock-chat-adapter.js";
-import { EventHub } from "./events/event-hub.js";
+import { EventHub, toPublicForgeState } from "./events/event-hub.js";
+import { NormalizedChatEventSchema } from "./events/normalized-chat-event.js";
 import {
   getAllowedViteOrigins,
   isAllowedLocalMutationRequest,
@@ -62,11 +63,86 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
   const eventSubDiagnostics = diagnosticsEnabled ? new EventSubDiagnostics() : undefined;
   let provider: "mock" | "twitch" = "mock";
   let liveEventSub: LiveEventSub | undefined;
+  let activity = {
+    accepted: 0,
+    rejected: 0,
+    reasons: { invalid: 0, duplicate: 0, inactive: 0, other: 0 },
+  };
+  let activityTimer: ReturnType<typeof setTimeout> | undefined;
+  let activityCycleId: string | null = null;
+  const resetActivity = (cycleId: string | null) => {
+    if (activityTimer) clearTimeout(activityTimer);
+    activityTimer = undefined;
+    activityCycleId = cycleId;
+    activity = {
+      accepted: 0,
+      rejected: 0,
+      reasons: { invalid: 0, duplicate: 0, inactive: 0, other: 0 },
+    };
+    hub.publishDashboard(activity);
+  };
+  const sendActivity = () => hub.publishDashboard(activity);
+  const recordBallot = (reason: import("./twitch/eventsub-diagnostics.js").ForgeBallotReason) => {
+    if (reason === "accepted") activity.accepted = Math.min(10_000, activity.accepted + 1);
+    else {
+      activity.rejected = Math.min(10_000, activity.rejected + 1);
+      const group =
+        reason === "duplicate-message" || reason === "unchanged-choice"
+          ? "duplicate"
+          : reason === "inactive-voting" || reason === "disconnected"
+            ? "inactive"
+            : reason === "invalid-choice" ||
+                reason === "invalid-timestamp" ||
+                reason === "invalid-viewer"
+              ? "invalid"
+              : "other";
+      activity.reasons[group] = Math.min(10_000, activity.reasons[group] + 1);
+    }
+    if (!activityTimer)
+      activityTimer = setTimeout(() => {
+        activityTimer = undefined;
+        sendActivity();
+      }, 300);
+  };
+  const publishForgeState = (state: ForgeState, source: "mock" | "twitch") => {
+    if (state.status === "voting" && state.cycleId !== activityCycleId)
+      resetActivity(state.cycleId);
+    else if (state.status === "idle" && activityCycleId !== null) resetActivity(null);
+    const payload = { kind: "forge.state" as const, source, state };
+    hub.publishDashboard(payload);
+    hub.publishOverlay(payload);
+  };
+  const publishConnection = (
+    source: "mock" | "twitch",
+    status: "connecting" | "connected" | "disconnected" | "error",
+  ) => {
+    const payload = { kind: "connection.status" as const, source, status };
+    hub.publishDashboard(payload);
+    hub.publishOverlay(payload);
+  };
+  const initialConnection = () => {
+    if (provider === "mock") return { source: "mock" as const, status: mockAdapter.status };
+    const status = liveEventSub?.status;
+    return {
+      source: "twitch" as const,
+      status: liveEventSub?.connected
+        ? ("connected" as const)
+        : status === "connecting" ||
+            status === "reconnecting" ||
+            status === "retry-wait" ||
+            status === "subscribing"
+          ? ("connecting" as const)
+          : status === "failed" || status === "revoked"
+            ? ("error" as const)
+            : ("disconnected" as const),
+    };
+  };
   const serverInstanceId = options.serverInstanceId ?? randomUUID();
   let forgeEpoch = Date.parse(options.serverStartedAt ?? new Date().toISOString());
   let forgeStartedAt = new Date(forgeEpoch).toISOString();
   let forgeGeneration = 0;
   const createForge = (mode: "mock" | "twitch", connected = false) => {
+    resetActivity(null);
     if (forgeGeneration > 0) {
       forgeEpoch = Math.max(now().getTime(), forgeEpoch + 1);
       forgeStartedAt = new Date(forgeEpoch).toISOString();
@@ -75,14 +151,15 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
     return new ForgeSession(
       now,
       options.forgeScheduler,
-      (state) => hub.publish({ kind: "forge.state", source: mode, state }),
+      (state) => publishForgeState(state, mode),
       instanceId,
       forgeStartedAt,
       mode,
       connected,
-      mode === "twitch" && eventSubDiagnostics
-        ? (reason) => eventSubDiagnostics.recordBallot(reason)
-        : undefined,
+      (reason) => {
+        recordBallot(reason);
+        if (mode === "twitch") eventSubDiagnostics?.recordBallot(reason);
+      },
     );
   };
   let forge = createForge("mock");
@@ -275,7 +352,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       provider = "twitch";
       forge.close();
       forge = createForge("twitch", false);
-      hub.publish({ kind: "forge.state", source: "twitch", state: forge.getState() });
+      publishForgeState(forge.getState(), "twitch");
       liveEventSub = new LiveEventSub({
         clientId: process.env.TWITCH_CLIENT_ID ?? "",
         identity,
@@ -290,7 +367,6 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         ...(eventSubDiagnostics ? { diagnostics: eventSubDiagnostics } : {}),
         onChat: (event) => {
           if (provider !== "twitch") return;
-          hub.publish(event);
           forge.handleEvent(event);
         },
         onStatus: (status: LiveEventSubStatus, connected) => {
@@ -309,10 +385,9 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
           }
           if (connected && forge.getState().mode !== "twitch") forge = createForge("twitch", true);
           if (forge.getState().mode === "twitch") forge.setTwitchConnected(connected);
-          hub.publish({
-            kind: "connection.status",
-            source: "twitch",
-            status: connected
+          publishConnection(
+            "twitch",
+            connected
               ? "connected"
               : status === "failed" || status === "revoked"
                 ? "error"
@@ -321,7 +396,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
                   : status === "retry-wait"
                     ? "disconnected"
                     : "connecting",
-          });
+          );
         },
       });
       liveEventSub.start();
@@ -337,7 +412,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         forge.close();
         provider = "mock";
         forge = createForge("mock");
-        hub.publish({ kind: "forge.state", source: "mock", state: forge.getState() });
+        publishForgeState(forge.getState(), "mock");
       }
       reply.header(
         "set-cookie",
@@ -352,18 +427,43 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       forge.close();
       provider = "mock";
       forge = createForge("mock");
-      hub.publish({ kind: "forge.state", source: "mock", state: forge.getState() });
+      publishForgeState(forge.getState(), "mock");
       return { mode: provider, status: "disconnected" };
     });
   }
 
-  app.get("/events", { websocket: true, onRequest: requireLocalWebSocketOrigin }, (socket) => {
-    hub.addClient(socket);
-    hub.publish({ kind: "connection.status", source: "mock", status: mockAdapter.status });
-  });
+  const subscribe = (recipient: "dashboard" | "overlay") => (socket: WebSocket) => {
+    if (recipient === "dashboard") {
+      hub.addDashboardClient(socket);
+      hub.sendDashboard(socket, { kind: "forge.state", source: provider, state: forge.getState() });
+      const connection = initialConnection();
+      hub.sendDashboard(socket, { kind: "connection.status", ...connection });
+      hub.sendDashboard(socket, activity);
+    } else {
+      hub.addOverlayClient(socket);
+      hub.sendOverlay(socket, { kind: "forge.state", source: provider, state: forge.getState() });
+      hub.sendOverlay(socket, { kind: "connection.status", ...initialConnection() });
+    }
+  };
+  app.get(
+    "/events/dashboard",
+    { websocket: true, onRequest: requireLocalWebSocketOrigin },
+    subscribe("dashboard"),
+  );
+  app.get(
+    "/events/overlay",
+    { websocket: true, onRequest: requireLocalWebSocketOrigin },
+    subscribe("overlay"),
+  );
+  // Compatibility path is pinned to the dashboard DTO family. It can never
+  // serialize normalized chat or select a recipient through client input.
+  app.get(
+    "/events",
+    { websocket: true, onRequest: requireLocalWebSocketOrigin },
+    subscribe("dashboard"),
+  );
 
   app.setErrorHandler((error, request, reply) => {
-    request.log.warn({ err: error }, "Request rejected");
     let statusCode = 500;
     if (
       error instanceof Error &&
@@ -373,6 +473,10 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
     ) {
       statusCode = error.statusCode;
     }
+    request.log.warn(
+      { statusCode, classification: statusCode >= 500 ? "server-error" : "request-rejected" },
+      "Request rejected",
+    );
     void reply
       .status(statusCode)
       .send({ error: statusCode >= 500 ? "Internal server error" : "Invalid request" });
@@ -389,8 +493,13 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       windowMs: 60_000,
       now: () => now().getTime(),
     });
-    app.get("/forge/state", { onRequest: requireLocalDevelopmentRequest }, async () =>
-      forge.getState(),
+    app.get(
+      "/forge/state",
+      { onRequest: requireLocalDevelopmentRequest },
+      async (_request, reply) => {
+        reply.header("cache-control", "no-store");
+        return toPublicForgeState(forge.getState());
+      },
     );
     if (eventSubDiagnostics) {
       app.post(
@@ -419,7 +528,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         if (provider === "twitch" && !forge.getState().connectedToTwitch)
           return reply.status(409).send({ error: "Twitch EventSub is not connected" });
         try {
-          return forge.start(parsed.data.durationSeconds);
+          return toPublicForgeState(forge.start(parsed.data.durationSeconds));
         } catch {
           return reply.status(409).send({ error: "A forge cycle is already active" });
         }
@@ -439,7 +548,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       async (_request, reply) => {
         if (forge.getState().status === "idle")
           return reply.status(409).send({ error: "No active forge cycle" });
-        return forge.reset();
+        return toPublicForgeState(forge.reset());
       },
     );
     app.post(
@@ -450,7 +559,6 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
           return reply.status(403).send({ error: "Mock simulation is disabled in Twitch mode" });
         const event = mockAdapter.nextEvent();
         if (!event) return reply.status(204).send();
-        hub.publish(event);
         forge.handleEvent(event);
         return reply.status(202).send({ accepted: true, kind: event.kind });
       },
@@ -466,7 +574,6 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         if (!parsed.success || parsed.data.provider !== "mock") {
           return reply.status(400).send({ error: "Invalid mock simulation event" });
         }
-        hub.publish(parsed.data);
         forge.handleEvent(parsed.data);
         return reply.status(202).send({ accepted: true, kind: parsed.data.kind });
       },
@@ -477,6 +584,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
     app,
     close: async () => {
       await mockAdapter.disconnect();
+      if (activityTimer) clearTimeout(activityTimer);
       forge.close();
       liveEventSub?.shutdown();
       oauth.close();

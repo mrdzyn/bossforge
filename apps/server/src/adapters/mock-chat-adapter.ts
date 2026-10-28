@@ -1,9 +1,9 @@
+import { parseVoteCommand } from "@bossforge/shared";
 import {
   NormalizedChatEventSchema,
-  parseVoteCommand,
   type NormalizedChatEvent,
   type ViewerIdentity,
-} from "@bossforge/shared";
+} from "../events/normalized-chat-event.js";
 import type { ChatAdapter } from "./chat-adapter.js";
 
 const syntheticViewer: ViewerIdentity = { id: "mock-ember-01", displayName: "EmberFan" };

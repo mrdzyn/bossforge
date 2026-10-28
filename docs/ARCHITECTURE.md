@@ -146,3 +146,20 @@ introduced. SQLite may be considered only if a later milestone needs persistence
   payloads, API responses, logs, screenshots, or persistent storage.
 - Real OAuth consent, EventSub connectivity and channel voting remain untested
   until the owner applies private configuration and initiates local consent.
+
+## M1-A outbound privacy boundary
+
+`NormalizedChatEvent` is consumed only inside the server by `ForgeSession` and
+the EventSub adapter. `EventHub` accepts forge state, connection state, or safe
+dashboard aggregates and builds recipient-specific DTOs. The dashboard and
+overlay have distinct strict version-1 envelopes and WebSocket endpoints;
+overlay does not receive dashboard activity. A server-side allowlist
+projection also protects HTTP forge snapshots and mutation responses. Initial
+state is sent directly to the socket that subscribed, avoiding status fan-out.
+
+The dashboard activity projection retains only bounded counts and fixed
+rejection buckets. It does not keep message history or viewer identifiers.
+Updates are coalesced; forge vote totals remain authoritative in public forge
+state. Reset and provider transitions reset activity counters. The `/events`
+compatibility route is pinned to dashboard serialization and never accepts a
+client-selected recipient.

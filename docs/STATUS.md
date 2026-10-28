@@ -162,3 +162,21 @@ A verified local Twitch broadcaster logs in securely; server-side EventSub recei
 - [Roadmap](ROADMAP.md)
 - [Acceptance evidence](ACCEPTANCE.md)
 - [Handoffs](HANDOFFS.md)
+
+## M1-A privacy-safe outbound events — implementation candidate
+
+- Implemented on `feat/m1a-privacy-safe-events` from expected M0 main SHA
+  `d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. Raw normalized mock and Twitch
+  chat remains server-internal; public dashboard and OBS WebSocket endpoints
+  use separate strict versioned schemas and explicit projections. HTTP forge
+  snapshots and mutation responses use the same allowlist projection.
+- Dashboard activity contains bounded aggregate accepted/rejected counts and
+  fixed reason buckets, reset at forge-cycle and provider lifecycle changes.
+  The dashboard no longer renders viewer names, avatars, or chat text. OBS is
+  read-only and receives no aggregate activity. Legacy `/events` is pinned to
+  the dashboard DTO and cannot publish raw chat.
+- Validation recorded in `docs/ACCEPTANCE.md`: frozen install, build,
+  typecheck, lint, format check, 151 tests, local synthetic simulation, and
+  real Chromium dashboard/overlay screenshots. No hosted CI, real Twitch
+  session, or native OBS run was performed. Independent exact-head security
+  review is pending; M1-A is not accepted until that audit passes.

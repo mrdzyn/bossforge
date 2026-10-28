@@ -1,8 +1,8 @@
+import { parseVoteCommand } from "@bossforge/shared";
 import {
   NormalizedChatEventSchema,
-  parseVoteCommand,
   type NormalizedChatEvent,
-} from "@bossforge/shared";
+} from "../events/normalized-chat-event.js";
 import { z } from "zod";
 
 const RFC3339_TIMESTAMP =

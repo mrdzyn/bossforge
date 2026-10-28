@@ -215,13 +215,13 @@ function CategoryResults({ state }: { state: ForgeState }) {
 
 export function Dashboard() {
   const {
-    events,
     forge: cachedForge,
     connection,
     error,
     notice,
     post,
     snapshotAvailable,
+    activity,
   } = useLiveEvents();
   const forge = connection === "connected" && snapshotAvailable ? cachedForge : null;
   const [seconds, setSeconds] = useState(0);
@@ -611,9 +611,9 @@ export function Dashboard() {
                 <div className="panel-heading">
                   <div>
                     <p className="eyebrow">
-                      {forge?.mode === "twitch" ? "LIVE TWITCH CHAT" : "SIMULATION FEED"}
+                      {forge?.mode === "twitch" ? "LIVE TWITCH ACTIVITY" : "SIMULATION ACTIVITY"}
                     </p>
-                    <h2>Recent chat</h2>
+                    <h2>Vote activity</h2>
                   </div>
                   {forge?.mode !== "twitch" && (
                     <button
@@ -625,28 +625,31 @@ export function Dashboard() {
                     </button>
                   )}
                 </div>
-                <div className="event-feed">
-                  {events
-                    .filter((event) => event.type === "chat.event")
-                    .slice(0, 4)
-                    .map((event) => {
-                      const p = event.payload;
-                      return (
-                        <div className="event-row" key={event.id}>
-                          <span className="event-avatar">
-                            {p.kind === "chat.message" ? p.message.viewer.displayName[0] : "•"}
-                          </span>
-                          <div className="event-copy">
-                            <strong>
-                              {p.kind === "chat.message"
-                                ? p.message.viewer.displayName
-                                : "Mock viewer"}
-                            </strong>
-                            <span>{p.kind === "chat.message" ? p.message.text : p.kind}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                <div className="event-feed" aria-live="polite">
+                  <div className="event-row">
+                    <div className="event-copy">
+                      <strong>{activity.accepted}</strong>
+                      <span>accepted votes</span>
+                    </div>
+                  </div>
+                  <div className="event-row">
+                    <div className="event-copy">
+                      <strong>{activity.rejected}</strong>
+                      <span>rejected events</span>
+                    </div>
+                  </div>
+                  <div className="event-row">
+                    <div className="event-copy">
+                      <strong>{activity.reasons.invalid}</strong>
+                      <span>invalid input</span>
+                    </div>
+                  </div>
+                  <div className="event-row">
+                    <div className="event-copy">
+                      <strong>{activity.reasons.duplicate}</strong>
+                      <span>duplicate or unchanged</span>
+                    </div>
+                  </div>
                 </div>
               </article>
             </div>
@@ -674,7 +677,7 @@ export function Dashboard() {
 }
 
 export function OverlayPreview() {
-  const { forge: cachedForge, connection, snapshotAvailable } = useLiveEvents();
+  const { forge: cachedForge, connection, snapshotAvailable } = useLiveEvents("overlay");
   const forge = connection === "connected" && snapshotAvailable ? cachedForge : null;
   const category =
     forge?.status === "voting"
