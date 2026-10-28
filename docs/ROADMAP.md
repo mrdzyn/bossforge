@@ -40,9 +40,7 @@ in the actual OBS Studio application passed at 1920×1080 and 1280×720 in
 simulated mode; it does not establish new real Twitch voting, live HP
 synchronization, or continuous animation performance. Automated fake-network
 validation is separate: 124 tests passed at implementation commit
-`279ff63fc803921310226d9c6903a029af7f0bd5`. See the [P3-B specification]
-(P3B-LIVE-TWITCH-INTEGRATION.md) and [acceptance evidence]
-(ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
+`279ff63fc803921310226d9c6903a029af7f0bd5`. See the [P3-B specification](P3B-LIVE-TWITCH-INTEGRATION.md) and [acceptance evidence](ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
 
 ## Phase 4 — Streamer UX and OBS Integration
 
@@ -58,8 +56,7 @@ independently reproduced and is not evidence of live battle HP or animation
 performance. The 149-test result (29 shared, 19 web, 101 server) is historical
 automated evidence from the P4A-C2 implementation checkpoint, separate from
 synthetic simulation, Chromium evidence, owner OBS results, and historical live
-Twitch evidence. Details are preserved in [P4A readiness]
-(P4A-STREAMER-OBS-READINESS.md) and [acceptance](ACCEPTANCE.md).
+Twitch evidence. Details are preserved in [P4A readiness](P4A-STREAMER-OBS-READINESS.md) and [acceptance](ACCEPTANCE.md).
 
 ## Proposed product direction — PDCP-001
 
