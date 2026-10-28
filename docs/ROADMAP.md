@@ -69,20 +69,23 @@ remain. The proposed server-authoritative battle session is independent of the
 optional Phaser arena, which remains a self-contained demo with no further
 gameplay expansion.
 
-This is an approved-for-planning, documentation-only proposal in existing Draft
-PR #7, independently reviewed PASS at its prior head
-[`adfaa6f`](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234).
-The PR branch is being reconciled to the current main baseline; no M0–M5
-implementation is authorized. The current raw-chat EventHub broadcast is not
-privacy-safe. A server-side privacy migration with strict dashboard/OBS
-projections and sentinel regression tests is required in M1 and blocks M2.
-`!hit` combat, authoritative battle HP, and Generic/Arena profiles remain
-unimplemented. See [PDCP-001](PDCP-001-ANY-GAME-TWITCH-ENGAGEMENT.md) for
-contracts, acceptance, security boundaries, schedule-slip fallbacks, dated
-milestones and the November 3, 2026 06:00 Asia/Manila deadline. Generic OBS plus
-a genuine chat hit takes priority over optional challenges and the Arena
-profile. PR #7 remains Draft and unmerged; each implementation scope requires
-separate owner authorization and independent review.
+PDCP-001 is approved for planning and merged through PR #7 at
+`5b30d7b3139c9f1ab74f3be46d0f4fb5d9665865`; its prior exact-head audit passed
+at [`adfaa6f`](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234).
+The current raw-chat EventHub broadcast is not privacy-safe. A server-side
+privacy migration with strict dashboard/OBS projections and sentinel regression
+tests is required in M1 and blocks M2. `!hit` combat, authoritative battle HP,
+and Generic/Arena profile loading remain unimplemented. The bounded
+[M0 contract lock](M0-ANY-GAME-CONTRACT-LOCK.md) specifies proposed state,
+privacy, duration-by-band balance, authorization, and delivery contracts. M1-B
+is a presentation-only revealed-boss / “BATTLE COMING SOON” preview from fresh
+ForgeState; it has no battle state or Start Battle. M2-A introduces authoritative
+`CommunityBattleStateV1`, BATTLE READY and owner Start Battle; M2-B adds chat hit
+routing. The contract does not authorize M1/M2 implementation. The PDCP-001 schedule and November 3, 2026 06:00
+Asia/Manila deadline remain; prioritize Generic OBS and a genuine server-
+authoritative Twitch attack over optional challenges, Arena profile polish,
+extra themes, and effects. Every implementation scope needs separate owner
+authorization and independent review.
 
 ## Phase 5 — Hackathon Submission
 

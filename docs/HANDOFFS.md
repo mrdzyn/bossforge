@@ -596,3 +596,41 @@ only after they exist. Do not invent a Codex session ID; use the session's
   decision. It has since been squash-merged into `main` at
   `5655dea53e3eba5425b6ead8926659a0bb72ae5e`. Preserve the acceptance evidence;
   do not deploy, publish, or submit Phase 5 materials.
+
+## PDCP-001 — M0 Any-Game contract lock
+
+- **Current base:** `main` at `5b30d7b3139c9f1ab74f3be46d0f4fb5d9665865`.
+  PR #7 is closed/merged at this head; the prior PDCP-001 planning PASS remains
+  recorded at [`adfaa6f`](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234).
+- **Branch/scope:** `docs/m0-any-game-contract-lock`; docs-only M0. The contract
+  lock is in `docs/M0-ANY-GAME-CONTRACT-LOCK.md`; current status and roadmap are
+  reconciled. The accepted PDCP-001 spec is edited only to correct its now-stale
+  current baseline/PR #7 status.
+- **Sequencing:** M1-B presents the freshly revealed boss as **REVEALED —
+  BATTLE COMING SOON** using fresh ForgeState only. It has no inferred battle
+  state, HP/timer, Start Battle action, or chat damage. M2-A introduces
+  authoritative `CommunityBattleStateV1`, BATTLE READY and owner Start Battle;
+  M2-B adds hit routing. In the final flow, accepted cooperative chat attacks
+  can yield COMMUNITY VICTORY; expiry is BOSS SURVIVED; disconnect/invalidation
+  is CANCELLED. The Phaser local combat model remains optional and separate.
+- **Provisional balance proposal:** 60/90/120-second choice (90 default), 8 base
+  damage, 7/4 weakness multiplier rounded half-up to 14, 2-second accepted-hit
+  cooldown, duration-by-band HP (low 100/150/200; medium 400/550/750; high
+  1,000/1,500/2,000 HP), 8 accepted hits/s plus burst 16, 64-entry/500-ms
+  queue, 10-minute/10,000-ID dedup, and 5,000 cooldown entries. Six attacker
+  cohorts have perfect-cadence upper bounds and paced one-third-weakness sample
+  arithmetic; queue/rate caveats are explicit. No simulation or tuning is
+  claimed; owner approval remains pending.
+- **Blocking security contract:** Current normalized chat with viewer identity
+  and text is broadcast through EventHub to browser clients. M1-A must add
+  strict server-side dashboard/OBS projections, aggregate dashboard activity,
+  and sentinel privacy tests. Independent security review of that boundary is
+  mandatory before M2 can begin. No `!hit`, authoritative battle HP, or profile
+  implementation exists yet.
+- **Owner decisions:** Confirm balance/default-band choices, whether recognized
+  but nonmatching elements apply base damage or are rejected, and the extent of
+  attack aggregates shown in OBS. See the M0 contract's decision list.
+- **Delivery gate:** This document does not authorize implementation. Request
+  independent exact-head M0 review; require separate owner authorization before
+  M1. No OAuth, Twitch activity, runtime restart, merge, deployment, publication
+  or submission is part of this work.
