@@ -1,11 +1,14 @@
 # BossForge Live
 
-**Chat creates the boss. The streamer fights it.**
+**Proposed direction: Chat creates the boss. Chat fights the boss. The streamer keeps playing their game.**
 
-BossForge Live is an interactive browser game concept for Twitch streams. The
-audience will shape a monster through chat and the streamer will fight it in an
-arcade arena. Phase 1 established server-authoritative local voting and a
-broadcast-oriented OBS overlay. Phase 2 delivered the playable local boss battle.
+BossForge Live currently provides audience boss voting, a read-only OBS
+overlay, verified local Twitch integration, and an optional Phaser arena. The
+approved-for-planning PDCP-001 proposal pivots the primary product toward a
+game-agnostic Twitch engagement overlay: chat creates and fights the boss while
+the streamer keeps playing their game. The proposed server-authoritative chat
+battle and `!hit` system are not implemented; Phaser remains an optional
+self-contained demo.
 
 ## Current status
 
@@ -48,14 +51,22 @@ transports. For a local account, the owner must personally approve/configure
 OAuth: set the registered Client ID and private Client Secret in gitignored
 `.env`, then explicitly set `TWITCH_INTEGRATION_ENABLED=true`. The server
 remains loopback-only and mock simulation remains available. **Phase 4-A
-frontend acceptance is PASS** on `feat/p4a-streamer-voting-ux` / Draft PR #6:
+frontend acceptance is PASS** and PR #6 was squash-merged into `main` at
+`5655dea53e3eba5425b6ead8926659a0bb72ae5e`:
 canonical voting instructions, fresh-state protections, tie-aware totals,
 community/default attribution, mobile clipping remediation and responsive
 Chromium QA are documented as complete. The 149-test result (29 shared, 19 web,
-101 server) was previously run; this docs-only closure does not rerun it. The
-PR remains Draft and unmerged pending final documentation review and the owner's
-separate decision. See [Phase 4-A readiness](docs/P4A-STREAMER-OBS-READINESS.md)
+101 server) is historical automated evidence, separate from synthetic
+simulation, Chromium QA, owner-supplied OBS results and historical live Twitch
+evidence. Owner-supplied OBS visual results pass at 1920×1080 and native
+1280×720 with Fit to Screen; they do not establish live HP synchronization or
+continuous animation performance. See [Phase 4-A readiness](docs/P4A-STREAMER-OBS-READINESS.md)
 and [acceptance evidence](docs/ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
+
+**PDCP-001 is planning only** on existing Draft PR #7. The current raw-chat
+browser broadcast path is not privacy-safe; the required M1 server-side privacy
+migration must precede M2. No `!hit` combat, authoritative battle HP or game
+profiles are implemented, and no milestone implementation is authorized.
 
 See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
 [roadmap](docs/ROADMAP.md).

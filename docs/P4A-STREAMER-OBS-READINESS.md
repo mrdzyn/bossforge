@@ -2,9 +2,10 @@
 
 **Status:** Phase 4-A frontend and owner visual acceptance complete on
 `feat/p4a-streamer-voting-ux`, based on `main` at
-`76a5ddeeea0986aae2ed073deaeb1a5b02fb6280`. Existing PR #6 remains Draft and
-unmerged pending final exact-head documentation review and owner decision.
-Phase 3-B PR #5 is already merged. This work does not start OAuth, access the
+`76a5ddeeea0986aae2ed073deaeb1a5b02fb6280`; PR #6 was subsequently
+squash-merged into `main` at `5655dea53e3eba5425b6ead8926659a0bb72ae5e`.
+Phase 3-B PR #5 is also merged. The acceptance and owner-supplied OBS evidence
+below remain historical records. This work did not start OAuth, access the
 authenticated runtime, activate Twitch, or submit Phase 5 materials.
 
 ## Streamer and viewer experience

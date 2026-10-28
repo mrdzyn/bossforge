@@ -5,8 +5,10 @@ Status vocabulary: **PASS** ran successfully; **FAIL** ran and failed;
 actual outcomes; do not infer a pass from a configured script.
 
 The older Phase 3-B remediation sections below retain historical results and
-review gates as recorded at those checkpoints. PR #5 subsequently merged to
-`main` at `76a5dde`; the current work is Phase 4-A.
+review gates as recorded at those checkpoints. PR #5 merged to `main` at
+`76a5dde`, and Phase 4-A PR #6 subsequently merged into the current main
+baseline `5655dea53e3eba5425b6ead8926659a0bb72ae5e`. P4A acceptance and owner
+OBS evidence are recorded in the final closure below.
 
 ## Required checks
 
@@ -816,6 +818,7 @@ genuine vote in every category. OBS testing was in simulated mode and does not
 prove new real Twitch voting, live HP synchronization, or continuous animation
 performance. The Any-Game `!hit` battle system is not implemented in PR #6.
 
-No application tests were rerun for this documentation-only acceptance update.
-PR #6 remains Draft and unmerged pending the requested exact-head delta audit
-and the owner's separate merge decision.
+No application tests were rerun for the documentation-only acceptance update
+at the time of the original closure. PR #6 has since been squash-merged into
+`main`; this record preserves the acceptance evidence and its original audit
+history.

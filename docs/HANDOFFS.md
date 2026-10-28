@@ -591,6 +591,8 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Limitations:** OBS was tested in simulated mode. No new live Twitch voting,
   live HP synchronization, or continuous animation performance is established.
   The PDCP-001 `!hit` battle system is not implemented in PR #6.
-- **Review gate:** Keep existing PR #6 Draft and unmerged. Request the final
-  exact-head documentation delta audit and wait for the owner's separate merge
-  decision. Do not deploy, publish, or submit Phase 5 materials.
+- **Original review gate:** At the time of this final acceptance closure, PR #6
+  was Draft and awaiting the final documentation delta audit and owner's merge
+  decision. It has since been squash-merged into `main` at
+  `5655dea53e3eba5425b6ead8926659a0bb72ae5e`. Preserve the acceptance evidence;
+  do not deploy, publish, or submit Phase 5 materials.
