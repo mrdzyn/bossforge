@@ -55,6 +55,19 @@ scope. Challenges and the Arena profile are optional; the Generic profile and
 a correctly labeled real Twitch demo take priority. No merge, deployment,
 publication, or Phase 5 submission is authorized by the proposal.
 
+**Proposed checkpoints (Asia/Manila):** M0 Wed Oct 28, 13:00–18:00; M1 Thu Oct
+29 by 18:00; M2 Fri Oct 30, 09:00–Sat Oct 31, 12:00; optional M3 Sat Oct 31,
+12:00–Sun Nov 1, 12:00; M4 Sun Nov 1, 12:00–Mon Nov 2, 06:00; M5 Mon Nov 2,
+06:00–Tue Nov 3, 06:00 (hard deadline). Reserve Nov 2 06:00–09:00 for owner-
+controlled Twitch validation, 09:00–11:00 for OBS recording, 11:00–16:00 for
+YouTube demo recording/edit/review, 16:00–17:00 for genuine Codex session
+evidence, and 17:00–Nov 3 06:00 for Devpost preparation and owner
+review/submission. Challenges and the Arena profile are first to defer; Generic
+OBS plus a genuine chat hit and privacy/security gates take priority. These
+dates do not authorize OAuth, publication or submission; those require the
+owner's separate action. Full exit criteria and authorization gates are in the
+specification.
+
 ## Phase 5 — Hackathon Submission
 
 Prepare the verified Twitch demonstration, short public YouTube demo, written
