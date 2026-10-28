@@ -621,19 +621,18 @@ only after they exist. Do not invent a Codex session ID; use the session's
   cohorts have perfect-cadence upper bounds and paced one-third-weakness sample
   arithmetic; queue/rate caveats are explicit. No simulation or tuning is
   claimed; owner approval remains pending.
-- **Blocking security contract:** Current normalized chat with viewer identity
-  and text is broadcast through EventHub to browser clients. M1-A must add
-  strict server-side dashboard/OBS projections, aggregate dashboard activity,
-  and sentinel privacy tests. Independent security review of that boundary is
-  mandatory before M2 can begin. No `!hit`, authoritative battle HP, or profile
-  implementation exists yet.
+- **M0-time blocking security contract:** At the locked baseline, normalized
+  chat with viewer identity and text was broadcast through EventHub. The
+  owner-authorized M1-A candidate now adds strict recipient projections,
+  aggregate dashboard activity and sentinel privacy tests; independent review
+  remains required before M1-A is accepted or M2 can begin. No `!hit`,
+  authoritative battle HP, or profile implementation exists yet.
 - **Owner decisions:** Confirm balance/default-band choices, whether recognized
   but nonmatching elements apply base damage or are rejected, and the extent of
   attack aggregates shown in OBS. See the M0 contract's decision list.
-- **Delivery gate:** This document does not authorize implementation. Request
-  independent exact-head M0 review; require separate owner authorization before
-  M1. No OAuth, Twitch activity, runtime restart, merge, deployment, publication
-  or submission is part of this work.
+- **M0-time delivery gate:** The M0 lock did not authorize implementation.
+  M1-A is now separately owner-authorized; M1-B/M2 remain outside scope. No
+  merge, deployment, publication or submission is part of this work.
 
 ## M1-A privacy-safe outbound events — independent exact-head review
 

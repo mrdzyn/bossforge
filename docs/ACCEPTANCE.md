@@ -829,7 +829,8 @@ history.
 preserving forge, voting, OAuth/EventSub handling, simulation, and P4A
 freshness. Implemented on branch `feat/m1a-privacy-safe-events`, based on
 `d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. The exact implementation SHA is
-the branch HEAD recorded in the PR handoff; no independent audit has passed.
+`7eb556f5c17af426d155470ae11ff07afa3d6a0f`; a follow-up commit records the
+GitHub API delivery blocker. No independent audit has passed.
 
 | Check          | Actual result                                                                                                                                                                                                                                                                                      |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
