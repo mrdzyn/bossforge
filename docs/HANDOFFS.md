@@ -596,3 +596,37 @@ only after they exist. Do not invent a Codex session ID; use the session's
   decision. It has since been squash-merged into `main` at
   `5655dea53e3eba5425b6ead8926659a0bb72ae5e`. Preserve the acceptance evidence;
   do not deploy, publish, or submit Phase 5 materials.
+
+## PDCP-001 — M0 Any-Game contract lock
+
+- **Current base:** `main` at `5b30d7b3139c9f1ab74f3be46d0f4fb5d9665865`.
+  PR #7 is closed/merged at this head; the prior PDCP-001 planning PASS remains
+  recorded at [`adfaa6f`](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234).
+- **Branch/scope:** `docs/m0-any-game-contract-lock`; docs-only M0. The contract
+  lock is in `docs/M0-ANY-GAME-CONTRACT-LOCK.md`; current status and roadmap are
+  reconciled. The accepted PDCP-001 spec is edited only to correct its now-stale
+  current baseline/PR #7 status.
+- **Locked proposal:** Forge reveal becomes BATTLE READY; only an authorized
+  owner Start Battle begins the server timer. Cooperative chat attacks can
+  yield COMMUNITY VICTORY; expiry is BOSS SURVIVED; disconnect/invalidation is
+  CANCELLED. The Phaser local combat model remains optional and semantically
+  separate.
+- **Provisional deterministic defaults:** 60/90/120-second choice (90 default),
+  8 base damage, 7/4 weakness multiplier rounded half-up to 14, 2-second
+  accepted-hit cooldown, owner-selected 400/1,700/5,200 HP audience bands,
+  8 accepted hits/s plus burst 16, 64-entry/500-ms queue, 10-minute/10,000-ID
+  dedup, 5,000 cooldown entries. Sample calculations are mathematical only;
+  no tuning or tests are claimed.
+- **Blocking security contract:** Current normalized chat with viewer identity
+  and text is broadcast through EventHub to browser clients. M1-A must add
+  strict server-side dashboard/OBS projections, aggregate dashboard activity,
+  and sentinel privacy tests. Independent security review of that boundary is
+  mandatory before M2 can begin. No `!hit`, authoritative battle HP, or profile
+  implementation exists yet.
+- **Owner decisions:** Confirm balance/default-band choices, whether recognized
+  but nonmatching elements apply base damage or are rejected, and the extent of
+  attack aggregates shown in OBS. See the M0 contract's decision list.
+- **Delivery gate:** This document does not authorize implementation. Request
+  independent exact-head M0 review; require separate owner authorization before
+  M1. No OAuth, Twitch activity, runtime restart, merge, deployment, publication
+  or submission is part of this work.

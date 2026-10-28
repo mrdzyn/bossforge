@@ -2,7 +2,7 @@
 
 **Status:** Proposed product-direction specification; planning only. No implementation is authorized by this document or its review.
 **Repository:** `mrdzyn/bossforge`
-**Planning baseline:** Reconciled against `main` at `5655dea53e3eba5425b6ead8926659a0bb72ae5e`, which includes the completed and accepted Phase 4-A work from PR #6. The prior independent PDCP-001 exact-head delta audit passed at `adfaa6f5000b330c393a6e50dcc20c7125d1519e` ([PASS review](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234); [earlier findings](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6460843038)). This baseline reconciliation preserves that planning review and requests a separate exact-head delta audit. PR #7 remains Draft and unmerged.
+**Planning baseline:** `main` at `5b30d7b3139c9f1ab74f3be46d0f4fb5d9665865`, which includes the completed Phase 4-A work from PR #6 and approved-for-planning PDCP-001 merged through PR #7. The independent PDCP-001 exact-head delta audit passed at `adfaa6f5000b330c393a6e50dcc20c7125d1519e` ([PASS review](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234); [earlier findings](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6460843038)). The later M0 contract lock is separate documentation and does not authorize M1/M2 implementation.
 **Product promise:** **Chat creates the boss. Chat fights the boss. The streamer keeps playing their game.**
 
 ## 1. Direction and scope
@@ -189,8 +189,8 @@ Before M2 merge, require independent exact-head review of battle authority, spam
 
 ## 10. Current gates
 
-- The reconciliation baseline is `main` at `5655dea53e3eba5425b6ead8926659a0bb72ae5e`; it contains Phase 4-A PR #6, including the completed frontend scope, mobile remediation and owner-supplied OBS visual acceptance. See [P4A acceptance](ACCEPTANCE.md#p4a-final-acceptance-closure--owner-supplied-obs-visual-qa) and [OBS evidence](P4A-STREAMER-OBS-READINESS.md#owner-supplied-obs-visual-qa-results).
-- The prior independent PDCP-001 exact-head delta review passed at `adfaa6f5000b330c393a6e50dcc20c7125d1519e` ([review](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234)). The present PR #7 delta only reconciles docs with the new main baseline; it does not claim a new implementation review.
+- The current baseline is `main` at `5b30d7b3139c9f1ab74f3be46d0f4fb5d9665865`; it contains Phase 4-A PR #6 and this approved-for-planning PDCP-001 proposal merged via PR #7. P4A retains completed frontend/mobile acceptance and owner-supplied OBS visual PASS. See [P4A acceptance](ACCEPTANCE.md#p4a-final-acceptance-closure--owner-supplied-obs-visual-qa) and [OBS evidence](P4A-STREAMER-OBS-READINESS.md#owner-supplied-obs-visual-qa-results).
+- The prior independent PDCP-001 exact-head delta review passed at `adfaa6f5000b330c393a6e50dcc20c7125d1519e` ([review](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234)). PR #7 merged the planning proposal; it did not implement M0–M5.
 - The current EventHub broadcasts normalized chat containing viewer identity and message text to browser WebSocket clients. The server-side privacy migration and strict recipient projections specified in M1 are **not implemented** and block M2. Do not claim browser privacy from hidden UI or schemas that have not been added and tested.
 - `!hit` combat, server-authoritative boss HP, and Generic/Arena profiles are **not implemented**. Phase 4-A voting and the optional Phaser demo remain the current shipped experience.
-- M0–M5 implementation, live battle QA, release, publication, and Phase 5 submission are not started or authorized by this planning document. Keep PR #7 Draft and unmerged; preserve separate owner authorization and exact-head independent review gates.
+- M0 contract-lock documentation is now tracked separately. M1–M5 implementation, live battle QA, release, publication, and Phase 5 submission are not started or authorized by this planning document. PR #7 is merged; preserve separate owner authorization and exact-head independent review gates for each implementation scope.
