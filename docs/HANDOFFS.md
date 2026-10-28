@@ -648,6 +648,12 @@ server/cycle-aware aggregate reconciliation and reconciles those records.
 The exact remediation head and actual validation results are recorded in
 `docs/ACCEPTANCE.md` after push. No independent approval is implied.
 
+The remediation validation ran at commit
+`371d2934b6333623c366ed6f1a8460031bb9617f`; the linked PR shows the latest
+branch head after this handoff documentation update. Request independent
+GPT-6 review of that current PR head. The prior audit at `ec25b4a9` is not a
+review of the remediation.
+
 Please independently verify:
 
 - `NormalizedChatEvent` has no path to browser serialization; recipient DTOs

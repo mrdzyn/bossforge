@@ -929,9 +929,9 @@ GitHub Actions was unavailable; these are local/cloud CI-equivalent results,
 not hosted CI. No browser or OBS changes were required for this bounded state
 reconciliation; no live Twitch connection was started. The initial GitHub CLI
 `Forbidden` event is retained above as history. Draft PR #9 exists, and the
-branch is pushed through the connected GitHub integration. The remediation
-commit and current pushed HEAD are recorded in the pull request and handoff;
-the exact reviewed HEAD is `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46` only for
-the prior independent audit, not this remediation. Request a new GPT-6 review
-of the exact remediation HEAD. M1-A remains unapproved until that review
+branch is pushed through the connected GitHub integration. These checks ran
+against remediation commit `371d2934b6333623c366ed6f1a8460031bb9617f`; the
+prior independent audit covered `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`.
+The latest branch head is shown on the linked Draft PR #9. Request a new GPT-6
+review of that exact current head. M1-A remains unapproved until the review
 passes; keep PR #9 Draft and do not merge, publish, or start M1-B/M2.
