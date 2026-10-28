@@ -77,8 +77,11 @@ privacy migration with strict dashboard/OBS projections and sentinel regression
 tests is required in M1 and blocks M2. `!hit` combat, authoritative battle HP,
 and Generic/Arena profile loading remain unimplemented. The bounded
 [M0 contract lock](M0-ANY-GAME-CONTRACT-LOCK.md) specifies proposed state,
-privacy, balance, authorization, and delivery contracts. It does not authorize
-M1/M2 implementation. The PDCP-001 schedule and November 3, 2026 06:00
+privacy, duration-by-band balance, authorization, and delivery contracts. M1-B
+is a presentation-only revealed-boss / “BATTLE COMING SOON” preview from fresh
+ForgeState; it has no battle state or Start Battle. M2-A introduces authoritative
+`CommunityBattleStateV1`, BATTLE READY and owner Start Battle; M2-B adds chat hit
+routing. The contract does not authorize M1/M2 implementation. The PDCP-001 schedule and November 3, 2026 06:00
 Asia/Manila deadline remain; prioritize Generic OBS and a genuine server-
 authoritative Twitch attack over optional challenges, Arena profile polish,
 extra themes, and effects. Every implementation scope needs separate owner

@@ -606,17 +606,21 @@ only after they exist. Do not invent a Codex session ID; use the session's
   lock is in `docs/M0-ANY-GAME-CONTRACT-LOCK.md`; current status and roadmap are
   reconciled. The accepted PDCP-001 spec is edited only to correct its now-stale
   current baseline/PR #7 status.
-- **Locked proposal:** Forge reveal becomes BATTLE READY; only an authorized
-  owner Start Battle begins the server timer. Cooperative chat attacks can
-  yield COMMUNITY VICTORY; expiry is BOSS SURVIVED; disconnect/invalidation is
-  CANCELLED. The Phaser local combat model remains optional and semantically
-  separate.
-- **Provisional deterministic defaults:** 60/90/120-second choice (90 default),
-  8 base damage, 7/4 weakness multiplier rounded half-up to 14, 2-second
-  accepted-hit cooldown, owner-selected 400/1,700/5,200 HP audience bands,
-  8 accepted hits/s plus burst 16, 64-entry/500-ms queue, 10-minute/10,000-ID
-  dedup, 5,000 cooldown entries. Sample calculations are mathematical only;
-  no tuning or tests are claimed.
+- **Sequencing:** M1-B presents the freshly revealed boss as **REVEALED —
+  BATTLE COMING SOON** using fresh ForgeState only. It has no inferred battle
+  state, HP/timer, Start Battle action, or chat damage. M2-A introduces
+  authoritative `CommunityBattleStateV1`, BATTLE READY and owner Start Battle;
+  M2-B adds hit routing. In the final flow, accepted cooperative chat attacks
+  can yield COMMUNITY VICTORY; expiry is BOSS SURVIVED; disconnect/invalidation
+  is CANCELLED. The Phaser local combat model remains optional and separate.
+- **Provisional balance proposal:** 60/90/120-second choice (90 default), 8 base
+  damage, 7/4 weakness multiplier rounded half-up to 14, 2-second accepted-hit
+  cooldown, duration-by-band HP (low 100/150/200; medium 400/550/750; high
+  1,000/1,500/2,000 HP), 8 accepted hits/s plus burst 16, 64-entry/500-ms
+  queue, 10-minute/10,000-ID dedup, and 5,000 cooldown entries. Six attacker
+  cohorts have perfect-cadence upper bounds and paced one-third-weakness sample
+  arithmetic; queue/rate caveats are explicit. No simulation or tuning is
+  claimed; owner approval remains pending.
 - **Blocking security contract:** Current normalized chat with viewer identity
   and text is broadcast through EventHub to browser clients. M1-A must add
   strict server-side dashboard/OBS projections, aggregate dashboard activity,
