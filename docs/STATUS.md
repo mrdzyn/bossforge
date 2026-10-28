@@ -180,3 +180,10 @@ A verified local Twitch broadcaster logs in securely; server-side EventSub recei
   real Chromium dashboard/overlay screenshots. No hosted CI, real Twitch
   session, or native OBS run was performed. Independent exact-head security
   review is pending; M1-A is not accepted until that audit passes.
+- Implementation is pushed to origin as commit
+  `7eb556f5c17af426d155470ae11ff07afa3d6a0f`. Draft PR creation is currently
+  blocked: GitHub CLI API requests are forbidden because its configured
+  `GH_TOKEN` is invalid, and `gh auth status` with that variable unset reports
+  no logged-in session. The branch is ready at
+  <https://github.com/mrdzyn/bossforge/pull/new/feat/m1a-privacy-safe-events>;
+  no PR or independent audit request has been submitted yet.

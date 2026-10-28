@@ -637,9 +637,10 @@ only after they exist. Do not invent a Codex session ID; use the session's
 
 ## M1-A privacy-safe outbound events — independent exact-head review
 
-Implementation is on `feat/m1a-privacy-safe-events`, based on M0 main
-`d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. Review the exact pushed Draft PR
-HEAD before approval. Scope is limited to removing raw normalized chat from
+Implementation is pushed on `feat/m1a-privacy-safe-events` at
+`7eb556f5c17af426d155470ae11ff07afa3d6a0f`, based on M0 main
+`d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. Draft PR creation and the audit
+request are blocked because GitHub CLI API authorization is unavailable (`GH_TOKEN` invalid; no stored login when unset). Once a Draft PR is created from the pushed branch, review its exact HEAD before approval. Scope is limited to removing raw normalized chat from
 outbound channels, strict versioned dashboard/overlay serialization, safe
 aggregate activity, HTTP/log privacy, and regression evidence. No M1-B, M2,
 combat, live Twitch session, deployment, publication, or merge is included.
@@ -663,5 +664,7 @@ Please independently verify:
   cloud checks as hosted CI.
 
 Codex's tests and browser captures are implementation evidence, not an
-independent approval. M1-A remains pending until a GPT-6 independent exact-head
-security audit passes and the owner separately authorizes any merge.
+independent approval. The Draft PR creation link is
+<https://github.com/mrdzyn/bossforge/pull/new/feat/m1a-privacy-safe-events>.
+M1-A remains pending until a GPT-6 independent exact-head security audit passes
+and the owner separately authorizes any merge.

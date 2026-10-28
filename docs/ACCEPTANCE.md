@@ -875,3 +875,13 @@ native OBS application was used. The app test's captured error-log assertion
 proves only the exercised Fastify request-failure path. Independent GPT-6
 security review of the exact pushed head is still required. M1-A is not
 accepted until that independent review passes; do not start M1-B/M2 or merge.
+
+**Delivery status:** commit `7eb556f5c17af426d155470ae11ff07afa3d6a0f` was
+successfully pushed to `origin/feat/m1a-privacy-safe-events`. Draft PR creation
+failed with GitHub API `Forbidden`; `gh auth status` reports that the configured
+`GH_TOKEN` is invalid, and with `GH_TOKEN` unset there is no logged-in session.
+Therefore no Draft PR or independent review request exists yet. Create it from
+the pushed branch at
+<https://github.com/mrdzyn/bossforge/pull/new/feat/m1a-privacy-safe-events>
+after workspace GitHub API authorization is restored. No credential value was
+requested or printed.
