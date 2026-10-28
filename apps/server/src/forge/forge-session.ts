@@ -6,10 +6,10 @@ import {
   type BossAttributes,
   type ForgeCategoryState,
   type ForgeState,
-  type NormalizedChatEvent,
   type Provider,
   type VoteCategory,
 } from "@bossforge/shared";
+import type { NormalizedChatEvent } from "../events/normalized-chat-event.js";
 import { assembleBoss } from "./boss-assembly.js";
 import type { ForgeBallotReason } from "../twitch/eventsub-diagnostics.js";
 

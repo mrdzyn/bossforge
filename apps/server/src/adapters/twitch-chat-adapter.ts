@@ -1,4 +1,4 @@
-import type { NormalizedChatEvent } from "@bossforge/shared";
+import type { NormalizedChatEvent } from "../events/normalized-chat-event.js";
 import type { ChatAdapter } from "./chat-adapter.js";
 
 /** Phase 0 boundary only. Real OAuth and EventSub transport are deferred. */

@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  AppEventEnvelopeSchema,
+  DashboardEventEnvelopeSchema,
+  OverlayEventEnvelopeSchema,
   ForgeStateReconciler,
-  ForgeStateSchema,
-  type AppEventEnvelope,
+  PublicForgeStateSchema,
   type ForgeState,
 } from "@bossforge/shared";
 import { isTwitchVoteCancelled, sanitizedForgeStartError } from "../live-forge-ui.js";
+import { DashboardActivityReconciler } from "../dashboard-activity-reconciler.js";
 
-export function useLiveEvents() {
+export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") {
   const reconciler = useRef<ForgeStateReconciler | null>(null);
   if (!reconciler.current) reconciler.current = new ForgeStateReconciler();
-  const [events, setEvents] = useState<AppEventEnvelope[]>([]);
+  const activityReconciler = useRef<DashboardActivityReconciler | null>(null);
+  if (!activityReconciler.current) activityReconciler.current = new DashboardActivityReconciler();
+  const [, setActivityRevision] = useState(0);
   const [forge, setForge] = useState<ForgeState | null>(null);
   const forgeRef = useRef<ForgeState | null>(null);
   const [snapshotAvailable, setSnapshotAvailable] = useState(false);
@@ -30,7 +33,11 @@ export function useLiveEvents() {
       else if (next.status === "voting" || next.status === "revealed") setNotice("");
       forgeRef.current = next;
       setForge(next);
-      if (transportReadyGeneration.current === generation) setSnapshotAvailable(true);
+      if (transportReadyGeneration.current === generation) {
+        activityReconciler.current?.applyForgeState(next, generation);
+        setActivityRevision((revision) => revision + 1);
+        setSnapshotAvailable(true);
+      }
       appliedVersion.current += 1;
     }
   }, []);
@@ -41,7 +48,7 @@ export function useLiveEvents() {
       try {
         const response = await fetch("/api/forge/state");
         if (!response.ok) throw new Error(`Snapshot request failed: ${response.status}`);
-        const next = ForgeStateSchema.parse(await response.json());
+        const next = PublicForgeStateSchema.parse(await response.json());
         if (
           transportReadyGeneration.current !== generation ||
           reconciler.current?.connectionGeneration !== generation
@@ -77,14 +84,19 @@ export function useLiveEvents() {
     const connect = () => {
       if (!active) return;
       const generation = reconciler.current!.beginConnection();
+      const activityGeneration = activityReconciler.current!.beginConnection();
+      if (activityGeneration !== generation) throw new Error("Live state generations diverged");
       transportReadyGeneration.current = null;
+      setActivityRevision((revision) => revision + 1);
       setSnapshotAvailable(false);
       socket = new WebSocket(
-        `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/events`,
+        `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/events/${recipient}`,
       );
       socket.addEventListener("open", () => {
         if (active) {
           transportReadyGeneration.current = generation;
+          activityReconciler.current?.setTransportReady(generation, true);
+          setActivityRevision((revision) => revision + 1);
           setConnection("connected");
           void refresh(generation);
         }
@@ -92,6 +104,8 @@ export function useLiveEvents() {
       socket.addEventListener("close", () => {
         if (active && reconciler.current?.connectionGeneration === generation) {
           transportReadyGeneration.current = null;
+          activityReconciler.current?.setTransportReady(generation, false);
+          setActivityRevision((revision) => revision + 1);
           setSnapshotAvailable(false);
           setConnection("disconnected");
           retry = setTimeout(connect, 1200);
@@ -100,6 +114,8 @@ export function useLiveEvents() {
       socket.addEventListener("error", () => {
         if (active && reconciler.current?.connectionGeneration === generation) {
           transportReadyGeneration.current = null;
+          activityReconciler.current?.setTransportReady(generation, false);
+          setActivityRevision((revision) => revision + 1);
           setSnapshotAvailable(false);
           setConnection("error");
         }
@@ -107,8 +123,17 @@ export function useLiveEvents() {
       socket.addEventListener("message", (message) => {
         if (!active || reconciler.current?.connectionGeneration !== generation) return;
         try {
-          const envelope = AppEventEnvelopeSchema.parse(JSON.parse(String(message.data)));
-          setEvents((current) => [envelope, ...current].slice(0, 16));
+          const raw: unknown = JSON.parse(String(message.data));
+          const parsed =
+            recipient === "dashboard"
+              ? DashboardEventEnvelopeSchema.safeParse(raw)
+              : OverlayEventEnvelopeSchema.safeParse(raw);
+          if (!parsed.success) throw new Error("invalid public event");
+          const envelope = parsed.data;
+          if (recipient === "dashboard" && envelope.type === "dashboard.activity") {
+            if (activityReconciler.current?.applyActivity(envelope.payload, generation))
+              setActivityRevision((revision) => revision + 1);
+          }
           if (
             transportReadyGeneration.current === generation &&
             envelope.type === "forge.state" &&
@@ -127,7 +152,7 @@ export function useLiveEvents() {
       clearInterval(snapshotPoll);
       socket?.close();
     };
-  }, [applyForge, refresh]);
+  }, [applyForge, recipient, refresh]);
   const post = useCallback(
     async (path: string, body?: unknown): Promise<boolean> => {
       const generation = reconciler.current?.connectionGeneration ?? 0;
@@ -151,7 +176,7 @@ export function useLiveEvents() {
           setError(sanitizedForgeStartError(response.status, serverError));
           return false;
         }
-        const result = ForgeStateSchema.safeParse(await response.json());
+        const result = PublicForgeStateSchema.safeParse(await response.json());
         if (result.success) applyForge(result.data, generation);
         else
           setError("The local server returned an invalid forge state. Reconnect the server link.");
@@ -163,5 +188,11 @@ export function useLiveEvents() {
     },
     [applyForge],
   );
-  return { events, forge, connection, error, notice, post, snapshotAvailable };
+  const activity =
+    activityReconciler.current?.getActivity(
+      reconciler.current?.connectionGeneration ?? -1,
+      connection === "connected",
+      snapshotAvailable,
+    ) ?? null;
+  return { activity, forge, connection, error, notice, post, snapshotAvailable };
 }

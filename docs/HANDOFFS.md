@@ -621,16 +621,62 @@ only after they exist. Do not invent a Codex session ID; use the session's
   cohorts have perfect-cadence upper bounds and paced one-third-weakness sample
   arithmetic; queue/rate caveats are explicit. No simulation or tuning is
   claimed; owner approval remains pending.
-- **Blocking security contract:** Current normalized chat with viewer identity
-  and text is broadcast through EventHub to browser clients. M1-A must add
-  strict server-side dashboard/OBS projections, aggregate dashboard activity,
-  and sentinel privacy tests. Independent security review of that boundary is
-  mandatory before M2 can begin. No `!hit`, authoritative battle HP, or profile
-  implementation exists yet.
+- **M0-time blocking security contract:** At the locked baseline, normalized
+  chat with viewer identity and text was broadcast through EventHub. The
+  owner-authorized M1-A candidate now adds strict recipient projections,
+  aggregate dashboard activity and sentinel privacy tests; independent review
+  remains required before M1-A is accepted or M2 can begin. No `!hit`,
+  authoritative battle HP, or profile implementation exists yet.
 - **Owner decisions:** Confirm balance/default-band choices, whether recognized
   but nonmatching elements apply base damage or are rejected, and the extent of
   attack aggregates shown in OBS. See the M0 contract's decision list.
-- **Delivery gate:** This document does not authorize implementation. Request
-  independent exact-head M0 review; require separate owner authorization before
-  M1. No OAuth, Twitch activity, runtime restart, merge, deployment, publication
-  or submission is part of this work.
+- **M0-time delivery gate:** The M0 lock did not authorize implementation.
+  M1-A is now separately owner-authorized; M1-B/M2 remain outside scope. No
+  merge, deployment, publication or submission is part of this work.
+
+## M1-A privacy-safe outbound events — independent exact-head review
+
+Draft PR #9 exists on `feat/m1a-privacy-safe-events`, based on M0 main
+`d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. The original source
+implementation commit is `7eb556f5c17af426d155470ae11ff07afa3d6a0f`; the
+independently audited checkpoint was `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`.
+The initial cloud workspace's GitHub CLI `Forbidden` failure is historical:
+connected GitHub access later created Draft PR #9. The GPT-6 audit found
+MAJOR-1 (stale dashboard activity after feed loss) and MINOR-1 (stale current
+status/PR metadata). This bounded remediation adds generation- and
+server/cycle-aware aggregate reconciliation and reconciles those records.
+The exact remediation head and actual validation results are recorded in
+`docs/ACCEPTANCE.md` after push. No independent approval is implied.
+
+The remediation validation ran at commit
+`371d2934b6333623c366ed6f1a8460031bb9617f`; the linked PR shows the latest
+branch head after this handoff documentation update. Request independent
+GPT-6 review of that current PR head. The prior audit at `ec25b4a9` is not a
+review of the remediation.
+
+Please independently verify:
+
+- `NormalizedChatEvent` has no path to browser serialization; recipient DTOs
+  are explicit, strict at every nesting level, and validated immediately
+  before sending.
+- Dashboard/OBS routing is fixed by the server endpoint, cannot be changed by
+  query/role input, and initial provider status is sent to one client only.
+- Dashboard aggregates reveal no event-level viewer activity; counters are
+  bounded, coalesced, and reset with forge/provider lifecycle changes. On the
+  client they must also be hidden immediately on feed loss, isolated to the
+  active connection generation, and withheld until fresh authoritative state
+  and matching server/cycle aggregates arrive after reconnect.
+- HTTP snapshots/mutation responses and diagnostics/log error handling do not
+  carry raw identities, content, tokens, cookies, or uncontrolled errors.
+- Sentinel tests inspect actual serialized frames and HTTP/log output and
+  preserve accepted/rejected votes, provider isolation, OAuth ownership,
+  reconnect/reset behavior, and P4A freshness.
+- Run CI-equivalent commands and review browser evidence recorded in
+  `docs/ACCEPTANCE.md`. GitHub Actions is currently unavailable; do not treat
+  cloud checks as hosted CI.
+
+Codex's tests and browser captures are implementation evidence, not an
+independent approval. Request a new GPT-6 security review of the exact pushed
+head on <https://github.com/mrdzyn/bossforge/pull/9>. M1-A remains pending
+until that independent exact-head review passes and the owner separately
+authorizes any merge.

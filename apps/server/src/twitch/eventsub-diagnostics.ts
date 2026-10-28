@@ -75,6 +75,10 @@ export interface EventSubDiagnosticsSnapshot {
 
 const zeroRecord = <T extends string>(keys: readonly T[]): Record<T, number> =>
   Object.fromEntries(keys.map((key) => [key, 0])) as Record<T, number>;
+const MAX_DIAGNOSTIC_COUNT = 1_000_000;
+const incrementBounded = (record: Record<string, number>, key: string): void => {
+  record[key] = Math.min(MAX_DIAGNOSTIC_COUNT, (record[key] ?? 0) + 1);
+};
 
 const DISCONNECT_REASONS: readonly EventSubDisconnectReason[] = [
   "socket-close",
@@ -164,24 +168,24 @@ export class EventSubDiagnostics {
   private lastDisconnect: EventSubDiagnosticsSnapshot["lastDisconnect"] = null;
 
   increment(counter: keyof EventSubDiagnosticsSnapshot["counters"]): void {
-    this.counters[counter] += 1;
+    this.counters[counter] = Math.min(MAX_DIAGNOSTIC_COUNT, this.counters[counter] + 1);
   }
 
   recordStatus(status: EventSubDiagnosticsStatus): void {
-    this.statusCounts[status] += 1;
+    incrementBounded(this.statusCounts, status);
   }
 
   recordClose(code: number | null): void {
-    this.counters.socketCloses += 1;
+    this.increment("socketCloses");
     if (code !== null && Number.isInteger(code) && code >= 1000 && code <= 4999) {
       const key = String(code);
-      this.closeCodes[key] = (this.closeCodes[key] ?? 0) + 1;
+      incrementBounded(this.closeCodes, key);
     }
   }
 
   recordSocketError(errorClass: EventSubSocketErrorClass): void {
-    this.counters.socketErrors += 1;
-    this.socketErrorClasses[errorClass] += 1;
+    this.increment("socketErrors");
+    incrementBounded(this.socketErrorClasses, errorClass);
   }
 
   recordKeepalive(elapsedMs: number, timeoutMs: number): void {
@@ -200,7 +204,7 @@ export class EventSubDiagnostics {
       timeoutMs?: number | null;
     } = {},
   ): void {
-    this.disconnectReasons[reason] += 1;
+    incrementBounded(this.disconnectReasons, reason);
     this.lastDisconnect = {
       reason,
       closeCode: detail.closeCode ?? null,
@@ -211,14 +215,14 @@ export class EventSubDiagnostics {
   }
 
   recordBallot(reason: ForgeBallotReason): void {
-    this.ballotReasons[reason] += 1;
-    if (reason === "accepted") this.counters.ballotsAccepted += 1;
-    else this.counters.ballotsRejected += 1;
+    incrementBounded(this.ballotReasons, reason);
+    if (reason === "accepted") this.increment("ballotsAccepted");
+    else this.increment("ballotsRejected");
   }
 
   recordForgeCancellation(reason: ForgeCancellationReason): void {
-    this.counters.forgeCancellations += 1;
-    this.forgeCancellationReasons[reason] += 1;
+    this.increment("forgeCancellations");
+    incrementBounded(this.forgeCancellationReasons, reason);
   }
 
   snapshot(): EventSubDiagnosticsSnapshot {

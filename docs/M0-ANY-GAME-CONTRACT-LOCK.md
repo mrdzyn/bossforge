@@ -250,7 +250,7 @@ Each row is a separate Draft PR with a narrowly named branch, own exact-head rev
 4. Confirm whether attack counters expose separate base/weakness counts on OBS or only total accepted attacks. Recommendation: OBS displays aggregate total and HP only; dashboard may show safe aggregate base/weakness/rejection counters.
 5. Approve M1-A as mandatory pre-M2 work. It closes an existing privacy exposure; it is not a claim that current browser events are safe.
 
-Until these decisions and the M0 exit audit are accepted, M1/M2 implementation remains unauthorized. The M1-B presentation preview has no battle engine; authoritative BATTLE READY and Start Battle begin in M2-A.
+This paragraph records the M0-time authorization gate. The owner has since separately authorized the bounded M1-A privacy migration on `feat/m1a-privacy-safe-events`; M1-B/M2 remain outside that authorization. The M1-B presentation preview has no battle engine; authoritative BATTLE READY and Start Battle begin in M2-A.
 
 ## 8. Deadline, fallback and release gate
 
@@ -258,7 +258,9 @@ Protect the approved PDCP-001 deadline: **November 3, 2026, 06:00 Asia/Manila**.
 
 Priority remains: (1) secure Generic OBS, (2) genuine Twitch chat attack, (3) server-authoritative HP, (4) cooperative Community Victory, (5) reliable demo/submission evidence. Defer challenges, Arena profile polish, extra themes, and advanced effects first. Preserve the existing real Twitch forge demonstration and credential-free simulation. If the server battle or privacy boundary slips, demonstrate only the completed forge/Phaser path and explicitly label the new battle incomplete; never imply Phaser combat or simulated traffic proves Twitch battle damage.
 
-## 9. Existing code observations used for this lock
+## 9. Baseline code observations used for this lock
+
+The following observations describe the code when this M0 contract was locked. The owner-authorized M1-A implementation candidate changes the chat/event boundary; see current results and audit status in `docs/STATUS.md` and `docs/ACCEPTANCE.md`.
 
 - `packages/shared/src/index.ts` currently includes viewer IDs, display names and text in `NormalizedChatEventSchema` and `AppEventEnvelopeSchema`; it also has a Phaser-oriented `BattleStateSchema` with `players`, `streamer-won`, and `community-won`. This new cooperative contract must be separate.
 - `apps/server/src/events/event-hub.ts` serializes one `AppEventPayload` and broadcasts it to every WebSocket client. `apps/server/src/app.ts` currently calls `hub.publish` for normalized mock/Twitch chat before/alongside forge processing. That browser payload is not privacy-safe; M1-A must move the boundary server-side.

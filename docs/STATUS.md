@@ -2,17 +2,24 @@
 
 ## Current snapshot — 2026-10-28
 
-- **Current baseline:** `main` at `5b30d7b3139c9f1ab74f3be46d0f4fb5d9665865`. PDCP-001 was approved for planning and merged through PR #7 at this baseline; implementation remains separately gated.
-- **P3-B / PR #5:** Completed and squash-merged to `main` at `76a5dde`. Historical C5-R2 live acceptance remains owner-supplied, not independently reproduced. OAuth/EventSub, stable connection, four-stage forge and Phaser victory were reported PASS; 3 genuine ballots were accepted and 3 rejected. Special used its no-vote default, so success in all four categories is not claimed. OBS capture was not part of that P3-B live run; separate P4A owner-supplied OBS visual QA is recorded below.
-- **Automated P3-B evidence:** 124 tests and workspace gates passed at implementation commit `279ff63fc803921310226d9c6903a029af7f0bd5`; those fake-network results are separate from the owner-supplied live run.
-- **Phase 4-A scope:** Exact canonical chat syntax and valid choices for the current stage, a visible countdown, current vote totals and a tie-aware leader, explicit default/community attribution, and separate live/simulated/disconnected labels. Live prompts require both a verified Twitch-connected forge snapshot and a connected local event feed with fresh authoritative state. Local feed loss suppresses stale vote details and reports the live vote status as unknown. The OBS overlay remains read-only. This work does not start OAuth, the authenticated runtime, or Phase 5 submissions.
-- **Phase 4-A final acceptance:** PASS; PR #6 was squash-merged into main at the current baseline. Verified Twitch commands use `!vote <category> <choice>` for the active `body`, `element`, `special`, or `weakness` stage. UI distinguishes LIVE TWITCH, SIMULATED, TWITCH DISCONNECTED and SERVER LINK UNAVAILABLE / LIVE VOTE STATUS UNKNOWN; live data requires a connected feed and fresh authoritative state. Leaders are tie-aware; final outcomes distinguish COMMUNITY VOTE from DEFAULT · No valid votes. P4A-C2 mobile clipping remediation and responsive Chromium QA PASS. The independent exact-head source review passed at `0296f11`.
-- **Phase 4-A evidence:** The 149-test suite previously passed (29 shared / 19 web / 101 server); frozen install, build, typecheck, lint, format, four-category mock simulation, and `git diff --check` passed at the C2 implementation checkpoint. Automated tests, synthetic simulation, Chromium QA, owner-supplied OBS visual evidence, and historical owner-supplied P3-B live Twitch results are separate evidence categories. Details are in [acceptance](ACCEPTANCE.md#phase-4-a--streamer-voting-ux-and-obs-readiness).
-- **OBS status:** Owner-verified visual rendering in the actual OBS Studio application is **PASS** at 1920×1080 and 1280×720. The owner confirms Browser 2 native Browser Source Properties were 1280×720 with **Transform → Fit to Screen**; there was no scene-boundary clipping, the simulated disclosure and default-boss labels were correct, and no administration controls appeared. This owner-supplied simulated-mode visual QA was not independently reproduced and does not prove new live Twitch voting, live HP synchronization, or continuous animation performance. See the [owner OBS evidence](P4A-STREAMER-OBS-READINESS.md#owner-supplied-obs-visual-qa-results).
-- **PDCP-001 status:** Approved for planning and merged via PR #7 at `5b30d7b3139c9f1ab74f3be46d0f4fb5d9665865`; the prior design audit passed at `adfaa6f5000b330c393a6e50dcc20c7125d1519e` ([exact-head PASS audit](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234); [earlier findings](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6460843038)). The current EventHub broadcasts identity-bearing normalized chat to browser clients. The server-side privacy migration is not implemented and is a required M1 prerequisite before M2. `!hit` combat, authoritative battle HP, and Generic/Arena profile loading are also not implemented.
-- **M0 contract lock:** This bounded documentation-only phase is on `docs/m0-any-game-contract-lock`, based on the current main above. [M0 contract](M0-ANY-GAME-CONTRACT-LOCK.md) defines the proposed duration-by-band HP matrix and owner decisions; calculations remain paper analysis, not tested tuning. Sequencing is explicit: M1-B shows the revealed boss with “BATTLE COMING SOON” from fresh ForgeState only, with no battle state or Start Battle; M2-A adds authoritative BATTLE READY/start, and M2-B adds chat hit routing. It does not authorize M1/M2. Obtain exact-head independent audit and separate owner authorization before implementation.
-- **Phase 4-A handoff:** Its implementation, mobile QA, owner-supplied OBS acceptance, and historical 149-test result remain intact in the merged P4A records. The `!hit` battle system is not implemented.
-- **Prior checkpoint notes:** Sections below preserve the status and review gates that applied at those historical checkpoints. References there to an open or unmerged PR #5 do not describe the current repository state.
+- **Current `main`:** `d556ef124fb9c98ae6c0801c68c76e38ec83a18b`; M0 was squash-merged through PR #8. The M0 contract and prior P3-B/P4A acceptance records below remain historical evidence.
+- **M1-A / Draft PR #9:** PR #9 exists against `main` on `feat/m1a-privacy-safe-events`. The audited baseline was `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`; source implementation commit is `7eb556f5c17af426d155470ae11ff07afa3d6a0f`. The bounded MAJOR-1 aggregate-freshness and MINOR-1 status reconciliation changes are implemented and validated locally; exact pushed remediation HEAD is recorded in the latest M1-A entry in [ACCEPTANCE](ACCEPTANCE.md). The new audit has not approved M1-A; keep PR #9 Draft/unmerged and do not begin M1-B/M2.
+- **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access subsequently created Draft PR #9; the former blocker is resolved. Retain the original failure as history, not as current PR status.
+- **Validation at audited HEAD:** 151 tests (26 shared / 19 web / 106 server), frozen install, build, typecheck, lint, format, simulation, and browser screenshots were reported by the implementation agent and documented in [ACCEPTANCE](ACCEPTANCE.md). The independent reviewer did not rerun them. New remediation results will be recorded separately and must not be conflated with hosted GitHub Actions.
+- **Historical live/OBS evidence:** Genuine Twitch activity and native OBS evidence remain owner-supplied at their original checkpoints. Chromium captures are separate browser evidence and do not establish live Twitch or native OBS acceptance. See the historical P3-B and P4A sections and [acceptance](ACCEPTANCE.md).
+- **Out of scope:** No M1-B, `!hit`, battle HP/timers, Generic/Arena profile loading, live Twitch connection, deployment, or publication is authorized by this remediation.
+
+### M1-A C1 bounded remediation status
+
+- Dashboard aggregate activity now follows the live feed generation and fresh
+  authoritative forge state. Feed loss clears displayed aggregates
+  immediately; retired-generation messages are rejected; reconnect requires a
+  fresh state and activity tagged to its server instance and cycle.
+- Current PR status is Draft PR #9, created through connected GitHub access.
+  The earlier GitHub CLI `Forbidden` event remains historical evidence only.
+- Cloud/local validation and the remediation commit are recorded in
+  [ACCEPTANCE](ACCEPTANCE.md). GitHub Actions remains unavailable, and the
+  independent GPT-6 exact-head review is pending.
 
 ## P3-B-C2 remediation checkpoint
 
@@ -162,3 +169,26 @@ A verified local Twitch broadcaster logs in securely; server-side EventSub recei
 - [Roadmap](ROADMAP.md)
 - [Acceptance evidence](ACCEPTANCE.md)
 - [Handoffs](HANDOFFS.md)
+
+## M1-A privacy-safe outbound events — implementation candidate
+
+- Implemented on `feat/m1a-privacy-safe-events` from expected M0 main SHA
+  `d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. Raw normalized mock and Twitch
+  chat remains server-internal; public dashboard and OBS WebSocket endpoints
+  use separate strict versioned schemas and explicit projections. HTTP forge
+  snapshots and mutation responses use the same allowlist projection.
+- Dashboard activity contains bounded aggregate accepted/rejected counts and
+  fixed reason buckets, reset at forge-cycle and provider lifecycle changes.
+  The dashboard no longer renders viewer names, avatars, or chat text. OBS is
+  read-only and receives no aggregate activity. Legacy `/events` is pinned to
+  the dashboard DTO and cannot publish raw chat.
+- Validation recorded in `docs/ACCEPTANCE.md`: frozen install, build,
+  typecheck, lint, format check, 151 tests, local synthetic simulation, and
+  real Chromium dashboard/overlay screenshots. No hosted CI, real Twitch
+  session, or native OBS run was performed. Independent exact-head security
+  review is pending; M1-A is not accepted until that audit passes.
+- Implementation is pushed to origin as commit
+  `7eb556f5c17af426d155470ae11ff07afa3d6a0f`; Draft PR #9 was subsequently
+  created through connected GitHub access. The original GitHub CLI `Forbidden`
+  failure is retained as a historical environment issue and is not a current
+  PR-creation blocker.

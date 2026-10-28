@@ -822,3 +822,116 @@ No application tests were rerun for the documentation-only acceptance update
 at the time of the original closure. PR #6 has since been squash-merged into
 `main`; this record preserves the acceptance evidence and its original audit
 history.
+
+## M1-A privacy-safe outbound events — candidate validation
+
+**Scope:** remove normalized mock/Twitch chat from browser serialization while
+preserving forge, voting, OAuth/EventSub handling, simulation, and P4A
+freshness. Implemented on branch `feat/m1a-privacy-safe-events`, based on
+`d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. The exact implementation SHA is
+`7eb556f5c17af426d155470ae11ff07afa3d6a0f`; a follow-up commit records the
+GitHub API delivery blocker. No independent audit has passed.
+
+| Check          | Actual result                                                                                                                                                                                                                                                                                      |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Environment    | Node `v24.19.0`; pnpm `11.25.0`; Chromium `154.0.8037.57`; Linux Debian 13 cloud workspace. `AGENTS.md` and `config/project-profile.json` were absent.                                                                                                                                             |
+| Frozen install | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm --store-dir /tmp/bossforge-pnpm-store install --frozen-lockfile` — passed; lockfile unchanged and 297 packages installed. The explicit temporary pnpm store is required by this restricted cloud filesystem. |
+| Build          | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm build` — passed. Existing Vite warning remains for the large Phaser arena chunk.                                                                                                                             |
+| Typecheck      | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm typecheck` — passed.                                                                                                                                                                                         |
+| Lint           | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm lint` — passed.                                                                                                                                                                                              |
+| Format         | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm format:check` — passed.                                                                                                                                                                                      |
+| Full tests     | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm test` — passed: 151 tests (26 shared, 19 web, 106 server).                                                                                                                                                   |
+| Simulation     | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store BOSSFORGE_URL=http://127.0.0.1:3123 pnpm simulate` against a loopback development server — passed. Four categories completed with two synthetic votes each; Thunder Tempest was revealed.                         |
+| Diff check     | `git diff --check` — passed after documentation and evidence updates.                                                                                                                                                                                                                              |
+
+**Wire privacy evidence:** tests inspect serialized Dashboard and OBS WebSocket
+frames, HTTP state snapshots and mutation responses, owner diagnostics, and
+captured request-log arguments. Unique sentinels for mock/Twitch viewer IDs and
+names, message IDs and text, OAuth token/cookie/secret fields, and a complete
+provider-error object are absent. The fake Twitch EventSub notification still
+changes the correct server-side vote total. Dashboard accepts strict forge,
+connection, and aggregate envelopes; OBS accepts only forge and connection
+envelopes. Nested identity injection, legacy `chat.event`, and unknown public
+fields fail schema validation. Recipient query-parameter attempts do not alter
+the fixed route projection. Initial state is delivered only to the subscribing
+socket. The mock integration verifies accepted, rejected, replayed and
+malformed events, with accurate aggregate counts and reset on forge lifecycle.
+
+**Chromium smoke:** actual headless Chromium rendered the dashboard at 1440×900
+and 390×844 and `/overlay` at 1920×1080 and 1280×720. Dashboard mobile
+`scrollWidth` matched its 390px viewport; both overlay viewports matched their
+viewport widths and heights. Dashboard controls and simulated status were
+present; OBS had no buttons. No browser console exceptions, console errors,
+failed requests, or HTTP responses ≥400 were recorded during captures.
+Screenshots: [dashboard desktop](visual-qa/m1a-dashboard-1440x900.png),
+[dashboard mobile](visual-qa/m1a-dashboard-390x844.png),
+[overlay 1920×1080](visual-qa/m1a-overlay-1920x1080.png),
+[overlay 1280×720](visual-qa/m1a-overlay-1280x720.png). These are browser
+captures, not native OBS Studio QA. Browser renders used a completed synthetic
+forge cycle; no live Twitch or credentials were used.
+
+**Limitations and gate:** GitHub Actions was unavailable; these are cloud
+workspace results, not hosted CI. No live Twitch OAuth/EventSub connection or
+native OBS application was used. The app test's captured error-log assertion
+proves only the exercised Fastify request-failure path. Independent GPT-6
+security review of the exact pushed head is still required. M1-A is not
+accepted until that independent review passes; do not start M1-B/M2 or merge.
+
+**Historical delivery status:** source implementation commit
+`7eb556f5c17af426d155470ae11ff07afa3d6a0f` was pushed to
+`origin/feat/m1a-privacy-safe-events`. The first cloud workspace could not
+create a PR because GitHub CLI API access returned `Forbidden` with an invalid
+`GH_TOKEN`; connected GitHub access later opened Draft PR #9. The original
+failure is preserved here as history and no longer describes current PR state.
+
+**Independent review history:** Draft PR #9 exists at the audited HEAD
+`ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`. The GPT-6 audit found MAJOR-1
+(stale dashboard activity after feed loss) and MINOR-1 (stale milestone/PR
+status). This checkpoint is a remediation candidate only; do not infer audit
+approval from implementation tests.
+
+## M1-A C1 — bounded aggregate freshness and status remediation
+
+**Scope:** MAJOR-1 and MINOR-1 from the independent GPT-6 review of PR #9 only.
+The dashboard activity feed is now cleared on disconnect/error and connection
+generation changes, accepts activity only for the current generation, and
+reveals activity again only after a fresh authoritative forge state and
+matching server-instance/cycle aggregate. Server aggregate snapshots carry the
+same server/cycle identity as the state they accompany; stale server/cycle
+activity is discarded. Public event schemas remain strict. No M1-B/M2 work was
+added.
+
+**Deterministic regression evidence:** the client reconciler tests cover
+activity visible → immediate feed-loss clearing → old-generation rejection →
+reconnect waiting for fresh state/activity, activity arriving before state,
+and old server/cycle rejection. Dashboard rendering tests verify stale counts
+are hidden behind the unknown-state message. Server tests verify aggregate
+frames are tagged to the latest preceding authoritative forge-state frame.
+Targeted results: Web 11/11, Server 25/25, Shared contracts 3/3 passed.
+
+**Full cloud/local CI-equivalent validation:** Debian 13 workspace, Node
+`v24.19.0`, pnpm `11.25.0`; `AGENTS.md` and
+`config/project-profile.json` were absent. All commands used
+`CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store`.
+
+| Gate            | Result                                                                                                                                                                                 |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frozen install  | `pnpm --store-dir /tmp/bossforge-pnpm-store install --frozen-lockfile` — passed; lockfile unchanged.                                                                                   |
+| Build           | `pnpm build` — passed; existing Vite warning remains for the large Phaser arena chunk.                                                                                                 |
+| Typecheck       | `pnpm typecheck` — passed.                                                                                                                                                             |
+| Lint            | `pnpm lint` — passed.                                                                                                                                                                  |
+| Formatting      | `pnpm format:check` — passed.                                                                                                                                                          |
+| Full test suite | `pnpm test` — passed: 155 tests (26 shared / 23 web / 106 server).                                                                                                                     |
+| Simulation      | `BOSSFORGE_URL=http://127.0.0.1:3001 pnpm simulate` against a loopback development server — passed; all four categories received two synthetic votes and Thunder Tempest was revealed. |
+| Whitespace      | `git diff --check` — passed.                                                                                                                                                           |
+
+GitHub Actions was unavailable; these are local/cloud CI-equivalent results,
+not hosted CI. No browser or OBS changes were required for this bounded state
+reconciliation; no live Twitch connection was started. The initial GitHub CLI
+`Forbidden` event is retained above as history. Draft PR #9 exists, and the
+branch is pushed through the connected GitHub integration. These checks ran
+against remediation commit `371d2934b6333623c366ed6f1a8460031bb9617f`; the
+prior independent audit covered `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`.
+The latest branch head is shown on the linked Draft PR #9. Request a new GPT-6
+review of that exact current head. M1-A remains unapproved until the review
+passes; keep PR #9 Draft and do not merge, publish, or start M1-B/M2.

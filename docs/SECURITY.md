@@ -1,5 +1,30 @@
 # Security notes
 
+## M1-A public event privacy boundary
+
+- `NormalizedChatEvent` is an internal server contract. Do not add it to any
+  browser event schema or publish it through `EventHub`.
+- Dashboard events use `DashboardEventEnvelopeSchema`; OBS events use the
+  smaller `OverlayEventEnvelopeSchema`. Both families are versioned, strict,
+  and reject unknown fields at every nested public object. Build outbound DTOs
+  explicitly on the server and validate with the recipient schema immediately
+  before serialization and send.
+- Dashboard may receive only forge state, public connection state, and bounded
+  aggregate activity with fixed reason codes. OBS receives only forge and
+  connection state. Recipient selection is fixed by `/events/dashboard` or
+  `/events/overlay`; query parameters or client-supplied roles never authorize
+  routing. The legacy `/events` path is dashboard-only and has the same strict
+  boundary.
+- Do not publish a chat event to browser clients, including mock simulation.
+  Do not retain viewer activity history for UI display. HTTP forge snapshots,
+  start/reset responses, diagnostics, and logs must use allowlisted data and
+  must not include viewer identity, message identifiers/text, OAuth data,
+  cookies, or full provider error objects.
+- Aggregate counts saturate at a fixed bound and reset on forge-cycle,
+  provider-mode, disconnect, and reset lifecycle transitions. EventSub
+  diagnostics use fixed classifications and bounded counters. Connection
+  subscriptions receive initial state only on their own socket.
+
 ## Development-mode boundaries (Phase 0 and Phase 1)
 
 - No real credentials or Twitch tokens belong in the repository, browser bundle,

@@ -6,12 +6,6 @@ export * from "./voting-presentation.js";
 export const ProviderSchema = z.enum(["mock", "twitch"]);
 export type Provider = z.infer<typeof ProviderSchema>;
 
-export const ViewerIdentitySchema = z.object({
-  id: z.string().min(1).max(64),
-  displayName: z.string().min(1).max(50),
-});
-export type ViewerIdentity = z.infer<typeof ViewerIdentitySchema>;
-
 export const VoteCategorySchema = z.enum(["body", "element", "special", "weakness"]);
 export type VoteCategory = z.infer<typeof VoteCategorySchema>;
 
@@ -28,36 +22,6 @@ export function parseVoteCommand(text: string): VoteCommand | undefined {
   if (!match?.[1] || !match[2]) return undefined;
   return VoteCommandSchema.parse({ category: match[1].toLowerCase(), choice: match[2] });
 }
-
-export const ChatMessageSchema = z.object({
-  id: z.string().min(1).max(100),
-  viewer: ViewerIdentitySchema,
-  text: z.string().max(500),
-  occurredAt: z.string().datetime(),
-  command: VoteCommandSchema.optional(),
-});
-export type ChatMessage = z.infer<typeof ChatMessageSchema>;
-
-export const NormalizedChatEventSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("viewer.connected"),
-    provider: ProviderSchema,
-    viewer: ViewerIdentitySchema,
-    occurredAt: z.string().datetime(),
-  }),
-  z.object({
-    kind: z.literal("chat.message"),
-    provider: ProviderSchema,
-    message: ChatMessageSchema,
-  }),
-  z.object({
-    kind: z.literal("viewer.disconnected"),
-    provider: ProviderSchema,
-    viewer: ViewerIdentitySchema,
-    occurredAt: z.string().datetime(),
-  }),
-]);
-export type NormalizedChatEvent = z.infer<typeof NormalizedChatEventSchema>;
 
 export const VoteSessionConfigSchema = z.object({
   id: z.string().min(1).max(100),
@@ -161,18 +125,6 @@ export const RevealedForgeStateSchema = ForgeStateBaseSchema.extend({
 }).superRefine(refineForgeMode);
 export type RevealedForgeState = z.infer<typeof RevealedForgeStateSchema>;
 
-export const ForgeStateEventSchema = z
-  .object({
-    kind: z.literal("forge.state"),
-    source: ProviderSchema,
-    state: ForgeStateSchema,
-  })
-  .superRefine((event, context) => {
-    if (event.source !== event.state.mode)
-      context.addIssue({ code: "custom", message: "Forge event source must match forge mode" });
-  });
-export type ForgeStateEvent = z.infer<typeof ForgeStateEventSchema>;
-
 export const BattlePlayerSchema = z.object({
   id: z.string().min(1).max(100),
   displayName: z.string().min(1).max(50),
@@ -189,55 +141,140 @@ export const BattleStateSchema = z.object({
 });
 export type BattleState = z.infer<typeof BattleStateSchema>;
 
-export const ConnectionStatusSchema = z.object({
-  kind: z.literal("connection.status"),
-  source: ProviderSchema,
-  status: z.enum(["connecting", "connected", "disconnected", "error"]),
-});
-export type ConnectionStatus = z.infer<typeof ConnectionStatusSchema>;
+// Public wire contracts are deliberately separate from NormalizedChatEvent and
+// use strict objects at every level. Internal chat identities/text must never
+// become valid public payloads.
+const PublicBossAttributesSchema = z
+  .object({
+    body: BossAttributesSchema.shape.body,
+    element: BossAttributesSchema.shape.element,
+    special: BossAttributesSchema.shape.special,
+    weakness: BossAttributesSchema.shape.weakness,
+  })
+  .strict();
+const PublicBossSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+    name: z.string().trim().min(1).max(60),
+    attributes: PublicBossAttributesSchema,
+    stats: z
+      .object({
+        health: z.number().int().min(1).max(100_000),
+        damage: z.number().int().min(1).max(1_000),
+        attackIntervalMs: z.number().int().min(100).max(60_000),
+      })
+      .strict(),
+  })
+  .strict();
+const PublicForgeOptionSchema = z
+  .object({
+    choice: z.string().min(1).max(40),
+    count: z.number().int().min(0).max(10_000),
+    percentage: z.number().int().min(0).max(100),
+  })
+  .strict();
+const PublicForgeCategorySchema = z
+  .object({
+    category: VoteCategorySchema,
+    status: z.enum(["pending", "open", "closed"]),
+    options: z.array(PublicForgeOptionSchema).min(2).max(12),
+    totalVotes: z.number().int().min(0).max(10_000),
+    openedAt: z.string().datetime().nullable(),
+    closesAt: z.string().datetime().nullable(),
+    winner: z.string().min(1).max(40).nullable(),
+    noVoteFallback: z.boolean(),
+  })
+  .strict();
+export const PublicForgeStateSchema = z
+  .object({
+    serverInstanceId: z.string().min(1).max(100),
+    serverStartedAt: z.string().datetime(),
+    revision: z.number().int().min(0),
+    cycleId: z.string().min(1).max(100).nullable(),
+    status: z.enum(["idle", "voting", "revealed"]),
+    mode: ProviderSchema,
+    simulated: z.boolean(),
+    connectedToTwitch: z.boolean(),
+    durationSeconds: z.number().int().min(5).max(60),
+    startedAt: z.string().datetime().nullable(),
+    activeCategory: VoteCategorySchema.nullable(),
+    progress: z.number().int().min(0).max(4),
+    categories: z.array(PublicForgeCategorySchema).length(4),
+    boss: PublicBossSchema.nullable(),
+  })
+  .strict()
+  .superRefine(refineForgeMode);
+export type PublicForgeState = z.infer<typeof PublicForgeStateSchema>;
 
-export const AppEventPayloadSchema = z.union([
-  NormalizedChatEventSchema,
-  ConnectionStatusSchema,
-  ForgeStateEventSchema,
-]);
-export type AppEventPayload = z.infer<typeof AppEventPayloadSchema>;
-
-export const AppEventEnvelopeSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("chat.event"),
-    schemaVersion: z.literal(1),
-    id: z.string().uuid(),
-    timestamp: z.string().datetime(),
-    payload: NormalizedChatEventSchema,
-  }),
-  z.object({
-    type: z.literal("connection.status"),
-    schemaVersion: z.literal(1),
-    id: z.string().uuid(),
-    timestamp: z.string().datetime(),
-    payload: ConnectionStatusSchema,
-  }),
-  z.object({
+const PublicConnectionStatusSchema = z
+  .object({
+    kind: z.literal("connection.status"),
+    source: ProviderSchema,
+    status: z.enum(["connecting", "connected", "disconnected", "error"]),
+  })
+  .strict();
+const PublicForgeStateEventSchema = z
+  .object({
+    kind: z.literal("forge.state"),
+    source: ProviderSchema,
+    state: PublicForgeStateSchema,
+  })
+  .strict()
+  .superRefine((event, context) => {
+    if (event.source !== event.state.mode)
+      context.addIssue({ code: "custom", message: "Forge event source must match forge mode" });
+  });
+export const DashboardActivitySchema = z
+  .object({
+    serverInstanceId: z.string().min(1).max(100),
+    cycleId: z.string().min(1).max(100).nullable(),
+    accepted: z.number().int().min(0).max(10_000),
+    rejected: z.number().int().min(0).max(10_000),
+    reasons: z
+      .object({
+        invalid: z.number().int().min(0).max(10_000),
+        duplicate: z.number().int().min(0).max(10_000),
+        inactive: z.number().int().min(0).max(10_000),
+        other: z.number().int().min(0).max(10_000),
+      })
+      .strict(),
+  })
+  .strict();
+export type DashboardActivity = z.infer<typeof DashboardActivitySchema>;
+const PublicEnvelopeBase = {
+  schemaVersion: z.literal(1),
+  id: z.string().uuid(),
+  timestamp: z.string().datetime(),
+} as const;
+const DashboardForgeEnvelope = z
+  .object({
+    ...PublicEnvelopeBase,
     type: z.literal("forge.state"),
-    schemaVersion: z.literal(1),
-    id: z.string().uuid(),
-    timestamp: z.string().datetime(),
-    payload: ForgeStateEventSchema,
-  }),
+    payload: PublicForgeStateEventSchema,
+  })
+  .strict();
+const DashboardConnectionEnvelope = z
+  .object({
+    ...PublicEnvelopeBase,
+    type: z.literal("connection.status"),
+    payload: PublicConnectionStatusSchema,
+  })
+  .strict();
+const DashboardActivityEnvelope = z
+  .object({
+    ...PublicEnvelopeBase,
+    type: z.literal("dashboard.activity"),
+    payload: DashboardActivitySchema,
+  })
+  .strict();
+export const DashboardEventEnvelopeSchema = z.discriminatedUnion("type", [
+  DashboardForgeEnvelope,
+  DashboardConnectionEnvelope,
+  DashboardActivityEnvelope,
 ]);
-export type AppEventEnvelope = z.infer<typeof AppEventEnvelopeSchema>;
-
-export function createEventEnvelope(
-  payload: AppEventPayload,
-  id: string,
-  timestamp: string,
-): AppEventEnvelope {
-  const type =
-    payload.kind === "connection.status"
-      ? "connection.status"
-      : payload.kind === "forge.state"
-        ? "forge.state"
-        : "chat.event";
-  return AppEventEnvelopeSchema.parse({ type, schemaVersion: 1, id, timestamp, payload });
-}
+export type DashboardEventEnvelope = z.infer<typeof DashboardEventEnvelopeSchema>;
+export const OverlayEventEnvelopeSchema = z.discriminatedUnion("type", [
+  DashboardForgeEnvelope,
+  DashboardConnectionEnvelope,
+]);
+export type OverlayEventEnvelope = z.infer<typeof OverlayEventEnvelopeSchema>;

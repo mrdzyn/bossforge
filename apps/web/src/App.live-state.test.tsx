@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ForgeState } from "@bossforge/shared";
+import type { DashboardActivity, ForgeState } from "@bossforge/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockedHook = vi.hoisted(() => ({ value: null as unknown }));
@@ -51,13 +51,24 @@ function installHookState({
   connection = "connected",
   snapshotAvailable = true,
   forge = makeState(),
+  activity,
 }: {
   connection?: string;
   snapshotAvailable?: boolean;
   forge?: ForgeState | null;
+  activity?: DashboardActivity | null;
 } = {}) {
   mockedHook.value = {
-    events: [],
+    activity:
+      activity === undefined
+        ? {
+            serverInstanceId: forge?.serverInstanceId ?? "test-server",
+            cycleId: forge?.cycleId ?? null,
+            accepted: 2,
+            rejected: 0,
+            reasons: { invalid: 0, duplicate: 0, inactive: 0, other: 0 },
+          }
+        : activity,
     forge,
     connection,
     error: "",
@@ -93,6 +104,9 @@ describe("actual dashboard and overlay live state composition", () => {
       expect(html).not.toContain("15s");
     }
     expect(dashboard).toContain("Vote total unknown");
+    expect(dashboard).toContain("Vote activity unknown");
+    expect(dashboard).not.toContain("accepted votes</span>");
+    expect(dashboard).not.toContain("<strong>2</strong>");
   });
 
   it("keeps an HTTP refresh failure unknown while the socket is open", () => {
@@ -105,6 +119,25 @@ describe("actual dashboard and overlay live state composition", () => {
       expect(html).not.toContain("!vote body drake");
       expect(html).not.toContain("4 votes");
     }
+    expect(dashboard).toContain("Vote activity unknown");
+  });
+
+  it("hides aggregates from another server epoch or forge cycle", () => {
+    const current = makeState();
+    installHookState({
+      forge: current,
+      activity: {
+        serverInstanceId: "retired-server",
+        cycleId: "retired-cycle",
+        accepted: 99,
+        rejected: 88,
+        reasons: { invalid: 77, duplicate: 0, inactive: 0, other: 0 },
+      },
+    });
+    const dashboard = renderToStaticMarkup(<Dashboard />);
+    expect(dashboard).toContain("Vote activity unknown");
+    expect(dashboard).not.toContain("99");
+    expect(dashboard).not.toContain("88");
   });
 
   it("restores prompts only after fresh state is reconciled following reconnect", () => {
