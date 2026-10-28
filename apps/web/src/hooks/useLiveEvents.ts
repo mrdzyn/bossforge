@@ -4,19 +4,17 @@ import {
   OverlayEventEnvelopeSchema,
   ForgeStateReconciler,
   PublicForgeStateSchema,
-  type DashboardActivity,
   type ForgeState,
 } from "@bossforge/shared";
 import { isTwitchVoteCancelled, sanitizedForgeStartError } from "../live-forge-ui.js";
+import { DashboardActivityReconciler } from "../dashboard-activity-reconciler.js";
 
 export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") {
   const reconciler = useRef<ForgeStateReconciler | null>(null);
   if (!reconciler.current) reconciler.current = new ForgeStateReconciler();
-  const [activity, setActivity] = useState<DashboardActivity>({
-    accepted: 0,
-    rejected: 0,
-    reasons: { invalid: 0, duplicate: 0, inactive: 0, other: 0 },
-  });
+  const activityReconciler = useRef<DashboardActivityReconciler | null>(null);
+  if (!activityReconciler.current) activityReconciler.current = new DashboardActivityReconciler();
+  const [, setActivityRevision] = useState(0);
   const [forge, setForge] = useState<ForgeState | null>(null);
   const forgeRef = useRef<ForgeState | null>(null);
   const [snapshotAvailable, setSnapshotAvailable] = useState(false);
@@ -35,7 +33,11 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
       else if (next.status === "voting" || next.status === "revealed") setNotice("");
       forgeRef.current = next;
       setForge(next);
-      if (transportReadyGeneration.current === generation) setSnapshotAvailable(true);
+      if (transportReadyGeneration.current === generation) {
+        activityReconciler.current?.applyForgeState(next, generation);
+        setActivityRevision((revision) => revision + 1);
+        setSnapshotAvailable(true);
+      }
       appliedVersion.current += 1;
     }
   }, []);
@@ -82,7 +84,10 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
     const connect = () => {
       if (!active) return;
       const generation = reconciler.current!.beginConnection();
+      const activityGeneration = activityReconciler.current!.beginConnection();
+      if (activityGeneration !== generation) throw new Error("Live state generations diverged");
       transportReadyGeneration.current = null;
+      setActivityRevision((revision) => revision + 1);
       setSnapshotAvailable(false);
       socket = new WebSocket(
         `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/events/${recipient}`,
@@ -90,6 +95,8 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
       socket.addEventListener("open", () => {
         if (active) {
           transportReadyGeneration.current = generation;
+          activityReconciler.current?.setTransportReady(generation, true);
+          setActivityRevision((revision) => revision + 1);
           setConnection("connected");
           void refresh(generation);
         }
@@ -97,6 +104,8 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
       socket.addEventListener("close", () => {
         if (active && reconciler.current?.connectionGeneration === generation) {
           transportReadyGeneration.current = null;
+          activityReconciler.current?.setTransportReady(generation, false);
+          setActivityRevision((revision) => revision + 1);
           setSnapshotAvailable(false);
           setConnection("disconnected");
           retry = setTimeout(connect, 1200);
@@ -105,6 +114,8 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
       socket.addEventListener("error", () => {
         if (active && reconciler.current?.connectionGeneration === generation) {
           transportReadyGeneration.current = null;
+          activityReconciler.current?.setTransportReady(generation, false);
+          setActivityRevision((revision) => revision + 1);
           setSnapshotAvailable(false);
           setConnection("error");
         }
@@ -119,8 +130,10 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
               : OverlayEventEnvelopeSchema.safeParse(raw);
           if (!parsed.success) throw new Error("invalid public event");
           const envelope = parsed.data;
-          if (recipient === "dashboard" && envelope.type === "dashboard.activity")
-            setActivity(envelope.payload);
+          if (recipient === "dashboard" && envelope.type === "dashboard.activity") {
+            if (activityReconciler.current?.applyActivity(envelope.payload, generation))
+              setActivityRevision((revision) => revision + 1);
+          }
           if (
             transportReadyGeneration.current === generation &&
             envelope.type === "forge.state" &&
@@ -175,5 +188,11 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
     },
     [applyForge],
   );
+  const activity =
+    activityReconciler.current?.getActivity(
+      reconciler.current?.connectionGeneration ?? -1,
+      connection === "connected",
+      snapshotAvailable,
+    ) ?? null;
   return { activity, forge, connection, error, notice, post, snapshotAvailable };
 }

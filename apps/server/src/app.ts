@@ -69,7 +69,15 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
     reasons: { invalid: 0, duplicate: 0, inactive: 0, other: 0 },
   };
   let activityTimer: ReturnType<typeof setTimeout> | undefined;
+  let activityServerInstanceId: string | null = null;
   let activityCycleId: string | null = null;
+  const activityForState = (state: ForgeState) => ({
+    serverInstanceId: state.serverInstanceId,
+    cycleId: state.cycleId,
+    accepted: activity.accepted,
+    rejected: activity.rejected,
+    reasons: { ...activity.reasons },
+  });
   const resetActivity = (cycleId: string | null) => {
     if (activityTimer) clearTimeout(activityTimer);
     activityTimer = undefined;
@@ -79,9 +87,11 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       rejected: 0,
       reasons: { invalid: 0, duplicate: 0, inactive: 0, other: 0 },
     };
-    hub.publishDashboard(activity);
   };
-  const sendActivity = () => hub.publishDashboard(activity);
+  const sendActivity = () => {
+    activityTimer = undefined;
+    hub.publishDashboard(activityForState(forge.getState()));
+  };
   const recordBallot = (reason: import("./twitch/eventsub-diagnostics.js").ForgeBallotReason) => {
     if (reason === "accepted") activity.accepted = Math.min(10_000, activity.accepted + 1);
     else {
@@ -105,12 +115,22 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       }, 300);
   };
   const publishForgeState = (state: ForgeState, source: "mock" | "twitch") => {
-    if (state.status === "voting" && state.cycleId !== activityCycleId)
+    let reset = false;
+    if (state.serverInstanceId !== activityServerInstanceId) {
+      activityServerInstanceId = state.serverInstanceId;
       resetActivity(state.cycleId);
-    else if (state.status === "idle" && activityCycleId !== null) resetActivity(null);
+      reset = true;
+    } else if (state.status === "voting" && state.cycleId !== activityCycleId) {
+      resetActivity(state.cycleId);
+      reset = true;
+    } else if (state.status === "idle" && activityCycleId !== null) {
+      resetActivity(null);
+      reset = true;
+    }
     const payload = { kind: "forge.state" as const, source, state };
     hub.publishDashboard(payload);
     hub.publishOverlay(payload);
+    if (reset) hub.publishDashboard(activityForState(state));
   };
   const publishConnection = (
     source: "mock" | "twitch",
@@ -435,10 +455,11 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
   const subscribe = (recipient: "dashboard" | "overlay") => (socket: WebSocket) => {
     if (recipient === "dashboard") {
       hub.addDashboardClient(socket);
-      hub.sendDashboard(socket, { kind: "forge.state", source: provider, state: forge.getState() });
+      const state = forge.getState();
+      hub.sendDashboard(socket, { kind: "forge.state", source: provider, state });
       const connection = initialConnection();
       hub.sendDashboard(socket, { kind: "connection.status", ...connection });
-      hub.sendDashboard(socket, activity);
+      hub.sendDashboard(socket, activityForState(state));
     } else {
       hub.addOverlayClient(socket);
       hub.sendOverlay(socket, { kind: "forge.state", source: provider, state: forge.getState() });

@@ -224,6 +224,13 @@ export function Dashboard() {
     activity,
   } = useLiveEvents();
   const forge = connection === "connected" && snapshotAvailable ? cachedForge : null;
+  const currentActivity =
+    activity &&
+    forge &&
+    activity.serverInstanceId === forge.serverInstanceId &&
+    activity.cycleId === forge.cycleId
+      ? activity
+      : null;
   const [seconds, setSeconds] = useState(0);
   const [durationSeconds, setDurationSeconds] = useState<ForgeDuration>(15);
   const [diagnostics, setDiagnostics] = useState<string | null>(null);
@@ -626,30 +633,38 @@ export function Dashboard() {
                   )}
                 </div>
                 <div className="event-feed" aria-live="polite">
-                  <div className="event-row">
-                    <div className="event-copy">
-                      <strong>{activity.accepted}</strong>
-                      <span>accepted votes</span>
-                    </div>
-                  </div>
-                  <div className="event-row">
-                    <div className="event-copy">
-                      <strong>{activity.rejected}</strong>
-                      <span>rejected events</span>
-                    </div>
-                  </div>
-                  <div className="event-row">
-                    <div className="event-copy">
-                      <strong>{activity.reasons.invalid}</strong>
-                      <span>invalid input</span>
-                    </div>
-                  </div>
-                  <div className="event-row">
-                    <div className="event-copy">
-                      <strong>{activity.reasons.duplicate}</strong>
-                      <span>duplicate or unchanged</span>
-                    </div>
-                  </div>
+                  {currentActivity ? (
+                    <>
+                      <div className="event-row">
+                        <div className="event-copy">
+                          <strong>{currentActivity.accepted}</strong>
+                          <span>accepted votes</span>
+                        </div>
+                      </div>
+                      <div className="event-row">
+                        <div className="event-copy">
+                          <strong>{currentActivity.rejected}</strong>
+                          <span>rejected events</span>
+                        </div>
+                      </div>
+                      <div className="event-row">
+                        <div className="event-copy">
+                          <strong>{currentActivity.reasons.invalid}</strong>
+                          <span>invalid input</span>
+                        </div>
+                      </div>
+                      <div className="event-row">
+                        <div className="event-copy">
+                          <strong>{currentActivity.reasons.duplicate}</strong>
+                          <span>duplicate or unchanged</span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="muted">
+                      Vote activity unknown until a fresh feed and server state are available.
+                    </p>
+                  )}
                 </div>
               </article>
             </div>

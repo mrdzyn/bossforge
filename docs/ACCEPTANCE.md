@@ -877,12 +877,61 @@ proves only the exercised Fastify request-failure path. Independent GPT-6
 security review of the exact pushed head is still required. M1-A is not
 accepted until that independent review passes; do not start M1-B/M2 or merge.
 
-**Delivery status:** commit `7eb556f5c17af426d155470ae11ff07afa3d6a0f` was
-successfully pushed to `origin/feat/m1a-privacy-safe-events`. Draft PR creation
-failed with GitHub API `Forbidden`; `gh auth status` reports that the configured
-`GH_TOKEN` is invalid, and with `GH_TOKEN` unset there is no logged-in session.
-Therefore no Draft PR or independent review request exists yet. Create it from
-the pushed branch at
-<https://github.com/mrdzyn/bossforge/pull/new/feat/m1a-privacy-safe-events>
-after workspace GitHub API authorization is restored. No credential value was
-requested or printed.
+**Historical delivery status:** source implementation commit
+`7eb556f5c17af426d155470ae11ff07afa3d6a0f` was pushed to
+`origin/feat/m1a-privacy-safe-events`. The first cloud workspace could not
+create a PR because GitHub CLI API access returned `Forbidden` with an invalid
+`GH_TOKEN`; connected GitHub access later opened Draft PR #9. The original
+failure is preserved here as history and no longer describes current PR state.
+
+**Independent review history:** Draft PR #9 exists at the audited HEAD
+`ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`. The GPT-6 audit found MAJOR-1
+(stale dashboard activity after feed loss) and MINOR-1 (stale milestone/PR
+status). This checkpoint is a remediation candidate only; do not infer audit
+approval from implementation tests.
+
+## M1-A C1 — bounded aggregate freshness and status remediation
+
+**Scope:** MAJOR-1 and MINOR-1 from the independent GPT-6 review of PR #9 only.
+The dashboard activity feed is now cleared on disconnect/error and connection
+generation changes, accepts activity only for the current generation, and
+reveals activity again only after a fresh authoritative forge state and
+matching server-instance/cycle aggregate. Server aggregate snapshots carry the
+same server/cycle identity as the state they accompany; stale server/cycle
+activity is discarded. Public event schemas remain strict. No M1-B/M2 work was
+added.
+
+**Deterministic regression evidence:** the client reconciler tests cover
+activity visible → immediate feed-loss clearing → old-generation rejection →
+reconnect waiting for fresh state/activity, activity arriving before state,
+and old server/cycle rejection. Dashboard rendering tests verify stale counts
+are hidden behind the unknown-state message. Server tests verify aggregate
+frames are tagged to the latest preceding authoritative forge-state frame.
+Targeted results: Web 11/11, Server 25/25, Shared contracts 3/3 passed.
+
+**Full cloud/local CI-equivalent validation:** Debian 13 workspace, Node
+`v24.19.0`, pnpm `11.25.0`; `AGENTS.md` and
+`config/project-profile.json` were absent. All commands used
+`CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store`.
+
+| Gate            | Result                                                                                                                                                                                 |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frozen install  | `pnpm --store-dir /tmp/bossforge-pnpm-store install --frozen-lockfile` — passed; lockfile unchanged.                                                                                   |
+| Build           | `pnpm build` — passed; existing Vite warning remains for the large Phaser arena chunk.                                                                                                 |
+| Typecheck       | `pnpm typecheck` — passed.                                                                                                                                                             |
+| Lint            | `pnpm lint` — passed.                                                                                                                                                                  |
+| Formatting      | `pnpm format:check` — passed.                                                                                                                                                          |
+| Full test suite | `pnpm test` — passed: 155 tests (26 shared / 23 web / 106 server).                                                                                                                     |
+| Simulation      | `BOSSFORGE_URL=http://127.0.0.1:3001 pnpm simulate` against a loopback development server — passed; all four categories received two synthetic votes and Thunder Tempest was revealed. |
+| Whitespace      | `git diff --check` — passed.                                                                                                                                                           |
+
+GitHub Actions was unavailable; these are local/cloud CI-equivalent results,
+not hosted CI. No browser or OBS changes were required for this bounded state
+reconciliation; no live Twitch connection was started. The initial GitHub CLI
+`Forbidden` event is retained above as history. Draft PR #9 exists, and the
+branch is pushed through the connected GitHub integration. The remediation
+commit and current pushed HEAD are recorded in the pull request and handoff;
+the exact reviewed HEAD is `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46` only for
+the prior independent audit, not this remediation. Request a new GPT-6 review
+of the exact remediation HEAD. M1-A remains unapproved until that review
+passes; keep PR #9 Draft and do not merge, publish, or start M1-B/M2.

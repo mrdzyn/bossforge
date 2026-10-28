@@ -636,13 +636,17 @@ only after they exist. Do not invent a Codex session ID; use the session's
 
 ## M1-A privacy-safe outbound events — independent exact-head review
 
-Implementation is pushed on `feat/m1a-privacy-safe-events` at
-`7eb556f5c17af426d155470ae11ff07afa3d6a0f`, based on M0 main
-`d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. Draft PR creation and the audit
-request are blocked because GitHub CLI API authorization is unavailable (`GH_TOKEN` invalid; no stored login when unset). Once a Draft PR is created from the pushed branch, review its exact HEAD before approval. Scope is limited to removing raw normalized chat from
-outbound channels, strict versioned dashboard/overlay serialization, safe
-aggregate activity, HTTP/log privacy, and regression evidence. No M1-B, M2,
-combat, live Twitch session, deployment, publication, or merge is included.
+Draft PR #9 exists on `feat/m1a-privacy-safe-events`, based on M0 main
+`d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. The original source
+implementation commit is `7eb556f5c17af426d155470ae11ff07afa3d6a0f`; the
+independently audited checkpoint was `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`.
+The initial cloud workspace's GitHub CLI `Forbidden` failure is historical:
+connected GitHub access later created Draft PR #9. The GPT-6 audit found
+MAJOR-1 (stale dashboard activity after feed loss) and MINOR-1 (stale current
+status/PR metadata). This bounded remediation adds generation- and
+server/cycle-aware aggregate reconciliation and reconciles those records.
+The exact remediation head and actual validation results are recorded in
+`docs/ACCEPTANCE.md` after push. No independent approval is implied.
 
 Please independently verify:
 
@@ -652,7 +656,10 @@ Please independently verify:
 - Dashboard/OBS routing is fixed by the server endpoint, cannot be changed by
   query/role input, and initial provider status is sent to one client only.
 - Dashboard aggregates reveal no event-level viewer activity; counters are
-  bounded, coalesced, and reset with forge/provider lifecycle changes.
+  bounded, coalesced, and reset with forge/provider lifecycle changes. On the
+  client they must also be hidden immediately on feed loss, isolated to the
+  active connection generation, and withheld until fresh authoritative state
+  and matching server/cycle aggregates arrive after reconnect.
 - HTTP snapshots/mutation responses and diagnostics/log error handling do not
   carry raw identities, content, tokens, cookies, or uncontrolled errors.
 - Sentinel tests inspect actual serialized frames and HTTP/log output and
@@ -663,7 +670,7 @@ Please independently verify:
   cloud checks as hosted CI.
 
 Codex's tests and browser captures are implementation evidence, not an
-independent approval. The Draft PR creation link is
-<https://github.com/mrdzyn/bossforge/pull/new/feat/m1a-privacy-safe-events>.
-M1-A remains pending until a GPT-6 independent exact-head security audit passes
-and the owner separately authorizes any merge.
+independent approval. Request a new GPT-6 security review of the exact pushed
+head on <https://github.com/mrdzyn/bossforge/pull/9>. M1-A remains pending
+until that independent exact-head review passes and the owner separately
+authorizes any merge.

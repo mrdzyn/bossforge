@@ -90,6 +90,8 @@ describe("shared contracts", () => {
         id: "a29eaa04-d2a0-4f4d-bf84-152fe4c7e9cb",
         timestamp,
         payload: {
+          serverInstanceId: "server-test",
+          cycleId: null,
           accepted: 1,
           rejected: 0,
           reasons: { invalid: 0, duplicate: 0, inactive: 0, other: 0 },

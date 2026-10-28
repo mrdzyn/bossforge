@@ -109,6 +109,8 @@ export class EventHub {
       return { kind: "connection.status", source: payload.source, status: payload.status };
     const activity = payload as DashboardActivity;
     return {
+      serverInstanceId: activity.serverInstanceId,
+      cycleId: activity.cycleId,
       accepted: activity.accepted,
       rejected: activity.rejected,
       reasons: {

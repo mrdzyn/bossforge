@@ -932,10 +932,22 @@ describe("BossForge server", () => {
     expect(snapshot.json().categories[0].totalVotes).toBe(1);
     const dash = dashboardFrames.map((frame) => JSON.parse(frame));
     const obs = overlayFrames.map((frame) => JSON.parse(frame));
+    const aggregateFrames = dash.filter((envelope) => envelope.type === "dashboard.activity");
     for (const envelope of dash)
       expect(DashboardEventEnvelopeSchema.safeParse(envelope).success).toBe(true);
     for (const envelope of obs)
       expect(OverlayEventEnvelopeSchema.safeParse(envelope).success).toBe(true);
+    expect(aggregateFrames.length).toBeGreaterThan(0);
+    for (const envelope of aggregateFrames) {
+      const aggregateIndex = dash.indexOf(envelope);
+      const previousState = dash
+        .slice(0, aggregateIndex)
+        .filter((candidate) => candidate.type === "forge.state")
+        .at(-1);
+      expect(previousState).toBeDefined();
+      expect(envelope.payload.serverInstanceId).toBe(previousState?.payload.state.serverInstanceId);
+      expect(envelope.payload.cycleId).toBe(previousState?.payload.state.cycleId);
+    }
     expect(
       dash.some(
         (envelope) => envelope.type === "dashboard.activity" && envelope.payload.accepted === 1,

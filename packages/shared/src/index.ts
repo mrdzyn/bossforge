@@ -226,6 +226,8 @@ const PublicForgeStateEventSchema = z
   });
 export const DashboardActivitySchema = z
   .object({
+    serverInstanceId: z.string().min(1).max(100),
+    cycleId: z.string().min(1).max(100).nullable(),
     accepted: z.number().int().min(0).max(10_000),
     rejected: z.number().int().min(0).max(10_000),
     reasons: z
