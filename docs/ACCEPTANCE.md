@@ -932,9 +932,9 @@ reconciliation; no live Twitch connection was started. The initial GitHub CLI
 branch is pushed through the connected GitHub integration. These checks ran
 against remediation commit `371d2934b6333623c366ed6f1a8460031bb9617f`; the
 prior independent audit covered `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`.
-The latest branch head is shown on the linked Draft PR #9. Request a new GPT-6
-review of that exact current head. M1-A remains unapproved until the review
-passes; keep PR #9 Draft and do not merge, publish, or start M1-B/M2.
+At this historical remediation checkpoint, M1-A still awaited exact-head
+review. It was subsequently accepted and squash-merged through PR #9 at
+`bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`; the prior review gate is closed.
 
 ## M1-B — Generic OBS and dashboard states
 
@@ -982,10 +982,8 @@ are not native OBS Studio QA.
 
 **Provider and owner-QA limitations:** All browser forge input was synthetic
 mock data. The connected Twitch path was not activated; Twitch label/state
-behavior is covered by deterministic component tests only. For privacy and
-credential boundaries, no real Twitch login or network connection was attempted. No real Twitch
-login, credentials, EventSub connection, native OBS Studio, or owner game was
-used. The Phaser arena implementation was left unchanged; its existing route
+behavior is covered by deterministic component tests only. No real Twitch login, credentials, EventSub connection, native OBS Studio, or
+owner game was used. The Phaser arena implementation was left unchanged; its existing route
 and tests remain part of regression validation.
 
 **Security/privacy impact:** This is a client presentation change using
@@ -995,8 +993,13 @@ withheld whenever the live feed/current authoritative snapshot is unavailable;
 invalid reveal-shaped state is not rendered as current.
 
 **Delivery/review:** Branch `feat/m1b-generic-obs-states`, based on merged main
-SHA `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`; the branch is pushed for a
-new Draft PR against `main`. Keep the PR Draft and unmerged. Request independent GPT-6 review of the exact pushed head for
-presentation scope, freshness/restart behavior, M1-A privacy and schema
-invariants, compatibility, and screenshots. Codex validation is not independent
-approval. M2, deployment and publication remain out of scope.
+SHA `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`, is pushed. Implementation
+commit: `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`. Draft PR creation is pending:
+`gh pr create --draft --base main` returned
+`Post "https://api.github.com/graphql": Forbidden`; `gh auth status` reports
+the configured `GH_TOKEN` is invalid. No credential was requested. The connected
+GitHub integration can create the Draft PR from this pushed branch. Request
+independent GPT-6 exact-head review there for presentation scope,
+freshness/restart behavior, M1-A privacy/schema invariants, compatibility, and
+screenshots. Codex validation is not independent approval. M2, deployment and
+publication remain out of scope.

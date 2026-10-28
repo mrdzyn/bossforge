@@ -623,16 +623,18 @@ only after they exist. Do not invent a Codex session ID; use the session's
   claimed; owner approval remains pending.
 - **M0-time blocking security contract:** At the locked baseline, normalized
   chat with viewer identity and text was broadcast through EventHub. The
-  owner-authorized M1-A candidate now adds strict recipient projections,
-  aggregate dashboard activity and sentinel privacy tests; independent review
-  remains required before M1-A is accepted or M2 can begin. No `!hit`,
-  authoritative battle HP, or profile implementation exists yet.
+  subsequently authorized M1-A implementation added strict recipient
+  projections, aggregate dashboard activity and sentinel privacy tests; PR #9
+  later squash-merged the work after the review gate. No `!hit`, authoritative
+  battle HP, or profile implementation existed at this planning checkpoint.
 - **Owner decisions:** Confirm balance/default-band choices, whether recognized
   but nonmatching elements apply base damage or are rejected, and the extent of
   attack aggregates shown in OBS. See the M0 contract's decision list.
-- **M0-time delivery gate:** The M0 lock did not authorize implementation.
-  M1-A is now separately owner-authorized; M1-B/M2 remain outside scope. No
-  merge, deployment, publication or submission is part of this work.
+- **M0-time delivery gate:** The M0 lock did not itself authorize
+  implementation. M1-A was separately authorized and later merged; M1-B has
+  since received separate presentation-only authorization. M2 remains outside
+  the current scope. No merge, deployment, publication or submission was part
+  of this historical planning handoff.
 
 ## M1-A privacy-safe outbound events — historical pre-remediation review checkpoint
 
@@ -675,11 +677,11 @@ Please independently verify:
   `docs/ACCEPTANCE.md`. GitHub Actions is currently unavailable; do not treat
   cloud checks as hosted CI.
 
-Codex's tests and browser captures are implementation evidence, not an
-independent approval. Request a new GPT-6 security review of the exact pushed
-head on <https://github.com/mrdzyn/bossforge/pull/9>. M1-A remains pending
-until that independent exact-head review passes and the owner separately
-authorizes any merge.
+At this historical checkpoint, Codex tests and browser captures were
+implementation evidence and a GPT-6 exact-head review was pending. PR #9 was
+subsequently accepted and squash-merged at
+`bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`; that review and merge gate is
+closed.
 
 ## M1-A merge and M1-B Generic presentation
 
@@ -689,7 +691,11 @@ authorizes any merge.
   blocker. M1-A's strict recipient schemas, internal-only normalized chat,
   bounded dashboard activity, and feed/state freshness form the M1-B base.
 - **M1-B branch:** `feat/m1b-generic-obs-states`, based on the exact merged
-  main SHA above. Delivery is a new Draft PR against `main`.
+  main SHA above. Implementation commit `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`
+  is pushed. Draft PR creation remains pending because `gh pr create --draft`
+  returned GitHub API `Forbidden` and `gh auth status` reports the configured
+  `GH_TOKEN` invalid. The connected GitHub integration can create the Draft PR
+  from this branch; do not request or expose credentials.
 - **Scope:** Generic dashboard and read-only OBS presentation only. State
   labels and reveal details use fresh authoritative public ForgeState. Reveal
   requires the complete server-authored four-category boss. The terminal text
@@ -700,8 +706,9 @@ authorizes any merge.
   `docs/visual-qa/m1b/`. `qa-results.json` records real process restart recovery
   from a revealed boss to a fresh revision-0 idle state and a new reveal, with
   no old boss restored. Native OBS and Twitch owner QA were not performed.
-- **Review handoff:** Independently review the exact pushed PR head for the
-  state matrix, authoritative reveal validation, restart and stale-state
-  suppression, privacy/schema invariants, responsive Chromium evidence, and
-  unchanged Arena behavior. Keep the PR Draft and unmerged; do not start M2,
-  deploy, publish, or connect to live Twitch.
+- **Review handoff:** After the connected integration opens the Draft PR,
+  independently review the exact pushed head for the state matrix, authoritative
+  reveal validation, restart and stale-state suppression, privacy/schema
+  invariants, responsive Chromium evidence, and unchanged Arena behavior. Keep
+  the PR Draft and unmerged; do not start M2, deploy, publish, or connect to
+  live Twitch.
