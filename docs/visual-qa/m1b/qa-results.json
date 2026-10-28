@@ -1,0 +1,79 @@
+{
+  "chromium": "154.0.8037.57",
+  "browserAutomation": "1.62.1",
+  "idleSize": {
+    "width": 1440,
+    "height": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 1256
+  },
+  "desktop": {
+    "width": 1440,
+    "height": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 1658,
+    "banner": {
+      "top": 1069,
+      "bottom": 1133,
+      "visible": false
+    },
+    "revealedBossScroll": {
+      "top": 481,
+      "bottom": 545,
+      "visible": true
+    }
+  },
+  "overlays": [
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920,
+      "scrollHeight": 1080,
+      "controls": 0
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "width": 1280,
+      "height": 720,
+      "scrollWidth": 1280,
+      "scrollHeight": 720,
+      "controls": 0
+    }
+  ],
+  "feedLoss": {
+    "overlayOldBoss": 0,
+    "overlayOldReveal": 0,
+    "overlayStatus": 4,
+    "dashboardOldBoss": 0,
+    "dashboardOldReveal": 0,
+    "dashboardStatus": 5
+  },
+  "serverRestart": {
+    "newServerInstanceId": "4e744987-9caf-4a49-9da4-b0a1fbfab0a0",
+    "revision": 0,
+    "status": "idle",
+    "oldBossAfterFreshIdle": {
+      "overlay": 0,
+      "dashboard": 0
+    },
+    "recovered": {
+      "serverInstanceId": "4e744987-9caf-4a49-9da4-b0a1fbfab0a0",
+      "cycleId": "forge-1",
+      "boss": 1
+    }
+  },
+  "consoleErrors": [],
+  "expectedOutageConsoleErrors": [],
+  "failedRequests": [],
+  "devServerProxyLogsDuringIntentionalBackendStop": [
+    "WebSocket proxy EPIPE",
+    "WebSocket proxy ECONNRESET (expected while the test backend is stopped)"
+  ]
+}

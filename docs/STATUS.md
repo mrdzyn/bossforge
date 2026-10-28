@@ -2,24 +2,30 @@
 
 ## Current snapshot — 2026-10-28
 
-- **Current `main`:** `d556ef124fb9c98ae6c0801c68c76e38ec83a18b`; M0 was squash-merged through PR #8. The M0 contract and prior P3-B/P4A acceptance records below remain historical evidence.
-- **M1-A / Draft PR #9:** PR #9 exists against `main` on `feat/m1a-privacy-safe-events`. The audited baseline was `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`; source implementation commit is `7eb556f5c17af426d155470ae11ff07afa3d6a0f`. The bounded MAJOR-1 aggregate-freshness and MINOR-1 status reconciliation changes are implemented and validated locally; exact pushed remediation HEAD is recorded in the latest M1-A entry in [ACCEPTANCE](ACCEPTANCE.md). The new audit has not approved M1-A; keep PR #9 Draft/unmerged and do not begin M1-B/M2.
-- **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access subsequently created Draft PR #9; the former blocker is resolved. Retain the original failure as history, not as current PR status.
-- **Validation at audited HEAD:** 151 tests (26 shared / 19 web / 106 server), frozen install, build, typecheck, lint, format, simulation, and browser screenshots were reported by the implementation agent and documented in [ACCEPTANCE](ACCEPTANCE.md). The independent reviewer did not rerun them. New remediation results will be recorded separately and must not be conflated with hosted GitHub Actions.
+- **Current `main`:** `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`; M1-A was squash-merged through PR #9. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
+- **M1-A merged:** PR #9 was squash-merged into `main` at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. Its historical remediation and review evidence remain in [ACCEPTANCE](ACCEPTANCE.md).
+- **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access later created Draft PR #9, which is now merged; the former blocker is historical only.
+- **Historical M1-A audited-head validation:** 151 tests (26 shared / 19 web / 106 server), frozen install, build, typecheck, lint, format, simulation, and browser screenshots are recorded in [ACCEPTANCE](ACCEPTANCE.md). These are historical implementation-agent reports, distinct from the later M1-A remediation and hosted GitHub Actions.
 - **Historical live/OBS evidence:** Genuine Twitch activity and native OBS evidence remain owner-supplied at their original checkpoints. Chromium captures are separate browser evidence and do not establish live Twitch or native OBS acceptance. See the historical P3-B and P4A sections and [acceptance](ACCEPTANCE.md).
-- **Out of scope:** No M1-B, `!hit`, battle HP/timers, Generic/Arena profile loading, live Twitch connection, deployment, or publication is authorized by this remediation.
+- **M1-B:** Generic dashboard/OBS presentation implementation is complete on `feat/m1b-generic-obs-states`, based on the merged M1-A commit above. It is presentation-only and does not start M2.
 
-### M1-A C1 bounded remediation status
+### M1-A merged status
 
-- Dashboard aggregate activity now follows the live feed generation and fresh
-  authoritative forge state. Feed loss clears displayed aggregates
-  immediately; retired-generation messages are rejected; reconnect requires a
-  fresh state and activity tagged to its server instance and cycle.
-- Current PR status is Draft PR #9, created through connected GitHub access.
-  The earlier GitHub CLI `Forbidden` event remains historical evidence only.
-- Cloud/local validation and the remediation commit are recorded in
-  [ACCEPTANCE](ACCEPTANCE.md). GitHub Actions remains unavailable, and the
-  independent GPT-6 exact-head review is pending.
+- PR #9 squash-merged at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`.
+  Historical GitHub CLI `Forbidden` evidence is retained in ACCEPTANCE; PR
+  creation is no longer blocked.
+- Aggregate activity generation/freshness remediation and its tests are part
+  of the merged main baseline. See the M1-A C1 acceptance entry.
+
+### M1-B — Generic OBS and dashboard states
+
+- Authorized presentation-only work is on `feat/m1b-generic-obs-states`, based
+  on the merged main SHA above. The dashboard and read-only overlay distinguish
+  idle, voting, revealed, disconnected, and unavailable states using fresh
+  privacy-safe authoritative projections.
+- No battle state, HP, damage, timers, Start Battle, `!hit`, profile loading, or
+  game integration is included. M1-B validation, screenshots and exact review
+  target are recorded in the M1-B sections of ACCEPTANCE and HANDOFFS.
 
 ## P3-B-C2 remediation checkpoint
 

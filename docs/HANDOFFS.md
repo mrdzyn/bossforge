@@ -597,7 +597,7 @@ only after they exist. Do not invent a Codex session ID; use the session's
   `5655dea53e3eba5425b6ead8926659a0bb72ae5e`. Preserve the acceptance evidence;
   do not deploy, publish, or submit Phase 5 materials.
 
-## PDCP-001 — M0 Any-Game contract lock
+## PDCP-001 — M0 Any-Game contract lock (historical planning handoff)
 
 - **Current base:** `main` at `5b30d7b3139c9f1ab74f3be46d0f4fb5d9665865`.
   PR #7 is closed/merged at this head; the prior PDCP-001 planning PASS remains
@@ -634,9 +634,9 @@ only after they exist. Do not invent a Codex session ID; use the session's
   M1-A is now separately owner-authorized; M1-B/M2 remain outside scope. No
   merge, deployment, publication or submission is part of this work.
 
-## M1-A privacy-safe outbound events — independent exact-head review
+## M1-A privacy-safe outbound events — historical pre-remediation review checkpoint
 
-Draft PR #9 exists on `feat/m1a-privacy-safe-events`, based on M0 main
+At this historical checkpoint Draft PR #9 was open on `feat/m1a-privacy-safe-events`, based on M0 main
 `d556ef124fb9c98ae6c0801c68c76e38ec83a18b`. The original source
 implementation commit is `7eb556f5c17af426d155470ae11ff07afa3d6a0f`; the
 independently audited checkpoint was `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`.
@@ -680,3 +680,28 @@ independent approval. Request a new GPT-6 security review of the exact pushed
 head on <https://github.com/mrdzyn/bossforge/pull/9>. M1-A remains pending
 until that independent exact-head review passes and the owner separately
 authorizes any merge.
+
+## M1-A merge and M1-B Generic presentation
+
+- **M1-A closure:** PR #9 was squash-merged into `main` at
+  `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. The old GitHub CLI `Forbidden`
+  event is retained as historical context in ACCEPTANCE; it is not a current
+  blocker. M1-A's strict recipient schemas, internal-only normalized chat,
+  bounded dashboard activity, and feed/state freshness form the M1-B base.
+- **M1-B branch:** `feat/m1b-generic-obs-states`, based on the exact merged
+  main SHA above. Delivery is a new Draft PR against `main`.
+- **Scope:** Generic dashboard and read-only OBS presentation only. State
+  labels and reveal details use fresh authoritative public ForgeState. Reveal
+  requires the complete server-authored four-category boss. The terminal text
+  is `REVEALED — BATTLE COMING SOON`; the optional Arena link remains a separate
+  local Phaser demo. No battle session, battle HP/damage/timer, Start Battle,
+  `!hit`, profile loading, game inspection/control, or M2 implementation.
+- **QA artifacts:** Actual Chromium screenshots and bounds are under
+  `docs/visual-qa/m1b/`. `qa-results.json` records real process restart recovery
+  from a revealed boss to a fresh revision-0 idle state and a new reveal, with
+  no old boss restored. Native OBS and Twitch owner QA were not performed.
+- **Review handoff:** Independently review the exact pushed PR head for the
+  state matrix, authoritative reveal validation, restart and stale-state
+  suppression, privacy/schema invariants, responsive Chromium evidence, and
+  unchanged Arena behavior. Keep the PR Draft and unmerged; do not start M2,
+  deploy, publish, or connect to live Twitch.

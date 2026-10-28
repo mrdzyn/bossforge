@@ -823,7 +823,7 @@ at the time of the original closure. PR #6 has since been squash-merged into
 `main`; this record preserves the acceptance evidence and its original audit
 history.
 
-## M1-A privacy-safe outbound events — candidate validation
+## M1-A privacy-safe outbound events — historical candidate validation checkpoint
 
 **Scope:** remove normalized mock/Twitch chat from browser serialization while
 preserving forge, voting, OAuth/EventSub handling, simulation, and P4A
@@ -877,20 +877,20 @@ proves only the exercised Fastify request-failure path. Independent GPT-6
 security review of the exact pushed head is still required. M1-A is not
 accepted until that independent review passes; do not start M1-B/M2 or merge.
 
-**Historical delivery status:** source implementation commit
+**Historical delivery status at this checkpoint:** source implementation commit
 `7eb556f5c17af426d155470ae11ff07afa3d6a0f` was pushed to
 `origin/feat/m1a-privacy-safe-events`. The first cloud workspace could not
 create a PR because GitHub CLI API access returned `Forbidden` with an invalid
 `GH_TOKEN`; connected GitHub access later opened Draft PR #9. The original
 failure is preserved here as history and no longer describes current PR state.
 
-**Independent review history:** Draft PR #9 exists at the audited HEAD
+**Independent review history at this checkpoint:** Draft PR #9 existed at the audited HEAD
 `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`. The GPT-6 audit found MAJOR-1
 (stale dashboard activity after feed loss) and MINOR-1 (stale milestone/PR
 status). This checkpoint is a remediation candidate only; do not infer audit
 approval from implementation tests.
 
-## M1-A C1 — bounded aggregate freshness and status remediation
+## M1-A C1 — bounded aggregate freshness and status remediation (merged through PR #9)
 
 **Scope:** MAJOR-1 and MINOR-1 from the independent GPT-6 review of PR #9 only.
 The dashboard activity feed is now cleared on disconnect/error and connection
@@ -935,3 +935,68 @@ prior independent audit covered `ec25b4a9bc2603f7a1fb0da2d960026fe38daf46`.
 The latest branch head is shown on the linked Draft PR #9. Request a new GPT-6
 review of that exact current head. M1-A remains unapproved until the review
 passes; keep PR #9 Draft and do not merge, publish, or start M1-B/M2.
+
+## M1-B — Generic OBS and dashboard states
+
+**Base and merged prerequisite:** M1-B is based on `main` at
+`bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`, the M1-A squash merge through PR
+#9. Earlier M1-A sections preserve their original candidate and audit history;
+PR #9 is merged and is not currently blocked by its historical CLI
+`Forbidden` failure.
+
+**Scope:** The existing dashboard and read-only `/overlay` now identify the
+Generic/OBS experience, explain that the Browser Source runs alongside the
+streamer's game without reading, controlling, or integrating with it, and
+present fresh authoritative idle, voting, reveal, disconnection and unavailable
+states. Reveals use only a fresh reconciled public `ForgeState` that validates
+as a completed four-category `RevealedForgeStateSchema`. The server-authored
+name, traits, category outcomes and existing community/default attribution are
+shown with `REVEALED — BATTLE COMING SOON`. The optional `/arena` is called out
+as a separate local Phaser demo. No battle, HP, damage, timer, Start Battle,
+`!hit`, profile loader or game integration was added. M1-A recipient schemas,
+privacy projections, feed generations, and state reconciliation remain intact.
+
+| Gate                                   | Actual result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Environment                            | Linux Debian 13 cloud workspace; Node `v24.19.0`; pnpm `11.25.0`; Chromium `154.0.8037.57`; Playwright `1.62.1`. `AGENTS.md` and `config/project-profile.json` were absent.                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Frozen install                         | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm --store-dir /tmp/bossforge-pnpm-store install --frozen-lockfile` — passed, lockfile unchanged.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Focused presentation tests             | `pnpm --filter @bossforge/web test -- App.live-state.test.tsx` — 29 tests passed across the web suite, including 14 `App.live-state` tests. These cover fresh valid reveal, invalid/missing boss and incomplete categories, exact copy, no battle affordances, provider labels, disconnect and process-epoch recovery.                                                                                                                                                                                                                                                                                                      |
+| Full build/typecheck/lint/format/tests | Results are recorded below after full validation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Simulation                             | `pnpm simulate` against the loopback dev server — result recorded below after the final run.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Browser                                | Real headless Chromium exercised idle and synthetic voting states and completed four-category forge/reveal. Dashboard captures: 1440×900, 390×844, and 360×800. Overlay captures: 1920×1080 and 1280×720. Both overlay document sizes match their viewport exactly and have zero controls; dashboard horizontal `scrollWidth` matches viewport at both mobile widths. A live dashboard/overlay process-restart smoke hid the old reveal on feed loss, accepted a fresh revision-0 idle state from a new server instance, and displayed the next new reveal. Connected runs recorded zero console errors or failed requests. |
+
+**Screenshots and measurements:** Actual Chromium PNGs and QA metrics are in
+[`visual-qa/m1b/`](visual-qa/m1b/): dashboard idle/voting/revealed at desktop
+and mobile sizes, overlay idle/voting/revealed at both broadcast sizes, and
+`dashboard-1440x900-server-loss.png`,
+`dashboard-1440x900-reconnected-idle.png`, `overlay-1280x720-server-loss.png`
+and `overlay-1280x720-reconnected-reveal.png` for real backend restart recovery.
+`qa-results.json` records Chromium/Playwright versions, viewport and document
+bounds, exact new instance/revision-0 idle recovery, absence of old boss/reveal,
+and console/network results. Browser captures recorded no console errors or
+failed requests. The Vite server log did report expected WebSocket proxy
+`EPIPE`/`ECONNRESET` while the test intentionally stopped the backend; the
+proxy reconnected after restart and state recovered. Dashboard reveal screenshots include the banner
+visible after scrolling the long dashboard to the boss panel. Chromium captures
+are not native OBS Studio QA.
+
+**Provider and owner-QA limitations:** All browser forge input was synthetic
+mock data. The connected Twitch path was not activated; Twitch label/state
+behavior is covered by deterministic component tests only. For privacy and
+credential boundaries, no real Twitch login or network connection was attempted. No real Twitch
+login, credentials, EventSub connection, native OBS Studio, or owner game was
+used. The Phaser arena implementation was left unchanged; its existing route
+and tests remain part of regression validation.
+
+**Security/privacy impact:** This is a client presentation change using
+M1-A's public projections. It adds no server route, recipient channel, chat
+identity/text UI, credential exposure, or new authority. Stale visuals are
+withheld whenever the live feed/current authoritative snapshot is unavailable;
+invalid reveal-shaped state is not rendered as current.
+
+**Delivery/review:** Branch `feat/m1b-generic-obs-states`, based on merged main
+SHA `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`; the branch is pushed for a
+new Draft PR against `main`. Keep the PR Draft and unmerged. Request independent GPT-6 review of the exact pushed head for
+presentation scope, freshness/restart behavior, M1-A privacy and schema
+invariants, compatibility, and screenshots. Codex validation is not independent
+approval. M2, deployment and publication remain out of scope.

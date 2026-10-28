@@ -5,15 +5,18 @@
 The workspace contains a React/Vite streamer dashboard and broadcast overlay, a
 Fastify server, and a shared TypeScript package. The server listens on
 `127.0.0.1:3001` by default; Vite listens on `127.0.0.1:5173` and proxies
-`/health`, `/events`, and `/api/*` to it. The UI uses a shared versioned
-WebSocket feed for dashboard activity and overlay state. A development-only
+`/health`, `/events`, and `/api/*` to it. The UI uses distinct strict versioned public
+WebSocket feeds for dashboard activity and overlay state. A development-only
 `ForgeSession` owns in-memory vote state, timers, ballots, results, and the
 assembled boss. A local state snapshot supports initial load and reconnect.
 
 ```text
-MockChatAdapter ── normalized chat event ── EventHub ── WebSocket ── browser
-                                              │
-                                       versioned envelope
+Mock/Twitch adapter ── NormalizedChatEvent ── ForgeSession (server only)
+                                                   │
+                                  public state / safe aggregates
+                                     ┌─────────────┴─────────────┐
+                              dashboard DTO                  OBS DTO
+                           strict dashboard WS             strict overlay WS
 
 Streamer dashboard ── local dev POST ── ForgeSession
 Synthetic mock chat ── validated vote ── ForgeSession ── state event ── clients
@@ -27,12 +30,12 @@ stats, battle state, connection state, and versioned application events.
 ## Responsibilities and lifecycle
 
 - `ChatAdapter` is the provider-neutral boundary. `MockChatAdapter` supplies a
-  deterministic four-event local sequence. `TwitchChatAdapter` is an explicit
-  Phase 0 stub and does not connect to Twitch.
-- Local simulation requests ask the mock adapter for an event or submit a
-  bounded synthetic mock event. The server validates and publishes the chat
-  envelope, then evaluates it in `ForgeSession`. Accepted vote changes publish
-  a full versioned `forge.state` snapshot.
+  deterministic local sequence. The Phase 3-B `LiveEventSub` runtime validates
+  Twitch notifications and routes them server-side; neither provider exposes
+  normalized chat to browsers.
+- Local simulation submits bounded synthetic mock events. The server validates
+  the normalized event and processes it internally in `ForgeSession`; accepted
+  vote changes publish an allowlisted public `forge.state` snapshot.
 - The forge runs body, element, special, and weakness votes in order. The server
   starts and closes each timer, keys ballots by stable viewer ID, and computes
   deterministic option-order ties and first-option no-vote fallbacks. The UI
@@ -47,18 +50,20 @@ stats, battle state, connection state, and versioned application events.
   `1800 - 150×bodyIndex + 50×elementIndex` milliseconds. Indices start at zero
   in each canonical option list; identical attributes and cycle ID always
   yield identical output. All four attributes also alter the modular artwork.
-- Browser messages are parsed against the same shared envelope schema before
-  display. Chat text is rendered as text, never injected HTML.
+- Browser messages are parsed against recipient-specific strict public schemas
+  before display. Public forge-state DTOs are allowlisted by the server; chat
+  content and viewer identity remain server-internal.
 - The dashboard owns local start/reset controls and simulated event generation.
   The OBS view is read-only and displays live counts, category, and reveal.
 
 ## Twitch integration path
 
-When account registration is available, a server-side adapter can translate
-official Twitch EventSub chat messages into `NormalizedChatEvent`. OAuth state
-validation, least-privilege authorization, exact redirect URI matching, secure
-server-side token storage, and connection revocation handling belong in that
-future implementation. Twitch formats must not leak into game services.
+The Phase 3-B runtime uses server-side OAuth and outbound Twitch EventSub as
+specified below. It remains local-development only by default and requires the
+owner's private configuration and interaction to activate. Tokens remain in
+server memory, notifications are schema validated, and normalized chat is never
+sent to dashboard or OBS clients. No new game integration or client credential
+surface is part of this path.
 
 ## Security boundaries
 
@@ -71,7 +76,7 @@ future implementation. Twitch formats must not leak into game services.
   localhost, 127.0.0.1, or IPv6 loopback at the configured Vite development
   port. Clients without an Origin are accepted only from loopback peers.
 - Request bodies and WebSocket frames have an 8 KiB limit. Synthetic event
-  payloads are schema validated before publication.
+  payloads are schema validated before internal forge processing.
 - The overlay is a separate read-only presentation surface. It does not receive
   administrative controls or secrets.
 - Twitch OAuth and EventSub credentials are not needed or present in Phase 0.
@@ -163,3 +168,21 @@ Updates are coalesced; forge vote totals remain authoritative in public forge
 state. Reset and provider transitions reset activity counters. The `/events`
 compatibility route is pinned to dashboard serialization and never accepts a
 client-selected recipient.
+
+## M1-B generic presentation states
+
+The dashboard and read-only `/overlay` consume only fresh, reconciled M1-A public
+forge and connection projections. A reveal is displayable only when a current
+authoritative `ForgeState` passes `RevealedForgeStateSchema`, has a non-null
+server-authored boss, a valid cycle ID, all four ordered categories closed, and
+a selected winner for each category. The UI does not assemble a boss or infer a
+reveal from vote totals, timers, or cached artwork. WebSocket loss invalidates
+visible authority immediately; restart/epoch reconciliation adopts the new
+server snapshot and never restores an older boss.
+
+The presentation communicates `REVEALED — BATTLE COMING SOON`. It omits
+blueprint/Arena health, damage and attack-interval values and contains no battle
+state, HP, damage, battle timer, outcome, Start Battle control, or `!hit`
+command. OBS remains read-only, credential-free, and game-independent. The
+Browser Source can sit alongside a game; it does not inspect, control, or
+integrate with that game.

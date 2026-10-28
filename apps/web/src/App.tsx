@@ -10,6 +10,7 @@ import { useLiveEvents } from "./hooks/useLiveEvents.js";
 import { FORGE_DURATIONS, forgeCountdownLabel, type ForgeDuration } from "./live-forge-ui.js";
 import { VoteInstructions } from "./VoteInstructions.js";
 import { LiveVoteSurface } from "./LiveVoteSurface.js";
+import { authoritativeReveal, currentForgePresentation } from "./forge-presentation.js";
 
 const Arena = lazy(() => import("./arena/Arena.js"));
 
@@ -223,7 +224,8 @@ export function Dashboard() {
     snapshotAvailable,
     activity,
   } = useLiveEvents();
-  const forge = connection === "connected" && snapshotAvailable ? cachedForge : null;
+  const forge =
+    connection === "connected" && snapshotAvailable ? currentForgePresentation(cachedForge) : null;
   const currentActivity =
     activity &&
     forge &&
@@ -318,15 +320,15 @@ export function Dashboard() {
           <div className="topbar-actions">
             <span className="local-badge">
               <i />{" "}
-              {forge?.connectedToTwitch
-                ? "TWITCH CONNECTED"
-                : connection !== "connected"
-                  ? "SERVER LINK UNAVAILABLE"
-                  : !snapshotAvailable
-                    ? "WAITING FOR FRESH SERVER STATE"
-                    : forge?.mode === "twitch"
-                      ? "TWITCH DISCONNECTED"
-                      : "SIMULATED"}
+              {connection !== "connected"
+                ? "SERVER LINK UNAVAILABLE"
+                : !forge
+                  ? "WAITING FOR FRESH SERVER STATE"
+                  : forge.connectedToTwitch
+                    ? "LIVE TWITCH"
+                    : forge.mode === "mock"
+                      ? "SIMULATED"
+                      : "TWITCH DISCONNECTED"}
             </span>
             <Connection status={connection} />
           </div>
@@ -334,20 +336,30 @@ export function Dashboard() {
         <div className="page-wrap">
           <section className="welcome-row">
             <div>
+              <span className="generic-label">GENERIC / OBS</span>
               <p className="eyebrow">
                 STREAMER DASHBOARD <span>•</span>{" "}
                 {connection !== "connected"
                   ? "SERVER LINK UNAVAILABLE"
-                  : !snapshotAvailable
+                  : !forge
                     ? "WAITING FOR FRESH SERVER STATE"
-                    : forge?.mode === "twitch"
+                    : forge.connectedToTwitch
                       ? "LIVE TWITCH"
-                      : "SIMULATED"}
+                      : forge.mode === "mock"
+                        ? "SIMULATED"
+                        : "TWITCH DISCONNECTED"}
               </p>
               <h1>
                 Make something <em>monstrous.</em>
               </h1>
               <p className="subheading">Four timed votes. One boss forged by chat.</p>
+              <p className="game-agnostic-copy">
+                Chat creates the boss. Chat fights the boss <b>— coming in M2.</b> You keep playing.
+              </p>
+              <p className="obs-explainer">
+                Add the read-only OBS Browser Source beside your game. It does not read, control, or
+                integrate with the game.
+              </p>
             </div>
             <div className="dashboard-actions">
               <label className="duration-control">
@@ -381,7 +393,7 @@ export function Dashboard() {
               >
                 {isRevealed ? "✦ Forge again" : "✦ Start the forge"}
               </button>
-              {forge?.status !== "idle" && (
+              {forge && forge.status !== "idle" && (
                 <button
                   className="secondary-button"
                   onClick={() => void post("/api/dev/forge/reset")}
@@ -390,9 +402,12 @@ export function Dashboard() {
                 </button>
               )}
               {isRevealed && (
-                <a className="secondary-button arena-entry" href="/arena">
-                  ⚔ Enter Arena
-                </a>
+                <div className="arena-demo-link">
+                  <a className="secondary-button arena-entry" href="/arena">
+                    ⚔ Optional Arena demo
+                  </a>
+                  <small>Separate local Phaser demo; not the future Twitch encounter.</small>
+                </div>
               )}
             </div>
           </section>
@@ -400,14 +415,20 @@ export function Dashboard() {
             <div>
               <p className="eyebrow">LOCAL TWITCH INTEGRATION</p>
               <strong>
-                {twitch?.identity
-                  ? `${twitch.identity.displayName} (@${twitch.identity.login}) · ${twitch.connected ? "TWITCH CONNECTED" : twitch.status.toUpperCase()}`
-                  : twitch?.configured
-                    ? "Not authenticated"
-                    : "Not configured · SIMULATED mode remains available"}
+                {!forge
+                  ? "LOCAL SERVER UNAVAILABLE · TWITCH STATUS UNKNOWN"
+                  : twitch?.identity
+                    ? `${twitch.identity.displayName} (@${twitch.identity.login}) · ${twitch.connected ? "TWITCH CONNECTED" : twitch.status.toUpperCase()}`
+                    : twitch?.configured
+                      ? "Not authenticated"
+                      : "Not configured · SIMULATED mode remains available"}
               </strong>
             </div>
-            {!twitch?.identity ? (
+            {!forge ? (
+              <span className="secondary-button" aria-disabled="true">
+                Twitch controls unavailable
+              </span>
+            ) : !twitch?.identity ? (
               <a className="secondary-button" href="http://localhost:3001/auth/twitch">
                 Authorize Twitch
               </a>
@@ -450,7 +471,7 @@ export function Dashboard() {
               <div className="eventsub-diagnostics">
                 <button
                   className="text-button"
-                  disabled={diagnosticsLoading}
+                  disabled={!forge || diagnosticsLoading}
                   onClick={() => void readEventSubDiagnostics()}
                 >
                   {diagnosticsLoading ? "Reading diagnostics…" : "Read local EventSub diagnostics"}
@@ -508,7 +529,7 @@ export function Dashboard() {
             <div className="stat-card">
               <span className="stat-icon violet">◷</span>
               <div>
-                <span className="stat-label">ACTIVE VOTES</span>
+                <span className="stat-label">FORGE VOTES</span>
                 <strong>
                   {forge
                     ? `${activeCategory?.totalVotes ?? forge.categories.reduce((total, item) => total + item.totalVotes, 0)} votes cast`
@@ -523,54 +544,65 @@ export function Dashboard() {
             </div>
           </section>
           <section className="workspace-grid">
-            <article className="panel boss-panel">
+            <article className={`panel boss-panel ${isRevealed ? "revealed" : ""}`}>
               <div className="panel-heading">
                 <div>
                   <p className="eyebrow">
-                    {isRevealed ? "THE CHAT HAS FORGED" : "THE NEXT CHALLENGER"}
+                    {isRevealed
+                      ? "THE COMMUNITY HAS FORGED"
+                      : !forge
+                        ? "SERVER STATE UNAVAILABLE"
+                        : forge.status === "idle"
+                          ? "GENERIC FORGE"
+                          : "THE CHAT IS FORGING"}
                   </p>
-                  <h2>{isRevealed ? forge?.boss?.name : "Boss blueprint"}</h2>
+                  <h2>
+                    {isRevealed
+                      ? forge?.boss?.name
+                      : !forge
+                        ? "Waiting for fresh state"
+                        : forge.status === "idle"
+                          ? "Ready to forge"
+                          : "Boss in progress"}
+                  </h2>
                 </div>
                 <span className={`draft-badge ${isRevealed ? "revealed" : ""}`}>
-                  {isRevealed ? "REVEALED" : forge?.status === "voting" ? "IN PROGRESS" : "READY"}{" "}
+                  {isRevealed
+                    ? "REVEALED"
+                    : !forge
+                      ? "WAITING"
+                      : forge.status === "voting"
+                        ? "IN PROGRESS"
+                        : "READY"}{" "}
                   <i />
                 </span>
               </div>
-              <BossArt state={forge} />
-              {forge?.boss && (
+              {forge && forge.status !== "idle" ? (
+                <BossArt state={forge} />
+              ) : (
+                <div className="forge-placeholder">
+                  <span>{forge ? "AWAITING FORGE" : "AUTHORITATIVE STATE UNAVAILABLE"}</span>
+                  <strong>
+                    {forge
+                      ? "Your next boss starts with four votes."
+                      : "Current boss details are hidden."}
+                  </strong>
+                </div>
+              )}
+              {isRevealed && forge?.boss && (
                 <div className="boss-details">
                   <div>
                     <span className="detail-label">FORGED NAME</span>
                     <h3>{forge.boss.name}</h3>
                   </div>
-                  <div className="level-mark">
-                    HP <b>{forge.boss.stats.health}</b>
-                  </div>
                 </div>
               )}
               <div className="attribute-row">
-                <span>
-                  BODY{" "}
-                  <b>
-                    {title(forge?.boss?.attributes.body ?? forge?.categories[0]?.winner ?? "TBD")}
-                  </b>
-                </span>
-                <span>
-                  ELEMENT{" "}
-                  <b className="fire-text">
-                    {title(
-                      forge?.boss?.attributes.element ?? forge?.categories[1]?.winner ?? "TBD",
-                    )}
-                  </b>
-                </span>
-                <span>
-                  WEAKNESS{" "}
-                  <b>
-                    {title(
-                      forge?.boss?.attributes.weakness ?? forge?.categories[3]?.winner ?? "TBD",
-                    )}
-                  </b>
-                </span>
+                {forge?.categories.map((category) => (
+                  <span key={category.category}>
+                    {title(category.category)} <b>{title(category.winner ?? "TBD")}</b>
+                  </span>
+                ))}
               </div>
               <div className="progress-label">
                 <span>FORGE PROGRESS</span>
@@ -579,11 +611,13 @@ export function Dashboard() {
               <div className="progress-track">
                 <i style={{ width: `${((forge?.progress ?? 0) / 4) * 100}%` }} />
               </div>
-              {forge?.boss && (
-                <p className="boss-stats">
-                  {forge.boss.attributes.special.toUpperCase()} · {forge.boss.stats.damage} DMG ·{" "}
-                  {forge.boss.stats.attackIntervalMs} MS ATTACK
-                </p>
+              {isRevealed && (
+                <div className="reveal-message" role="status">
+                  <strong>REVEALED — BATTLE COMING SOON</strong>
+                  <span>
+                    The reveal is presentation only. Cooperative chat combat is planned for M2.
+                  </span>
+                </div>
               )}
             </article>
             <div className="right-stack">
@@ -595,11 +629,13 @@ export function Dashboard() {
                   </div>
                   <span className="live-indicator">
                     <i />
-                    {forge?.status === "voting" && forge.activeCategory
-                      ? forgeCountdownLabel(forge.activeCategory, seconds)
-                      : isRevealed
-                        ? "COMPLETE"
-                        : "READY"}
+                    {!forge
+                      ? "STATUS UNKNOWN"
+                      : forge.status === "voting" && forge.activeCategory
+                        ? forgeCountdownLabel(forge.activeCategory, seconds)
+                        : isRevealed
+                          ? "COMPLETE"
+                          : "READY"}
                   </span>
                 </div>
                 <LiveVoteSurface
@@ -676,7 +712,7 @@ export function Dashboard() {
             <span>
               {connection !== "connected"
                 ? "SERVER LINK UNAVAILABLE · LIVE VOTE STATUS UNKNOWN"
-                : !snapshotAvailable
+                : !forge
                   ? "WAITING FOR FRESH SERVER STATE · LIVE VOTE STATUS UNKNOWN"
                   : forge?.connectedToTwitch
                     ? "TWITCH CONNECTED"
@@ -693,11 +729,13 @@ export function Dashboard() {
 
 export function OverlayPreview() {
   const { forge: cachedForge, connection, snapshotAvailable } = useLiveEvents("overlay");
-  const forge = connection === "connected" && snapshotAvailable ? cachedForge : null;
+  const forge =
+    connection === "connected" && snapshotAvailable ? currentForgePresentation(cachedForge) : null;
   const category =
     forge?.status === "voting"
       ? (forge.categories.find((item) => item.category === forge.activeCategory) ?? null)
       : null;
+  const reveal = authoritativeReveal(forge);
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
     const update = () => setSeconds(remainingVoteSeconds(category?.closesAt ?? null, Date.now()));
@@ -717,11 +755,12 @@ export function OverlayPreview() {
           </span>
         </div>
         <div className="overlay-round">
+          <span className="generic-label">GENERIC / OBS</span>
           <span className="round-live">
             <i />
             {connection !== "connected"
               ? "SERVER LINK UNAVAILABLE / LIVE VOTE STATUS UNKNOWN"
-              : !snapshotAvailable
+              : !forge
                 ? "WAITING FOR FRESH SERVER STATE / LIVE VOTE STATUS UNKNOWN"
                 : forge?.connectedToTwitch
                   ? "LIVE TWITCH"
@@ -729,31 +768,56 @@ export function OverlayPreview() {
                     ? "SIMULATED / NOT CONNECTED TO TWITCH"
                     : "TWITCH DISCONNECTED / VOTING PAUSED"}
           </span>
-          <span>
-            {forge?.cycleId?.toUpperCase() ?? "AWAITING FORGE"} <b>•</b> {connection.toUpperCase()}
-          </span>
+          <span>{forge?.cycleId?.toUpperCase() ?? "AWAITING FORGE"}</span>
         </div>
       </header>
-      <section className="overlay-boss-card">
-        <div className="overlay-boss-art">
-          <BossArt state={forge} />
-        </div>
-        <div className="overlay-boss-info">
-          <span className="eyebrow">
-            {forge?.status === "revealed" ? "THE COMMUNITY FORGED" : "THE CHAT IS FORGING"}
-          </span>
-          <h1>{forge?.boss?.name ?? "A NEW BOSS AWAITS"}</h1>
-          <div className="boss-tags">
-            <span>{title(forge?.boss?.attributes.body ?? "BODY TBD")}</span>
-            <span>{title(forge?.boss?.attributes.element ?? "ELEMENT TBD")}</span>
+      {forge?.status === "voting" || reveal ? (
+        <section className={`overlay-boss-card ${reveal ? "is-revealed" : ""}`}>
+          <div className="overlay-boss-art">
+            <BossArt state={forge} />
           </div>
-          {forge?.boss && (
-            <div className="overlay-stats">
-              {forge.boss.stats.health} HP <b>·</b> {forge.boss.stats.damage} DMG
-            </div>
-          )}
-        </div>
-      </section>
+          <div className="overlay-boss-info">
+            <span className="eyebrow">
+              {reveal ? "THE COMMUNITY HAS FORGED" : "THE CHAT IS FORGING"}
+            </span>
+            <h1>{reveal ? reveal.boss.name : "A BOSS IN THE MAKING"}</h1>
+            {reveal ? (
+              <div className="boss-tags reveal-tags">
+                <span>BODY · {title(reveal.boss.attributes.body)}</span>
+                <span>ELEMENT · {title(reveal.boss.attributes.element)}</span>
+                <span>SPECIAL · {title(reveal.boss.attributes.special)}</span>
+                <span>WEAKNESS · {title(reveal.boss.attributes.weakness)}</span>
+              </div>
+            ) : (
+              <div className="boss-tags">
+                <span>{title(forge?.categories[0]?.winner ?? "BODY TBD")}</span>
+                <span>{title(forge?.categories[1]?.winner ?? "ELEMENT TBD")}</span>
+              </div>
+            )}
+            {reveal && (
+              <div className="overlay-reveal-message" role="status">
+                <strong>REVEALED — BATTLE COMING SOON</strong>
+                <span>Cooperative chat combat is planned for M2.</span>
+              </div>
+            )}
+          </div>
+        </section>
+      ) : forge?.status === "idle" ? (
+        <section className="overlay-awaiting" aria-label="Awaiting forge">
+          <span className="eyebrow">GENERIC PRESENTATION</span>
+          <strong>AWAITING FORGE</strong>
+          <p>A four-stage audience forge will reveal the boss here.</p>
+        </section>
+      ) : (
+        <section className="overlay-awaiting" role="status">
+          <strong>
+            {connection === "connected"
+              ? "WAITING FOR FRESH SERVER STATE"
+              : "SERVER LINK UNAVAILABLE"}
+          </strong>
+          <p>Current boss details are hidden until the local server state is fresh.</p>
+        </section>
+      )}
       <LiveVoteSurface
         connection={connection}
         snapshotAvailable={snapshotAvailable}
@@ -770,13 +834,17 @@ export function OverlayPreview() {
                 ? `VOTE: ${title(category.category)} · ${seconds}s`
                 : forge?.status === "revealed"
                   ? "BOSS REVEALED"
-                  : "WAITING TO BEGIN"}
+                  : forge?.status === "idle"
+                    ? "AWAITING FORGE"
+                    : "WAITING TO BEGIN"}
             </span>
           </div>
           <h2>
             {category
               ? `Choose the boss ${category.category === "weakness" ? "weakness" : category.category}`
-              : "A boss built by the whole chat"}
+              : forge?.status === "idle"
+                ? "The forge is ready when you are."
+                : "A boss built by the whole chat"}
           </h2>
           <VoteInstructions
             category={category}
@@ -816,17 +884,20 @@ export function OverlayPreview() {
                 ))}
               </div>
             </>
-          ) : forge ? (
+          ) : reveal ? (
             <div className="overlay-reveal-row">
-              {forge.categories.map((item) => (
+              {reveal.categories.map((item) => (
                 <span key={item.category}>
-                  {title(item.category)} <b>{humanizeVoteChoice(item.winner ?? "none")}</b>
-                  {item.winner && ` · ${winnerAttribution(item.winner, item.noVoteFallback)}`}
+                  <small>{title(item.category)}</small>
+                  <b>{humanizeVoteChoice(item.winner ?? "none")}</b>
+                  <em>{winnerAttribution(item.winner, item.noVoteFallback)}</em>
                 </span>
               ))}
             </div>
+          ) : forge?.status === "idle" ? (
+            <p className="overlay-awaiting-copy">Awaiting the first forge cycle.</p>
           ) : (
-            <p>Connect to the local development server to see votes.</p>
+            <p>Current vote details are unavailable until fresh server state returns.</p>
           )}
         </section>
       </LiveVoteSurface>
@@ -834,7 +905,7 @@ export function OverlayPreview() {
         <span className="activity-dot" />
         {connection !== "connected"
           ? "SERVER LINK UNAVAILABLE · LIVE VOTE STATUS UNKNOWN"
-          : !snapshotAvailable
+          : !forge
             ? "WAITING FOR FRESH SERVER STATE · LIVE VOTE STATUS UNKNOWN"
             : forge?.connectedToTwitch
               ? "LIVE TWITCH CHAT · VOTES ARE SERVER AUTHORITATIVE"
@@ -843,7 +914,7 @@ export function OverlayPreview() {
                 : "TWITCH DISCONNECTED · LIVE VOTING PAUSED"}
       </div>
       <div className="overlay-safe-label">
-        BROADCAST OVERLAY <b>•</b> SAFE AREA
+        OBS BROWSER SOURCE · RUNS BESIDE YOUR GAME · NO GAME ACCESS
       </div>
     </main>
   );
