@@ -3,11 +3,13 @@
 ## Current snapshot — 2026-10-28
 
 - **Active milestone:** Phase 4-A — streamer voting UX and OBS readiness, developed on `feat/p4a-streamer-voting-ux` from `main` at `76a5ddeeea0986aae2ed073deaeb1a5b02fb6280`.
-- **P3-B / PR #5:** Completed and squash-merged to `main` at `76a5dde`. Historical C5-R2 live acceptance remains owner-supplied, not independently reproduced. OAuth/EventSub, stable connection, four-stage forge and Phaser victory were reported PASS; 3 genuine ballots were accepted and 3 rejected. Special used its no-vote default, so success in all four categories is not claimed. Actual OBS application capture remains **UNVERIFIED**.
+- **P3-B / PR #5:** Completed and squash-merged to `main` at `76a5dde`. Historical C5-R2 live acceptance remains owner-supplied, not independently reproduced. OAuth/EventSub, stable connection, four-stage forge and Phaser victory were reported PASS; 3 genuine ballots were accepted and 3 rejected. Special used its no-vote default, so success in all four categories is not claimed. OBS capture was not part of that P3-B live run; separate P4A owner-supplied OBS visual QA is recorded below.
 - **Automated P3-B evidence:** 124 tests and workspace gates passed at implementation commit `279ff63fc803921310226d9c6903a029af7f0bd5`; those fake-network results are separate from the owner-supplied live run.
 - **Phase 4-A scope:** Exact canonical chat syntax and valid choices for the current stage, a visible countdown, current vote totals and a tie-aware leader, explicit default/community attribution, and separate live/simulated/disconnected labels. Live prompts require both a verified Twitch-connected forge snapshot and a connected local event feed with fresh authoritative state. Local feed loss suppresses stale vote details and reports the live vote status as unknown. The OBS overlay remains read-only. This work does not start OAuth, the authenticated runtime, or Phase 5 submissions.
-- **Phase 4-A validation:** Initial implementation and P4A-C1 evidence remain in [acceptance](ACCEPTANCE.md#phase-4-a--streamer-voting-ux-and-obs-readiness). P4A-C2 addresses the reported 390px dashboard/overlay clipping using mobile-only minimum-width and wrapping constraints. Exact viewport browser checks, disconnect warning bounds, and current screenshots are in the [P4A-C2 evidence](ACCEPTANCE.md#p4a-c2--mobile-clipping-remediation). Node 24.21.0 / pnpm 11.25.0; frozen install, build, typecheck, lint, format, 19 targeted web tests, 149 full tests, four-category mock simulation and `git diff --check` passed.
-- **OBS status:** Owner-supplied evidence reports visible Browser Source rendering at 1920×1080. The 1280×720 source appeared about 640×360 within a larger canvas; full-frame acceptance remains pending the owner’s Properties and **Transform → Fit to Screen** retest. Actual OBS acceptance is **PARTIAL**, not complete. See the [owner OBS checklist](P4A-STREAMER-OBS-READINESS.md#owner-obs-browser-source-checklist).
+- **Phase 4-A final acceptance:** PASS for the frontend scope on Draft PR #6. Verified Twitch commands use `!vote <category> <choice>` for the active `body`, `element`, `special`, or `weakness` stage. UI distinguishes LIVE TWITCH, SIMULATED, TWITCH DISCONNECTED and SERVER LINK UNAVAILABLE / LIVE VOTE STATUS UNKNOWN; live data requires a connected feed and fresh authoritative state. Leaders are tie-aware; final outcomes distinguish COMMUNITY VOTE from DEFAULT · No valid votes. P4A-C2 mobile clipping remediation and requested responsive Chromium QA PASS. The independent exact-head source review passed at `0296f11`.
+- **Phase 4-A evidence:** The 149-test suite previously passed (29 shared / 19 web / 101 server); frozen install, build, typecheck, lint, format, four-category mock simulation, and `git diff --check` passed at the C2 implementation checkpoint. Synthetic simulation, Chromium visual QA, automated tests, and historical owner-supplied P3-B live Twitch results are separate evidence categories. Details are in [acceptance](ACCEPTANCE.md#phase-4-a--streamer-voting-ux-and-obs-readiness).
+- **OBS status:** Owner-verified visual rendering in the actual OBS Studio application is **PASS** at 1920×1080 and 1280×720. The owner confirms Browser 2 native Browser Source Properties were 1280×720 with **Transform → Fit to Screen**; there was no scene-boundary clipping, the simulated disclosure and default-boss labels were correct, and no administration controls appeared. This owner-supplied simulated-mode visual QA was not independently reproduced and does not prove new live Twitch voting, live HP synchronization, or continuous animation performance. See the [owner OBS evidence](P4A-STREAMER-OBS-READINESS.md#owner-supplied-obs-visual-qa-results).
+- **Phase 4-A delivery gate:** Documentation closure and exact-head delta audit remain on existing Draft PR #6. Keep it Draft and unmerged pending the owner’s separate merge decision. The PDCP-001 `!hit` battle system is not implemented.
 - **Prior checkpoint notes:** Sections below preserve the status and review gates that applied at those historical checkpoints. References there to an open or unmerged PR #5 do not describe the current repository state.
 
 ## P3-B-C2 remediation checkpoint
@@ -110,9 +112,11 @@
   demonstration are **PASS**, based on owner-supplied live results.
 - Canonical accepted chat syntax is `!vote <category> <choice>`; category must
   be the active stage. Categories are `body`, `element`, `special`, and
-  `weakness`, with choices listed in `packages/shared/src/index.ts`. A future
-  UX improvement should show this syntax and the currently valid choices in
-  the overlay. Actual OBS application capture remains **UNVERIFIED**.
+  `weakness`, with choices listed in `packages/shared/src/index.ts`. At the
+  P3-B checkpoint, showing this syntax in the overlay was a future UX
+  improvement; P4A now supplies the active-stage commands. The P3-B live run
+  did not include OBS capture; separate P4A owner-supplied OBS visual QA passes
+  at both target resolutions, as recorded above.
 - These runtime results were supplied by the owner and were not independently
   reproduced. Automated fake-transport validation remains separate: 124 tests
   passed at the audited implementation head.

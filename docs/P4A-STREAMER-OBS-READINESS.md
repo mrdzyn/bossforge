@@ -1,9 +1,11 @@
 # Phase 4-A — Streamer Voting UX and OBS Readiness
 
-**Status:** In progress on `feat/p4a-streamer-voting-ux`, based on `main` at
-`76a5ddeeea0986aae2ed073deaeb1a5b02fb6280`. Phase 3-B PR #5 is already merged.
-This work does not start OAuth, access the authenticated runtime, activate
-Twitch, or submit Phase 5 materials.
+**Status:** Phase 4-A frontend and owner visual acceptance complete on
+`feat/p4a-streamer-voting-ux`, based on `main` at
+`76a5ddeeea0986aae2ed073deaeb1a5b02fb6280`. Existing PR #6 remains Draft and
+unmerged pending final exact-head documentation review and owner decision.
+Phase 3-B PR #5 is already merged. This work does not start OAuth, access the
+authenticated runtime, activate Twitch, or submit Phase 5 materials.
 
 ## Streamer and viewer experience
 
@@ -62,11 +64,9 @@ not authorize a new OAuth flow or Twitch test by itself.
 7. Let each stage complete. PASS if a real winning ballot is labeled
    **COMMUNITY VOTE**, while an empty category clearly says **DEFAULT · No
    valid votes**. Verify that the final boss and arena state reconcile.
-8. To verify actual OBS capture, add a Browser Source in the OBS application
-   that the owner will use, point it at the local `/overlay` URL, set the
-   intended 1920×1080 or 1280×720 canvas, and confirm the rendered source in the
-   OBS preview/program. Record this separately from Chromium QA. Do not claim
-   OBS PASS from a browser screenshot.
+8. Actual OBS visual acceptance is now owner-verified PASS at 1920×1080 and
+   1280×720, as recorded below. This application evidence is separate from
+   Chromium QA. A browser screenshot alone does not establish OBS PASS.
 
 ### Disposable Chromium evidence
 
@@ -92,31 +92,28 @@ are in [`docs/visual-qa/p4a-c2-verified`](visual-qa/p4a-c2-verified/), with
 visible bounds and the exact validation record in
 [ACCEPTANCE](ACCEPTANCE.md#p4a-c2--mobile-clipping-remediation).
 
-### Owner OBS Browser Source checklist
+### Owner-supplied OBS visual QA results
 
-The owner has supplied evidence that the Browser Source rendered visibly in OBS
-at 1920×1080. The 1280×720 source appeared about 640×360 in a larger canvas, so
-full-frame acceptance at that size remains pending. To complete the owner
-retest:
+The owner reports that OBS Studio Browser Source visual rendering PASS at
+1920×1080 and 1280×720. Source fitting PASS; no visible scene-boundary clipping;
+SIMULATED disclosure PASS; default boss outcomes were correctly labeled; and no
+overlay administration controls were visible. For Browser 2, the owner confirms
+native Browser Source Properties width 1280 and height 720, with **Transform →
+Fit to Screen** applied. This is owner-supplied visual evidence from the actual
+OBS application; it was not independently reproduced.
 
-1. Keep the isolated mock server and Vite running. In OBS Studio, open the
-   intended scene and use **Sources → + → Browser** to add a Browser Source.
-2. Name it `BossForge mock overlay`; use the URL
-   `http://127.0.0.1:5201/overlay`. Do not enable Twitch or add credentials.
-3. For the 1920×1080 case, create a Browser Source whose **Properties** width
-   and height are 1920 and 1080. Confirm the mock overlay, simulated
-   disclosure, prompt, choices, counts and countdown render legibly.
-4. For the 1280×720 case, use a separate Browser Source and set its **Properties**
-   width and height to 1280 and 720. Select that source, right-click, and choose
-   **Transform → Fit to Screen**. Confirm the source fills the intended canvas
-   frame and the content remains legible. Browser Source properties set the
-   rendered viewport; **Fit to Screen** sets its transform/scale in the scene.
-   Scaling a smaller viewport is not equivalent to rendering at 1280×720.
-5. Save a screenshot of the OBS Studio window for each source/resolution. Keep
-   these owner captures separate from Chromium evidence. Record 1280×720 as
-   PASS only when the source fills the intended frame. If either render clips
-   content or differs materially, record FAIL and include the screenshot.
-   Chromium screenshots alone do not establish OBS PASS.
+The initial C2 review interpreted the approximate 640×360 on-screen size in the
+1280×720 scene as a smaller Browser Source viewport and marked full-frame
+acceptance pending. The owner clarified that Properties were already native
+1280×720 and **Fit to Screen** had been applied; the apparent 640×360 was OBS
+preview/display scaling. This clarification supersedes the pending assessment
+and closes the retest request while preserving the earlier interpretation here.
+
+These results establish visual rendering and fit in simulated mode only. They
+do not establish a new real Twitch vote, live HP synchronization, continuous
+animation performance, or independent OBS reproduction. The historical P3-B
+live Twitch evidence is separately owner-supplied and is not part of this OBS
+visual acceptance.
 
 ## Evidence boundaries and Phase 5 preparation
 
@@ -124,8 +121,9 @@ P3-B live results remain owner-supplied and were not independently reproduced:
 OAuth/EventSub and connection stability PASS; 6 notifications, 6 normalized
 messages, 6 callbacks; 3 genuine ballots accepted and 3 rejected; all four
 stages completed; Special used its no-vote default; Phaser arena VICTORY. These
-results do not show a genuine accepted vote in all four categories. Actual OBS
-application capture remains **UNVERIFIED**.
+results do not show a genuine accepted vote in all four categories. OBS capture
+was not included in that P3-B live report; later P4A owner-supplied OBS visual
+results are recorded above.
 
 For future hackathon submission preparation, collect a genuine Twitch demo,
 actual OBS capture, Phaser battle, a reproducible installation/run, a YouTube

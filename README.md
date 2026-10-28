@@ -37,17 +37,24 @@ two invalid-choice), with no disconnects, socket closes/errors, or forge
 cancellations. The four-stage forge revealed Cinder Granite (Golem / Fire /
 Ember Burst default / Earth); Special used its no-vote default, so accepted
 genuine ballots in all four categories are not claimed. The owner reports a
-Phaser VICTORY (boss 0/120 HP; streamer 64/100 HP). These results are
-owner-supplied and not independently reproduced; actual OBS application capture
-remains **UNVERIFIED**. Automated validation is separate: 124 tests passed at
+Phaser VICTORY (boss 0/120 HP; streamer 64/100 HP). These P3-B live results are
+owner-supplied and not independently reproduced; that Twitch run did not include
+OBS capture. Separate P4A owner-supplied visual QA in the actual OBS Studio
+application passes at 1920×1080 and 1280×720 in simulated mode. It does not
+establish a new real Twitch vote, live HP synchronization or continuous
+animation performance. Automated validation is separate: 124 tests passed at
 implementation commit `279ff63fc803921310226d9c6903a029af7f0bd5` using fake
 transports. For a local account, the owner must personally approve/configure
 OAuth: set the registered Client ID and private Client Secret in gitignored
 `.env`, then explicitly set `TWITCH_INTEGRATION_ENABLED=true`. The server
-remains loopback-only and mock simulation remains available. **Phase 4-A is in
-progress** on `feat/p4a-streamer-voting-ux`; it adds clearer streamer voting
-instructions and an OBS-ready read-only overlay. Actual capture inside OBS
-remains unverified. See [Phase 4-A readiness](docs/P4A-STREAMER-OBS-READINESS.md)
+remains loopback-only and mock simulation remains available. **Phase 4-A
+frontend acceptance is PASS** on `feat/p4a-streamer-voting-ux` / Draft PR #6:
+canonical voting instructions, fresh-state protections, tie-aware totals,
+community/default attribution, mobile clipping remediation and responsive
+Chromium QA are documented as complete. The 149-test result (29 shared, 19 web,
+101 server) was previously run; this docs-only closure does not rerun it. The
+PR remains Draft and unmerged pending final documentation review and the owner's
+separate decision. See [Phase 4-A readiness](docs/P4A-STREAMER-OBS-READINESS.md)
 and [acceptance evidence](docs/ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
 
 See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and

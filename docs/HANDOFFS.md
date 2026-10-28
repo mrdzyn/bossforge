@@ -460,8 +460,9 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Forge and arena:** PASS — Cinder Granite revealed (Golem / Fire / Ember
   Burst default / Earth). Phaser terminal result: VICTORY, boss 0/120 HP,
   streamer 64/100 HP. Connection stability and complete forge-to-victory
-  demonstration pass on the owner’s report. Actual OBS application capture
-  remains unverified.
+  demonstration pass on the owner’s report. The P3-B live run did not include
+  OBS application capture; separate P4A owner-supplied OBS visual QA is recorded
+  below.
 - **Chat syntax:** `!vote <category> <choice>`, with the category matching the
   active stage. The category choices are body (golem, wraith, drake, mimic),
   element (fire, ice, storm, void), special (ember-burst, frost-chain,
@@ -491,17 +492,21 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Security boundary:** The change does not alter OAuth, EventSub, vote intake,
   state routes, network binding, or production behavior. No authenticated
   runtime restart, OAuth, Twitch request, or real vote is part of this work.
-- **Evidence status:** Automated UI/helper tests and disposable mock-mode browser
-  QA are recorded in the Phase 4-A section of `docs/ACCEPTANCE.md`. They are
-  separate from owner-supplied P3-B live results. Actual OBS application
-  capture has owner-supplied partial evidence: 1920×1080 rendered visibly;
-  1280×720 full-frame acceptance remains pending the owner Browser Source
-  retest in `docs/P4A-STREAMER-OBS-READINESS.md`.
+- **Evidence status:** Phase 4-A frontend acceptance is PASS. Automated UI/helper
+  tests and mock-mode Chromium QA are recorded in `docs/ACCEPTANCE.md`, separate
+  from owner-supplied historical P3-B live results. The owner reports actual
+  OBS Studio visual PASS at 1920×1080 and 1280×720, including native 1280×720
+  Browser Source Properties, **Transform → Fit to Screen**, no scene-boundary
+  clipping, SIMULATED disclosure, correct default labels, and no overlay
+  administration controls. This evidence is owner-supplied and not independently
+  reproduced; it does not establish new live Twitch voting, live HP
+  synchronization, or continuous animation performance.
 - **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build,
-  typecheck, lint, Prettier, 134 tests (29 shared / 4 web / 101 server),
-  four-category mock simulation, responsive browser checks and `git diff
---check` passed. Phaser's existing large arena chunk emits a build-size
-  advisory; the build succeeds.
+  typecheck, lint, Prettier, 149 tests (29 shared / 19 web / 101 server),
+  four-category synthetic mock simulation, responsive browser checks and
+  `git diff --check` passed at the C2 implementation checkpoint. The tests were
+  previously run and are not rerun for this documentation-only closure. Phaser's
+  existing large arena chunk emits a build-size advisory; the build succeeds.
 - **Phase 5:** Submission preparations are recorded in the readiness guide;
   no video, footage, session ID, public submission, or publication is claimed.
 - **Review gate:** Keep the Phase 4-A pull request Draft and unmerged. Request
@@ -550,11 +555,14 @@ only after they exist. Do not invent a Codex session ID; use the session's
   visible DOM bounds were checked at each CSS viewport. Connection-loss warning
   fits at 360px; the isolated mock server was restored after that check. Current
   screenshots and details are in the P4A-C2 section of `docs/ACCEPTANCE.md`.
-- **OBS evidence:** Owner reports the Browser Source was visible at 1920×1080.
-  At 1280×720 it appeared about 640×360 in a larger canvas. The owner must set
-  a separate Browser Source to 1280×720 in Properties, use **Transform → Fit
-  to Screen**, confirm it fills the canvas and provide a full OBS screenshot.
-  Do not mark full OBS acceptance PASS until this retest is captured.
+- **OBS evidence:** The initial C2 interpretation treated an approximate
+  640×360 on-screen appearance as a smaller source viewport and marked 1280×720
+  pending. The owner clarified that Browser 2 Properties were already native
+  1280×720 and **Transform → Fit to Screen** was applied; the appearance was
+  preview/display scaling. This supersedes the pending assessment. Owner visual
+  QA now passes at both 1920×1080 and 1280×720. See the final results in
+  `docs/P4A-STREAMER-OBS-READINESS.md`; preserve the original misinterpretation
+  above as audit history.
 - **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build,
   typecheck, lint, formatting, targeted web tests (19), full workspace tests
   (149: 29 shared / 19 web / 101 server), four-category five-second mock
@@ -564,3 +572,25 @@ only after they exist. Do not invent a Codex session ID; use the session's
 - **Delivery:** Commit and push this bounded fix, docs and preserved/new QA
   artifacts to the existing Draft PR #6 only. Request independent exact-head
   re-audit. Do not merge, deploy, publish or start Phase 5.
+
+### P4A final acceptance closure
+
+- **Current result:** PASS for the Phase 4-A frontend/overlay scope, including
+  mobile clipping remediation and owner-verified OBS visual presentation.
+- **Canonical voting UX:** `!vote <category> <choice>` uses only the currently
+  active `body`, `element`, `special`, or `weakness` stage. The UI separates
+  LIVE TWITCH, SIMULATED, Twitch disconnected, and local-server-unavailable
+  states; live prompts require fresh authoritative state. Leaders are
+  tie-aware, and completed results distinguish COMMUNITY VOTE from DEFAULT ·
+  No valid votes. OBS remains read-only.
+- **Evidence categories:** 149 automated tests previously passed (29 shared /
+  19 web / 101 server); four-category mock simulation is synthetic; responsive
+  results are Chromium visual QA; 1920×1080 and 1280×720 OBS results are
+  owner-supplied application screenshots. Historical P3-B genuine Twitch
+  results remain owner-supplied and are not new P4A live voting evidence.
+- **Limitations:** OBS was tested in simulated mode. No new live Twitch voting,
+  live HP synchronization, or continuous animation performance is established.
+  The PDCP-001 `!hit` battle system is not implemented in PR #6.
+- **Review gate:** Keep existing PR #6 Draft and unmerged. Request the final
+  exact-head documentation delta audit and wait for the owner's separate merge
+  decision. Do not deploy, publish, or submit Phase 5 materials.
