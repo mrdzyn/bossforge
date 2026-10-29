@@ -33,8 +33,9 @@ credentials, genuine chat, or viewer information were used.
 The final files prefixed `final-` and the 16 files named
 `ready-{body}-{dashboard|overlay}-{size}.png` are the acceptance capture set.
 The directory also preserves exploratory screenshots, intermediate
-measurement JSON, and Playwright runner-generated `page@*.webm` copies from
-earlier iterations. Those are retained as history and are superseded by the
+measurement JSON from earlier iterations. The two redundant Playwright
+runner-generated videos were removed; `motion-demo.webm` remains. Exploratory
+artifacts are superseded by the
 final JSON records above; they must not be treated as final acceptance
 measurements.
 
@@ -54,3 +55,14 @@ registry DNS failure occurred; subsequent read-only checks found 3001 and 5173
 no longer listening. No credentials were read and no Twitch or OBS action was
 taken. The owner runtime was not restarted. This incident is recorded rather
 than claiming the owner's runtime remained available throughout the task.
+
+## Audit remediation validation
+
+Node 24.21.0 ran the already-installed Prettier 3.9.10 directly against every
+tracked text file changed by PR #18; the check passed. No dependencies were
+installed. Earlier package-by-package validation passed 264 tests (41 shared,
+147 server, 76 web). The root parallel test command was not green: sandbox
+socket tests hit `EPERM`, and the authorized rerun hit the concurrent SVG
+checksum timeout; the isolated web suite passed with a 15-second timeout.
+Hosted CI remains unverified. Weakness recoil also animates a CSS filter;
+sustained rendering performance has not been measured.

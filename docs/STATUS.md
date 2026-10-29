@@ -73,7 +73,7 @@
   PR #17.
 - **Scope:** strengthen bounded idle and authoritative hit/weakness reactions
   for the four existing SVG characters, and fit the original art within the
-  existing stage. CSS transforms/opacity only; no animation framework, server
+  existing stage. CSS transforms, opacity, and a bounded weakness filter effect; no animation framework, server
   combat change, or change to Twitch/EventSub authority. Synthetic Chromium
   screenshots and observations are in `docs/visual-qa/boss-motion-v1/`.
 - **Review target:** branch `feat/boss-motion-v1`; Draft PR
