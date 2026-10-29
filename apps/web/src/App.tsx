@@ -4,6 +4,8 @@ import {
   humanizeVoteChoice,
   remainingVoteSeconds,
   type ForgeState,
+  type BossAttributes,
+  type CommunityBattleStateV1,
   winnerAttribution,
 } from "@bossforge/shared";
 import { useLiveEvents } from "./hooks/useLiveEvents.js";
@@ -14,15 +16,28 @@ import { LiveVoteSurface } from "./LiveVoteSurface.js";
 import { authoritativeReveal, currentForgePresentation } from "./forge-presentation.js";
 import { OverlayBattleHud } from "./OverlayBattleHud.js";
 import { overlayBattleView } from "./overlay-battle-presentation.js";
+import { AnimatedBoss, type BossPresentationPhase } from "./components/AnimatedBoss.js";
 
 const Arena = lazy(() => import("./arena/Arena.js"));
+
+function BrandMark({ className = "" }: { className?: string }) {
+  return (
+    <img
+      className={`brand-logo-mark ${className}`.trim()}
+      src="/assets/branding/bossforge-mark.svg"
+      alt=""
+      aria-hidden="true"
+      width="36"
+      height="36"
+      decoding="async"
+    />
+  );
+}
 
 function Brand() {
   return (
     <a className="brand" href="/" aria-label="BossForge dashboard">
-      <span className="brand-mark">
-        B<span>F</span>
-      </span>
+      <BrandMark />
       <span className="brand-name">
         BOSSFORGE<span>LIVE</span>
       </span>
@@ -72,79 +87,55 @@ function Connection({ status }: { status: string }) {
 }
 const title = (value: string) => value.replaceAll("-", " ").toUpperCase();
 
-function BossArt({ state }: { state: ForgeState | null }) {
-  const attrs = state?.boss?.attributes;
-  const body =
-    attrs?.body ?? state?.categories.find((item) => item.category === "body")?.winner ?? "golem";
-  const element =
-    attrs?.element ??
-    state?.categories.find((item) => item.category === "element")?.winner ??
-    "fire";
-  const special =
-    attrs?.special ??
-    state?.categories.find((item) => item.category === "special")?.winner ??
-    "ember-burst";
-  const weakness =
-    attrs?.weakness ??
-    state?.categories.find((item) => item.category === "weakness")?.winner ??
-    "water";
-  const specialStyle =
-    special === "frost-chain"
-      ? "chain"
-      : special === "thunder-dash"
-        ? "thunder"
-        : special === "shadow-pulse"
-          ? "shadow"
-          : "ember";
-  const specialGlyph =
-    special === "frost-chain"
-      ? "⛓"
-      : special === "thunder-dash"
-        ? "ϟ"
-        : special === "shadow-pulse"
-          ? "◉"
-          : "✹";
-  const weaknessGlyph =
-    weakness === "water" ? "◉" : weakness === "light" ? "✧" : weakness === "earth" ? "⬟" : "〰";
+function battlePresentationPhase(
+  battle: Pick<CommunityBattleStateV1, "status"> | null,
+): BossPresentationPhase {
+  switch (battle?.status) {
+    case "active":
+    case "victory":
+    case "expired":
+    case "cancelled":
+    case "ready":
+      return battle.status;
+    default:
+      return "reveal";
+  }
+}
+
+function BossArt({
+  state,
+  battle = null,
+}: {
+  state: ForgeState | null;
+  battle?: Pick<
+    CommunityBattleStateV1,
+    "status" | "encounterId" | "acceptedHitCount" | "weaknessHitCount" | "currentHp" | "maxHp"
+  > | null;
+}) {
+  const reveal = authoritativeReveal(state);
+  const attributes: BossAttributes | null = reveal?.boss.attributes ?? null;
+  const phase: BossPresentationPhase = attributes ? battlePresentationPhase(battle) : "forging";
+  const authorityIdentity =
+    state && reveal
+      ? `${state.serverInstanceId}:${state.serverStartedAt}:${state.mode}:${state.cycleId}:${battle?.encounterId ?? "revealed"}`
+      : null;
+  const traits = attributes
+    ? `${title(attributes.body)} · ${title(attributes.element)}`
+    : "COMMUNITY VOTES IN PROGRESS";
   return (
-    <div
-      className={`boss-art body-${body} element-${element} special-${specialStyle} weakness-${weakness}`}
-      role="img"
-      aria-label={`${title(body)} ${title(element)} boss, ${title(special)} special, weak to ${title(weakness)}`}
-    >
-      <div className="art-aura" />
-      <div className="boss-figure">
-        <div className="boss-horns">
-          <i />
-          <i />
-        </div>
-        <div className="boss-head">
-          <i />
-          <i />
-          <b />
-        </div>
-        <div className="boss-torso">
-          <i />
-          <i />
-          <b />
-        </div>
-        <div className="boss-limbs">
-          <i />
-          <i />
-          <b />
-          <b />
-        </div>
-      </div>
+    <div className={`boss-art ${attributes ? `element-${attributes.element}` : "element-neutral"}`}>
+      <AnimatedBoss
+        attributes={attributes}
+        phase={phase}
+        authorityIdentity={authorityIdentity}
+        acceptedHitCount={battle?.status === "active" ? battle.acceptedHitCount : 0}
+        weaknessHitCount={battle?.status === "active" ? battle.weaknessHitCount : 0}
+        currentHp={battle?.status === "active" ? battle.currentHp : null}
+        maxHp={battle?.status === "active" ? battle.maxHp : null}
+        loading="eager"
+      />
       <span className="art-tag tag-top">FORGE ENTITY / {state?.cycleId ?? "AWAITING VOTES"}</span>
-      <span className="art-tag tag-bottom">
-        {title(body)} · {title(element)}
-      </span>
-      <span className="special-mark" aria-hidden="true">
-        {specialGlyph}
-      </span>
-      <span className="weakness-mark" aria-hidden="true">
-        {weaknessGlyph}
-      </span>
+      <span className="art-tag tag-bottom">{traits}</span>
     </div>
   );
 }
@@ -756,9 +747,23 @@ export function Dashboard() {
                 </span>
               </div>
               {forge && forge.status !== "idle" ? (
-                <BossArt state={forge} />
+                <BossArt
+                  state={forge}
+                  battle={battleLive.fresh && battleMatchesForge ? battle : null}
+                />
               ) : (
                 <div className="forge-placeholder">
+                  {forge && (
+                    <img
+                      className="forge-placeholder-logo"
+                      src="/assets/branding/bossforge-logo.svg"
+                      alt="BossForge Live"
+                      width="132"
+                      height="132"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  )}
                   <span>{forge ? "AWAITING FORGE" : "AUTHORITATIVE STATE UNAVAILABLE"}</span>
                   <strong>
                     {forge
@@ -918,6 +923,15 @@ export function OverlayPreview() {
       ? (forge.categories.find((item) => item.category === forge.activeCategory) ?? null)
       : null;
   const reveal = authoritativeReveal(forge);
+  const overlayBattleMatchesForge = Boolean(
+    overlayBattleFresh &&
+    overlayBattle &&
+    reveal &&
+    overlayBattle.forgeCycleId === forge?.cycleId &&
+    overlayBattle.forgeIdentity?.serverInstanceId === forge?.serverInstanceId &&
+    overlayBattle.forgeIdentity.serverStartedAt === forge?.serverStartedAt &&
+    overlayBattle.forgeIdentity.mode === forge?.mode,
+  );
   const battleView = overlayBattleView({
     connection,
     forgeFresh: snapshotAvailable,
@@ -936,9 +950,7 @@ export function OverlayPreview() {
     <main className="overlay-page">
       <header className="overlay-topline">
         <div className="overlay-brand">
-          <span className="brand-mark">
-            B<span>F</span>
-          </span>
+          <BrandMark />
           <span>
             BOSSFORGE <b>LIVE</b>
           </span>
@@ -963,7 +975,7 @@ export function OverlayPreview() {
       {forge?.status === "voting" || reveal ? (
         <section className={`overlay-boss-card ${reveal ? "is-revealed" : ""}`}>
           <div className="overlay-boss-art">
-            <BossArt state={forge} />
+            <BossArt state={forge} battle={overlayBattleMatchesForge ? overlayBattle : null} />
           </div>
           <div className="overlay-boss-info">
             <span className="eyebrow">
