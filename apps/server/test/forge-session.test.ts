@@ -117,6 +117,173 @@ describe("ForgeSession", () => {
     expect(session.getState().cycleId).toBe("forge-2");
   });
 
+  it.each(["water", "light", "earth", "wind"])("uses the actual %s weakness vote", (weakness) => {
+    const { session, tick, vote } = setup();
+    session.start(5);
+    tick();
+    tick();
+    tick();
+    expect(vote(`weakness-${weakness}`, "viewer", `!vote weakness ${weakness}`)).toBe(true);
+    tick();
+    expect(session.getState()).toMatchObject({
+      status: "revealed",
+      boss: { attributes: { weakness } },
+    });
+    expect(session.getState().categories[3]).toMatchObject({
+      winner: weakness,
+      noVoteFallback: false,
+      totalVotes: 1,
+    });
+  });
+
+  it("breaks tied weakness votes using configured choice order", () => {
+    const { session, tick, vote } = setup();
+    session.start(5);
+    tick();
+    tick();
+    tick();
+    expect(vote("tie-wind", "a", "!vote weakness wind")).toBe(true);
+    expect(vote("tie-light", "b", "!vote weakness light")).toBe(true);
+    tick();
+    expect(session.getState().boss?.attributes.weakness).toBe("light");
+  });
+
+  it("opens exactly one retry for zero valid weakness ballots and accepts its audience vote", () => {
+    const { session, tick, vote, pendingTimers } = setup();
+    session.start(5);
+    tick();
+    tick();
+    tick();
+    expect(vote("invalid-first", "viewer", "!vote weakness nonsense")).toBe(false);
+    const first = session.getState().categories[3]!.closesAt;
+    tick();
+    const retry = session.getState();
+    expect(retry).toMatchObject({
+      status: "voting",
+      activeCategory: "weakness",
+      weaknessRetry: true,
+      boss: null,
+    });
+    expect(retry.categories[3]!.closesAt).not.toBe(first);
+    expect(pendingTimers()).toBe(1);
+    expect(vote("retry-earth", "viewer", "!vote weakness earth")).toBe(true);
+    tick();
+    expect(session.getState()).toMatchObject({
+      status: "revealed",
+      boss: { attributes: { weakness: "earth" } },
+    });
+  });
+
+  it("ends safely after two empty weakness windows and can be explicitly reset", () => {
+    const { session, tick, vote, pendingTimers } = setup();
+    session.start(5);
+    tick();
+    tick();
+    tick();
+    tick();
+    expect(vote("invalid-retry", "viewer", "!vote weakness unknown")).toBe(false);
+    tick();
+    expect(session.getState()).toMatchObject({
+      status: "failed",
+      activeCategory: null,
+      progress: 3,
+      boss: null,
+      weaknessRetry: true,
+    });
+    expect(session.getState().categories[3]).toMatchObject({
+      status: "closed",
+      winner: null,
+      noVoteFallback: false,
+      totalVotes: 0,
+    });
+    expect(pendingTimers()).toBe(0);
+    expect(vote("late", "viewer", "!vote weakness water")).toBe(false);
+    session.reset();
+    session.start(5);
+    expect(session.getState()).toMatchObject({
+      status: "voting",
+      cycleId: "forge-2",
+      weaknessRetry: false,
+    });
+  });
+
+  it("cancels the retry without revealing a boss", () => {
+    const { session, tick, pendingTimers } = setup();
+    session.start(5);
+    tick();
+    tick();
+    tick();
+    tick();
+    expect(session.getState().weaknessRetry).toBe(true);
+    session.reset();
+    tick();
+    expect(session.getState()).toMatchObject({ status: "idle", boss: null, weaknessRetry: false });
+    expect(pendingTimers()).toBe(0);
+  });
+
+  it("cancels a Twitch retry on verified disconnect and does not resume", () => {
+    let now = Date.parse("2026-10-26T12:00:00.000Z");
+    const callbacks: Array<() => void> = [];
+    const session = new ForgeSession(
+      () => new Date(now),
+      {
+        schedule(callback) {
+          callbacks.push(callback);
+          return () => undefined;
+        },
+      },
+      () => undefined,
+      "instance",
+      undefined,
+      "twitch",
+      true,
+    );
+    session.start(5);
+    for (let i = 0; i < 4; i++) {
+      now += 5000;
+      callbacks.at(-1)!();
+    }
+    expect(session.getState()).toMatchObject({ status: "voting", weaknessRetry: true });
+    const stale = callbacks.at(-1)!;
+    session.setTwitchConnected(false);
+    stale();
+    expect(session.getState()).toMatchObject({
+      status: "idle",
+      boss: null,
+      connectedToTwitch: false,
+    });
+    session.setTwitchConnected(true);
+    expect(session.getState()).toMatchObject({ status: "idle", boss: null });
+    session.close();
+  });
+
+  it("ignores a queued callback from the previous weakness window", () => {
+    let now = Date.parse("2026-10-26T12:00:00.000Z");
+    const callbacks: Array<() => void> = [];
+    const session = new ForgeSession(() => new Date(now), {
+      schedule(callback) {
+        callbacks.push(callback);
+        return () => undefined;
+      },
+    });
+    session.start(5);
+    for (let i = 0; i < 3; i++) {
+      now += 5000;
+      callbacks.at(-1)!();
+    }
+    const old = callbacks.at(-1)!;
+    now += 5000;
+    old();
+    expect(session.getState()).toMatchObject({ status: "voting", weaknessRetry: true });
+    old();
+    expect(session.getState()).toMatchObject({
+      status: "voting",
+      activeCategory: "weakness",
+      weaknessRetry: true,
+    });
+    session.close();
+  });
+
   it("replays stale message IDs as rejected across a reset", () => {
     const { session, vote } = setup();
     session.start(5);

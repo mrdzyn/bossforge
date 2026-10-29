@@ -22,8 +22,10 @@ authenticated runtime, activate Twitch, or submit Phase 5 materials.
   spelling. Categories progress through `body`, `element`, `special`, and
   `weakness`.
 - A completed community-selected result is labeled **COMMUNITY VOTE**. When a
-  category has no valid votes, the selected first-choice fallback is labeled
-  **DEFAULT · No valid votes**. A fallback is not described as a viewer vote.
+  body, element or special category has no valid votes, its first-choice
+  fallback is labeled **DEFAULT · No valid votes**. Weakness instead receives
+  one additional voting window; if no valid ballot arrives the forge ends
+  without a boss. A fallback is not described as a viewer vote.
 - Mock mode is labeled **SIMULATED** and explains that Twitch is disconnected;
   Twitch commands are not shown there. Twitch mode without a verified
   connection is labeled **DISCONNECTED** and voting is paused. The overlay has

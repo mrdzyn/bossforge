@@ -31,14 +31,14 @@ const makeReveal = (
       status: "closed",
       options: FORGE_VOTE_CHOICES[category].map((choice) => ({
         choice,
-        count: 0,
-        percentage: 0,
+        count: category === "weakness" && choice === winners[category] ? 1 : 0,
+        percentage: category === "weakness" && choice === winners[category] ? 100 : 0,
       })),
-      totalVotes: 0,
+      totalVotes: category === "weakness" ? 1 : 0,
       openedAt: "2026-10-29T00:00:00.000Z",
       closesAt: "2026-10-29T00:00:15.000Z",
       winner: winners[category],
-      noVoteFallback: true,
+      noVoteFallback: category !== "weakness",
     })),
     boss: {
       id: "boss-1",

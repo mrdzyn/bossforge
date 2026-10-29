@@ -86,14 +86,14 @@ describe("authoritative completed forge reveal", () => {
         status: "closed",
         options: FORGE_VOTE_CHOICES[category].map((choice) => ({
           choice,
-          count: 0,
-          percentage: 0,
+          count: category === "weakness" && choice === winners[category] ? 1 : 0,
+          percentage: category === "weakness" && choice === winners[category] ? 100 : 0,
         })),
-        totalVotes: 0,
+        totalVotes: category === "weakness" ? 1 : 0,
         openedAt: "2026-10-29T00:00:00.000Z",
         closesAt: "2026-10-29T00:00:15.000Z",
         winner: winners[category],
-        noVoteFallback: true,
+        noVoteFallback: category !== "weakness",
       })),
       boss: {
         id: "boss-1",
@@ -105,6 +105,16 @@ describe("authoritative completed forge reveal", () => {
   };
   it("accepts ordered winners and matching server-authored attributes, including valid defaults", () => {
     expect(authoritativeCompletedReveal(reveal())?.boss.attributes.weakness).toBe("water");
+  });
+  it("rejects a fabricated no-vote weakness fallback", () => {
+    const invalid = reveal();
+    invalid.categories[3]!.totalVotes = 0;
+    invalid.categories[3]!.noVoteFallback = true;
+    invalid.categories[3]!.options.forEach((option) => {
+      option.count = 0;
+      option.percentage = 0;
+    });
+    expect(authoritativeCompletedReveal(invalid)).toBeNull();
   });
   it("rejects an out-of-options winner and a boss attribute mismatch", () => {
     const valid = reveal();

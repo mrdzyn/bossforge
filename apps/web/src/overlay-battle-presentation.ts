@@ -4,6 +4,7 @@ export type OverlayBattleView =
   | "unavailable"
   | "awaiting"
   | "voting"
+  | "forge-failed"
   | "waiting-battle"
   | "disconnected"
   | "ready"
@@ -47,6 +48,7 @@ export function overlayBattleView(input: {
     return "unavailable";
   const twitchDisconnected = forge.mode === "twitch" && !forge.connectedToTwitch;
   if (forge.status === "idle") return "awaiting";
+  if (forge.status === "failed") return "forge-failed";
   if (forge.status === "voting") return twitchDisconnected ? "disconnected" : "voting";
   if (!battle?.forgeIdentity || !forge.cycleId) return "waiting-battle";
   const identity = battle.forgeIdentity;
@@ -55,7 +57,10 @@ export function overlayBattleView(input: {
     identity.serverStartedAt !== forge.serverStartedAt ||
     identity.mode !== forge.mode ||
     identity.cycleId !== forge.cycleId ||
-    battle.forgeCycleId !== forge.cycleId
+    battle.forgeCycleId !== forge.cycleId ||
+    !forge.boss ||
+    battle.bossSnapshot?.id !== forge.boss.id ||
+    battle.bossSnapshot.attributes.weakness !== forge.boss.attributes.weakness
   )
     return twitchDisconnected ? "disconnected" : "waiting-battle";
   if (battle.status === "cancelled") return "cancelled";

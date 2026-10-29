@@ -95,13 +95,14 @@ const ForgeStateBaseSchema = z.object({
   serverStartedAt: z.string().datetime(),
   revision: z.number().int().min(0),
   cycleId: z.string().min(1).max(100).nullable(),
-  status: z.enum(["idle", "voting", "revealed"]),
+  status: z.enum(["idle", "voting", "revealed", "failed"]),
   mode: ProviderSchema,
   simulated: z.boolean(),
   connectedToTwitch: z.boolean(),
   durationSeconds: z.number().int().min(5).max(60),
   startedAt: z.string().datetime().nullable(),
   activeCategory: VoteCategorySchema.nullable(),
+  weaknessRetry: z.boolean().optional(),
   progress: z.number().int().min(0).max(4),
   categories: z.array(ForgeCategoryStateSchema).length(4),
   boss: BossSchema.nullable(),
@@ -111,6 +112,13 @@ function refineForgeMode(
   state: z.infer<typeof ForgeStateBaseSchema>,
   context: z.RefinementCtx,
 ): void {
+  if (
+    state.status === "failed" &&
+    (state.boss !== null || state.activeCategory !== null || !state.cycleId)
+  )
+    context.addIssue({ code: "custom", message: "Failed forge cannot reveal a boss" });
+  if (state.weaknessRetry && state.status === "voting" && state.activeCategory !== "weakness")
+    context.addIssue({ code: "custom", message: "Retry is restricted to weakness voting" });
   if (state.simulated !== (state.mode === "mock"))
     context.addIssue({ code: "custom", message: "Simulation label must match forge mode" });
   if (state.connectedToTwitch && state.mode !== "twitch")
@@ -157,6 +165,7 @@ export function authoritativeCompletedReveal(input: unknown): RevealedForgeState
     )
       return false;
     const highestCount = Math.max(...category.options.map((option) => option.count));
+    if (key === "weakness" && (category.noVoteFallback || highestCount < 1)) return false;
     if (category.noVoteFallback) return category.totalVotes === 0 && highestCount === 0;
     return (
       category.totalVotes > 0 &&
@@ -232,13 +241,14 @@ export const PublicForgeStateSchema = z
     serverStartedAt: z.string().datetime(),
     revision: z.number().int().min(0),
     cycleId: z.string().min(1).max(100).nullable(),
-    status: z.enum(["idle", "voting", "revealed"]),
+    status: z.enum(["idle", "voting", "revealed", "failed"]),
     mode: ProviderSchema,
     simulated: z.boolean(),
     connectedToTwitch: z.boolean(),
     durationSeconds: z.number().int().min(5).max(60),
     startedAt: z.string().datetime().nullable(),
     activeCategory: VoteCategorySchema.nullable(),
+    weaknessRetry: z.boolean().optional(),
     progress: z.number().int().min(0).max(4),
     categories: z.array(PublicForgeCategorySchema).length(4),
     boss: PublicBossSchema.nullable(),
