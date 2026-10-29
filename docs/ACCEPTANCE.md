@@ -1247,3 +1247,48 @@ suite (**233 tests: 41 shared, 147 server, 45 web**), `pnpm simulate`, and
 `EPERM` failures; the authorized local rerun passed all tests. Hosted GitHub
 Actions are not claimed as passing. No merge, deployment, or release claim is
 made.
+
+### M2-C exact-head audit remediation
+
+Starting from audited HEAD `cf7a1a2eb47368301708f98012e17b01c9dc1942`, the
+same-generation overlay snapshot race is fenced by a latest-request sequence,
+an invalidation increment, transport-generation checks, and a limit of two
+simultaneous HTTP snapshot fetches. A validated newer WebSocket battle event
+also retires older in-flight HTTP snapshots. Deferred-fetch hook tests prove
+that older A cannot restore HP after B fails, older A cannot erase B's fresh
+snapshot, same-generation out-of-order responses cannot regress revision, and
+G1 responses cannot override G2 after reconnect/backend restart. Fresh G2
+authority restores the correct battle view.
+
+The presentation now permits a fresh, identity-matching Twitch `cancelled`
+battle to show `BATTLE CANCELLED` with its fixed reason when Twitch is lost.
+The overlay header retains `TWITCH DISCONNECTED / VOTING PAUSED`; active HP,
+timer and `!hit` prompts stay suppressed. Stale, mismatched, retired-encounter,
+and provider-switched states do not show an old cancellation.
+
+Mounted fake-timer React regressions verify hit and weakness effects reset on
+immediate victory/cancellation, replacement encounter, and server loss;
+historical hit counters do not replay on reconnect. Reduced-motion disables
+both effect classes. The effects are tied to same-epoch/same-encounter
+authoritative accepted-hit increments, and their timers are cleared on state
+replacement and unmount. Thirteen added web tests cover the deferred fetches,
+mounted transitions and the actual `OverlayPreview` composition.
+
+**Visual evidence:** Chromium component-composition screenshots are recorded
+under `docs/visual-qa/m2c/` with exact bounding rectangles in
+`layout-observations.json`. At 1920×1080, the Twitch-disconnected cancellation
+panel ended at y=285.4 and showed the fixed message/reason with no combat data.
+An accepted weakness hit rendered 92/100 and one attack with both brief
+effects; cancellation cleared them. The replacement encounter had 100/100,
+zero attacks, and no stale effects. At 1280×720 the replacement HUD ended at
+y=387 with scroll width matching the viewport. These browser fixtures used
+synthetic state and the production HUD component; they do not establish live
+Twitch or native OBS acceptance.
+
+**Validation:** Node `v24.21.0` / pnpm `11.25.0`; frozen install, build,
+typecheck, lint, Prettier, all **246 tests** (41 shared / 147 server / 58 web),
+four-category `pnpm simulate`, and `git diff --check` passed. The first
+sandbox suite run failed eight socket-binding checks with `EPERM`; the
+authorized local rerun passed. The existing optional Phaser chunk-size
+warning remains. Hosted GitHub Actions, real Twitch operations, and native OBS
+remain unverified.

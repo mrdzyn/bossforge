@@ -1048,5 +1048,110 @@
     "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-3\nFORGE ENTITY / forge-3\nDRAKE · STORM\nϟ\n✧\nTHE COMMUNITY HAS FORGED\nThunder Tempest\nBODY · DRAKE\nELEMENT · STORM\nSPECIAL · THUNDER DASH\nWEAKNESS · LIGHT\nBATTLE ACTIVE · COMMUNITY BOSS\nThunder Tempest\nSIMUL",
     "rootBg": "rgba(0, 0, 0, 0)",
     "bodyBg": "rgba(0, 0, 0, 0)"
+  },
+  {
+    "path": "docs/visual-qa/m2c/remediation-twitch-cancelled-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "boxes": {
+      ".m2c-terminal": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 128,
+        "right": 1580,
+        "bottom": 285.4
+      }
+    },
+    "overflow": [],
+    "text": "TWITCH DISCONNECTED / VOTING PAUSED · BATTLE CANCELLED · TWITCH CONNECTION LOST",
+    "impact": false,
+    "weakness": false,
+    "source": "synthetic component-composition Chromium QA"
+  },
+  {
+    "path": "docs/visual-qa/m2c/remediation-accepted-hit-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "boxes": {
+      ".m2c-battle-hud": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 323,
+        "right": 1580,
+        "bottom": 480.4
+      }
+    },
+    "overflow": [],
+    "text": "LIVE TWITCH · BATTLE ACTIVE · Cinder Granite · WEAKNESS WATER · ATTACKS 1 · TIME 00:45 · 92 / 100 · !hit · !hit water",
+    "impact": true,
+    "weakness": true,
+    "source": "synthetic component-composition Chromium QA"
+  },
+  {
+    "path": "docs/visual-qa/m2c/remediation-hit-cancelled-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "boxes": {
+      ".m2c-terminal": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 128,
+        "right": 1580,
+        "bottom": 285.4
+      }
+    },
+    "overflow": [],
+    "text": "TWITCH DISCONNECTED / VOTING PAUSED · BATTLE CANCELLED · TWITCH CONNECTION LOST",
+    "impact": false,
+    "weakness": false,
+    "source": "synthetic component-composition Chromium QA"
+  },
+  {
+    "path": "docs/visual-qa/m2c/remediation-new-encounter-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "boxes": {
+      ".m2c-battle-hud": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 323,
+        "right": 1580,
+        "bottom": 480.4
+      }
+    },
+    "overflow": [],
+    "text": "LIVE TWITCH · ENC-2 · BATTLE ACTIVE · ATTACKS 0 · TIME 00:45 · 100 / 100 · no inherited impact classes",
+    "impact": false,
+    "weakness": false,
+    "source": "synthetic component-composition Chromium QA"
+  },
+  {
+    "path": "docs/visual-qa/m2c/remediation-new-encounter-1280x720.png",
+    "width": 1280,
+    "height": 720,
+    "scrollWidth": 1280,
+    "boxes": {
+      ".m2c-battle-hud": {
+        "x": 51.2,
+        "y": 64,
+        "width": 1177.6,
+        "height": 323,
+        "right": 1228.8,
+        "bottom": 387
+      }
+    },
+    "overflow": [],
+    "text": "LIVE TWITCH · ENC-2 · BATTLE ACTIVE · ATTACKS 0 · TIME 00:45 · 100 / 100 · no inherited impact classes",
+    "impact": false,
+    "weakness": false,
+    "source": "synthetic component-composition Chromium QA"
   }
 ]

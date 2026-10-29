@@ -12,6 +12,17 @@ import {
 import { isTwitchVoteCancelled, sanitizedForgeStartError } from "../live-forge-ui.js";
 import { DashboardActivityReconciler } from "../dashboard-activity-reconciler.js";
 
+const MAX_OVERLAY_SNAPSHOT_REQUESTS = 2;
+
+function advanceOverlaySnapshotFence(
+  sequence: { current: number },
+  owner: { current: symbol },
+): { sequence: number; owner: symbol } {
+  sequence.current = sequence.current >= Number.MAX_SAFE_INTEGER ? 0 : sequence.current + 1;
+  owner.current = Symbol("overlay-snapshot");
+  return { sequence: sequence.current, owner: owner.current };
+}
+
 export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") {
   const reconciler = useRef<ForgeStateReconciler | null>(null);
   if (!reconciler.current) reconciler.current = new ForgeStateReconciler();
@@ -26,6 +37,9 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
   const [snapshotAvailable, setSnapshotAvailable] = useState(false);
   const [overlayBattle, setOverlayBattle] = useState<OverlayBattleStateV1 | null>(null);
   const [overlayBattleFresh, setOverlayBattleFresh] = useState(false);
+  const overlaySnapshotSequence = useRef(0);
+  const overlaySnapshotOwner = useRef(Symbol("overlay-snapshot"));
+  const overlaySnapshotRequests = useRef(0);
   const appliedVersion = useRef(0);
   const [connection, setConnection] = useState("connecting");
   const transportReadyGeneration = useRef<number | null>(null);
@@ -85,12 +99,20 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
   const refreshOverlayBattle = useCallback(
     async (generation: number) => {
       if (recipient !== "overlay" || transportReadyGeneration.current !== generation) return;
+      if (overlaySnapshotRequests.current >= MAX_OVERLAY_SNAPSHOT_REQUESTS) return;
+      overlaySnapshotRequests.current += 1;
+      const requestFence = advanceOverlaySnapshotFence(
+        overlaySnapshotSequence,
+        overlaySnapshotOwner,
+      );
       try {
         const response = await fetch("/api/battle/overlay-state", { cache: "no-store" });
         if (!response.ok) throw new Error("unavailable");
         const parsed = OverlayBattleStateV1Schema.safeParse(await response.json());
         if (!parsed.success) throw new Error("invalid");
         if (
+          requestFence.sequence !== overlaySnapshotSequence.current ||
+          requestFence.owner !== overlaySnapshotOwner.current ||
           transportReadyGeneration.current !== generation ||
           reconciler.current?.connectionGeneration !== generation ||
           overlayBattleReconciler.current?.connectionGeneration !== generation
@@ -102,13 +124,18 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
         }
       } catch {
         if (
+          requestFence.sequence === overlaySnapshotSequence.current &&
+          requestFence.owner === overlaySnapshotOwner.current &&
           transportReadyGeneration.current === generation &&
           overlayBattleReconciler.current?.connectionGeneration === generation
         ) {
+          advanceOverlaySnapshotFence(overlaySnapshotSequence, overlaySnapshotOwner);
           overlayBattleReconciler.current.invalidate();
           setOverlayBattle(null);
           setOverlayBattleFresh(false);
         }
+      } finally {
+        overlaySnapshotRequests.current -= 1;
       }
     },
     [recipient],
@@ -127,6 +154,7 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
     const connect = () => {
       if (!active) return;
       const generation = reconciler.current!.beginConnection();
+      advanceOverlaySnapshotFence(overlaySnapshotSequence, overlaySnapshotOwner);
       const battleGeneration = overlayBattleReconciler.current!.beginConnection();
       if (battleGeneration !== generation) throw new Error("Battle state generations diverged");
       const activityGeneration = activityReconciler.current!.beginConnection();
@@ -151,6 +179,7 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
       });
       socket.addEventListener("close", () => {
         if (active && reconciler.current?.connectionGeneration === generation) {
+          advanceOverlaySnapshotFence(overlaySnapshotSequence, overlaySnapshotOwner);
           transportReadyGeneration.current = null;
           overlayBattleReconciler.current?.invalidate();
           setOverlayBattle(null);
@@ -164,6 +193,7 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
       });
       socket.addEventListener("error", () => {
         if (active && reconciler.current?.connectionGeneration === generation) {
+          advanceOverlaySnapshotFence(overlaySnapshotSequence, overlaySnapshotOwner);
           transportReadyGeneration.current = null;
           overlayBattleReconciler.current?.invalidate();
           setOverlayBattle(null);
@@ -200,6 +230,8 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
             envelope.type === "battle.state" &&
             overlayBattleReconciler.current?.apply(envelope.payload.state, generation, "websocket")
           ) {
+            // A newer validated socket event supersedes every HTTP snapshot already in flight.
+            advanceOverlaySnapshotFence(overlaySnapshotSequence, overlaySnapshotOwner);
             setOverlayBattle(overlayBattleReconciler.current.state);
             setOverlayBattleFresh(overlayBattleReconciler.current.hasFreshState);
           }
@@ -211,6 +243,8 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
     connect();
     return () => {
       active = false;
+      advanceOverlaySnapshotFence(overlaySnapshotSequence, overlaySnapshotOwner);
+      transportReadyGeneration.current = null;
       if (retry) clearTimeout(retry);
       clearInterval(snapshotPoll);
       socket?.close();

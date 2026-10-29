@@ -73,6 +73,67 @@ describe("authoritative overlay battle composition", () => {
     ).toBe("ready");
   });
 
+  it("shows a fresh matching Twitch cancellation while retaining disconnect disclosure", () => {
+    const twitchForge = {
+      ...forge,
+      mode: "twitch",
+      simulated: false,
+      connectedToTwitch: false,
+    } as unknown as ForgeState;
+    const cancelled = {
+      ...battle,
+      status: "cancelled",
+      cancelReason: "twitch_disconnected",
+      forgeIdentity: { ...battle.forgeIdentity!, mode: "twitch" },
+    } as OverlayBattleStateV1;
+    expect(overlayBattleView({ ...base, forge: twitchForge, battle: cancelled })).toBe("cancelled");
+    expect(
+      overlayBattleView({ ...base, forge: twitchForge, battle: cancelled, battleFresh: false }),
+    ).toBe("unavailable");
+    const mismatched = {
+      ...cancelled,
+      forgeIdentity: { ...cancelled.forgeIdentity!, cycleId: "retired-forge" },
+    } as OverlayBattleStateV1;
+    expect(overlayBattleView({ ...base, forge: twitchForge, battle: mismatched })).toBe(
+      "disconnected",
+    );
+    expect(
+      overlayBattleView({
+        ...base,
+        forge: twitchForge,
+        battle: { ...cancelled, forgeIdentity: { ...cancelled.forgeIdentity!, mode: "mock" } },
+      }),
+    ).toBe("disconnected");
+    const html = renderToStaticMarkup(
+      <>
+        <span>TWITCH DISCONNECTED</span>
+        <OverlayBattleHud battle={cancelled} view="cancelled" simulated={false} />
+      </>,
+    );
+    expect(html).toContain("TWITCH DISCONNECTED");
+    expect(html).toContain("BATTLE CANCELLED");
+    expect(html).toContain("TWITCH CONNECTION LOST");
+    expect(html).not.toContain("!hit");
+    expect(html).not.toContain("72 / 100");
+  });
+
+  it("does not expose an active Twitch battle when the source is disconnected", () => {
+    const twitchForge = {
+      ...forge,
+      mode: "twitch",
+      simulated: false,
+      connectedToTwitch: false,
+    } as unknown as ForgeState;
+    const view = overlayBattleView({ ...base, forge: twitchForge });
+    expect(view).toBe("disconnected");
+    const html = renderToStaticMarkup(
+      <OverlayBattleHud battle={battle} view={view} simulated={false} />,
+    );
+    expect(html).toContain("TWITCH DISCONNECTED");
+    expect(html).not.toContain("!hit");
+    expect(html).not.toContain("72 / 100");
+  });
+
   it("renders server HP, accessible progress, exact commands and simulated disclosure", () => {
     const html = renderToStaticMarkup(<OverlayBattleHud battle={battle} view="active" simulated />);
     expect(html).toContain("72 / 100");

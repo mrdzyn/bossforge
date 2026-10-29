@@ -45,9 +45,9 @@ export function overlayBattleView(input: {
   const { forge, battle } = input;
   if (input.connection !== "connected" || !input.forgeFresh || !input.battleFresh || !forge)
     return "unavailable";
-  if (forge.mode === "twitch" && !forge.connectedToTwitch) return "disconnected";
+  const twitchDisconnected = forge.mode === "twitch" && !forge.connectedToTwitch;
   if (forge.status === "idle") return "awaiting";
-  if (forge.status === "voting") return "voting";
+  if (forge.status === "voting") return twitchDisconnected ? "disconnected" : "voting";
   if (!battle?.forgeIdentity || !forge.cycleId) return "waiting-battle";
   const identity = battle.forgeIdentity;
   if (
@@ -57,11 +57,12 @@ export function overlayBattleView(input: {
     identity.cycleId !== forge.cycleId ||
     battle.forgeCycleId !== forge.cycleId
   )
-    return "waiting-battle";
+    return twitchDisconnected ? "disconnected" : "waiting-battle";
+  if (battle.status === "cancelled") return "cancelled";
+  if (twitchDisconnected) return "disconnected";
   if (battle.status === "ready") return "ready";
   if (battle.status === "active") return "active";
   if (battle.status === "victory") return "victory";
   if (battle.status === "expired") return "expired";
-  if (battle.status === "cancelled") return "cancelled";
   return "waiting-battle";
 }

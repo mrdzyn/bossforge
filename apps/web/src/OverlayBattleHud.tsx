@@ -28,6 +28,12 @@ export function OverlayBattleHud({
   const [impact, setImpact] = useState(false);
   const [weaknessImpact, setWeaknessImpact] = useState(false);
   const previous = useRef<OverlayBattleStateV1 | null>(null);
+  const impactTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const weaknessTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const animationIdentity = useRef<string | null>(null);
+  const battleIdentity = battle
+    ? `${battle.serverInstanceId}:${battle.serverStartedAt}:${battle.encounterId}`
+    : null;
   useEffect(() => {
     if (view !== "active" || !battle?.deadlineAt) return;
     setNow(Date.now());
@@ -37,20 +43,59 @@ export function OverlayBattleHud({
   useEffect(() => {
     const old = previous.current;
     previous.current = battle;
-    if (shouldAnimateAcceptedHits(old, battle, view) && old && battle) {
-      setImpact(true);
-      const timeout = setTimeout(() => setImpact(false), 420);
-      if (battle.weaknessHitCount > old.weaknessHitCount) {
-        setWeaknessImpact(true);
-        const weaknessTimeout = setTimeout(() => setWeaknessImpact(false), 520);
-        return () => {
-          clearTimeout(timeout);
-          clearTimeout(weaknessTimeout);
-        };
-      }
-      return () => clearTimeout(timeout);
+    const identity = battleIdentity;
+    const active = view === "active" && battle?.status === "active";
+    const identityChanged = animationIdentity.current !== identity;
+    const clearTimers = () => {
+      if (impactTimeout.current !== null) clearTimeout(impactTimeout.current);
+      if (weaknessTimeout.current !== null) clearTimeout(weaknessTimeout.current);
+      impactTimeout.current = null;
+      weaknessTimeout.current = null;
+    };
+
+    if (!active || identityChanged) {
+      clearTimers();
+      setImpact(false);
+      setWeaknessImpact(false);
+      animationIdentity.current = active ? identity : null;
+      return;
     }
-  }, [battle, view]);
+    if (!old || !battle || !shouldAnimateAcceptedHits(old, battle, view)) return;
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    ) {
+      clearTimers();
+      setImpact(false);
+      setWeaknessImpact(false);
+      return;
+    }
+
+    clearTimers();
+    const effectIdentity = identity;
+    setImpact(true);
+    impactTimeout.current = setTimeout(() => {
+      if (animationIdentity.current === effectIdentity) setImpact(false);
+      impactTimeout.current = null;
+    }, 420);
+    if (battle.weaknessHitCount > old.weaknessHitCount) {
+      setWeaknessImpact(true);
+      weaknessTimeout.current = setTimeout(() => {
+        if (animationIdentity.current === effectIdentity) setWeaknessImpact(false);
+        weaknessTimeout.current = null;
+      }, 520);
+    }
+  }, [battle, battleIdentity, view]);
+  useEffect(
+    () => () => {
+      if (impactTimeout.current !== null) clearTimeout(impactTimeout.current);
+      if (weaknessTimeout.current !== null) clearTimeout(weaknessTimeout.current);
+      impactTimeout.current = null;
+      weaknessTimeout.current = null;
+      animationIdentity.current = null;
+    },
+    [],
+  );
 
   if (view === "unavailable")
     return (
@@ -107,7 +152,7 @@ export function OverlayBattleHud({
   const hasTime = countdown !== "RESOLVING BATTLE";
   return (
     <section
-      className={`m2c-battle-hud ${impact ? "is-impact" : ""} ${weaknessImpact ? "is-weakness" : ""}`}
+      className={`m2c-battle-hud ${impact && animationIdentity.current === battleIdentity ? "is-impact" : ""} ${weaknessImpact && animationIdentity.current === battleIdentity ? "is-weakness" : ""}`}
       aria-label="Community boss battle"
     >
       <div className="m2c-hud-heading">

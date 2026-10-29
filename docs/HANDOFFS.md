@@ -861,6 +861,21 @@ subsequently squash-merged into `main` at
   matching forge/battle authority. Server loss hides HP, timer and attack
   commands; recovery requires a current-generation socket plus a fresh HTTP
   snapshot. Native OBS, genuine Twitch activity and hosted CI remain unverified.
+- **Audit remediation:** HTTP overlay snapshot responses are fenced by request
+  ordering, invalidation and connection generation; only two requests may be
+  concurrently in flight. A newer validated WebSocket battle event also
+  invalidates older fetch results. A fresh identity-matching Twitch cancellation
+  remains visible beside the disconnected source disclosure, with no HP or
+  prompts. Mounted HUD effects clear on terminal state, loss, epoch/encounter
+  replacement and teardown; reconnect does not replay historical hits.
+- **Evidence:** 13 additional web tests pass, including deferred-fetch races,
+  provider/disconnect presentation, fake-timer terminal/rematch transitions,
+  reconnect, epoch replacement, and reduced motion. Full suite is 246 tests
+  (41 shared / 147 server / 58 web). Build, typecheck, lint, format, frozen install, mock
+  simulation, diff check and isolated Chromium visual QA pass. Sandbox socket
+  checks required an authorized local rerun after `EPERM`. The remediation PNGs
+  and bounds are in `docs/visual-qa/m2c/README.md`. Native OBS, genuine Twitch,
+  and hosted CI remain unverified.
 - **Delivery:** Draft [PR #13](https://github.com/mrdzyn/bossforge/pull/13) was
   created against `main` at `6fb37e827b7466559970f714ef5f05c04af27157`.
   Implementation commit: `b646f140354b9c3e7aad1f378d59139d057968dc`; a

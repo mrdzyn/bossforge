@@ -30,6 +30,11 @@ native OBS evidence.
 - [Owner cancellation, 1920×1080](battle-cancelled-1920x1080.png)
 - [Server unavailable, 1920×1080](server-unavailable-1920x1080.png)
 - [Recovered after server restart, 1920×1080](server-recovered-1920x1080.png)
+- [Remediation: Twitch disconnected with cancelled encounter, 1920×1080](remediation-twitch-cancelled-1920x1080.png)
+- [Remediation: accepted weakness hit feedback, 1920×1080](remediation-accepted-hit-1920x1080.png)
+- [Remediation: cancellation immediately after hit, 1920×1080](remediation-hit-cancelled-1920x1080.png)
+- [Remediation: clean replacement encounter, 1920×1080](remediation-new-encounter-1920x1080.png)
+- [Remediation: clean replacement encounter, 1280×720](remediation-new-encounter-1280x720.png)
 
 `layout-observations.json` records viewport size, scroll dimensions, measured
 element rectangles, horizontal overflow checks, visible text and computed
@@ -45,6 +50,26 @@ legibility in both the default dark/checkerboard preview and the forced white
 compositor background. Header labels use dark translucent pills for contrast.
 These captures do not constitute a native
 OBS Browser Source test or owner acceptance.
+
+## M2-C audit remediation visual QA
+
+Captured with isolated headless Chrome on 2026-10-29 using a temporary local
+component-composition harness that rendered the production `OverlayBattleHud`
+with synthetic, schema-shaped state. The Twitch-disconnected cancellation view
+showed `TWITCH DISCONNECTED / VOTING PAUSED`, `BATTLE CANCELLED`, and the fixed
+`TWITCH CONNECTION LOST` reason together. No HP or attack command was visible.
+The active accepted-weakness-hit capture showed 92/100 HP, one aggregate
+attack, and the bounded impact/weakness effects; after cancellation both
+effects were absent. The replacement encounter showed 100/100 HP, zero
+attacks, and no inherited effect classes. No browser or server mutation route
+was added for this visual harness; the temporary harness files were removed
+after capture.
+
+At 1920×1080, the cancellation panel measured x=340, y=157.4, width=1240,
+height=128, ending at y=285.4. At 1280×720, the replacement HUD measured
+x=51.2, y=64, width=1177.6, height=323, ending at y=387; viewport scroll width
+was 1280. All measured panels stayed inside their viewport. These are synthetic
+Chromium component visuals, not genuine Twitch or native OBS evidence.
 
 ## Synthetic flow evidence
 

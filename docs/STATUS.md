@@ -98,6 +98,25 @@
   is on Draft [PR #13](https://github.com/mrdzyn/bossforge/pull/13), targeting
   the verified M2-B main baseline. Independent exact-head review is requested
   after the final documentation follow-up is pushed. PR remains unmerged.
+- **M2-C audit remediation:** On the existing PR #13 branch, the exact-head
+  review findings for stale overlapping overlay snapshots, Twitch-disconnect
+  cancellation presentation, and impact-effect lifecycle were addressed.
+  Overlay snapshot requests now use request/invalidation sequencing and allow
+  at most two concurrent fetches; a newer validated WebSocket battle event or
+  transport invalidation fences older HTTP responses. The overlay can show a
+  fresh matching cancelled result with its fixed reason while the header says
+  `TWITCH DISCONNECTED / VOTING PAUSED`; active HP and commands remain hidden.
+  Hit and weakness effects reset on terminal/unavailable states, epoch or
+  encounter change, and teardown. Added 13 web regressions (5 deferred-fetch
+  hook tests, 5 mounted fake-timer tests, and 3 cancellation/disconnect
+  presentation/composition tests). Chromium screenshots and measured bounds
+  are recorded in `docs/visual-qa/m2c/README.md`. Node `v24.21.0` / pnpm
+  `11.25.0`: frozen install, build, typecheck, lint, format, all **246 tests**
+  (41 shared / 147 server / 58 web), four-category mock simulation, and diff check passed. The
+  sandbox run had eight existing socket-binding `EPERM` failures; the full
+  suite passed in the authorized local environment. Hosted Actions, real
+  Twitch, and native OBS remain unverified. Exact implementation/final review
+  HEAD and independent re-audit are recorded after push.
 
 ### M1-A merged status
 

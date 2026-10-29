@@ -180,4 +180,64 @@ describe("M2-A battle dashboard projection", () => {
     expect(overlay).not.toContain("Start Battle");
     expect(overlay).not.toContain("Cancel encounter");
   });
+
+  it("shows a fresh matching Twitch cancellation beside its disconnected source label only", () => {
+    const twitchForge = {
+      ...(forge as unknown as Record<string, unknown>),
+      mode: "twitch",
+      simulated: false,
+      connectedToTwitch: false,
+    };
+    const cancelled = {
+      ...activeBattle,
+      status: "cancelled",
+      currentHp: 72,
+      cancelReason: "twitch_disconnected",
+      forgeIdentity: { ...activeBattle.forgeIdentity, mode: "twitch" },
+    };
+    const overlayState = Object.fromEntries(
+      Object.entries(cancelled).filter(
+        ([key]) => !["profileId", "profileVersion", "profileSnapshot"].includes(key),
+      ),
+    );
+    mocks.live = {
+      forge: twitchForge,
+      connection: "connected",
+      snapshotAvailable: true,
+      overlayBattle: overlayState,
+      overlayBattleFresh: true,
+      post: vi.fn(),
+      error: "",
+      notice: "",
+      activity: null,
+    };
+    mocks.battle = { state: null, fresh: false, error: "", mutate: vi.fn() };
+    const cancelledHtml = renderToStaticMarkup(<OverlayPreview />);
+    expect(cancelledHtml).toContain("TWITCH DISCONNECTED / VOTING PAUSED");
+    expect(cancelledHtml).toContain("BATTLE CANCELLED");
+    expect(cancelledHtml).toContain("TWITCH CONNECTION LOST");
+    expect(cancelledHtml).not.toContain("!hit");
+    expect(cancelledHtml).not.toContain("72 / 100");
+
+    mocks.live = { ...(mocks.live as object), overlayBattleFresh: false };
+    const staleHtml = renderToStaticMarkup(<OverlayPreview />);
+    expect(staleHtml).toContain("BATTLE STATUS UNKNOWN");
+    expect(staleHtml).not.toContain("BATTLE CANCELLED");
+
+    mocks.live = {
+      ...(mocks.live as object),
+      overlayBattleFresh: true,
+      overlayBattle: {
+        ...overlayState,
+        forgeIdentity: {
+          ...(overlayState.forgeIdentity as Record<string, unknown>),
+          cycleId: "retired-forge",
+        },
+      },
+    };
+    const mismatchedHtml = renderToStaticMarkup(<OverlayPreview />);
+    expect(mismatchedHtml).toContain("TWITCH DISCONNECTED / VOTING PAUSED");
+    expect(mismatchedHtml).not.toContain("BATTLE CANCELLED");
+    expect(mismatchedHtml).not.toContain("!hit");
+  });
 });
