@@ -28,7 +28,11 @@ const EventSubTimestampSchema = z
 // Twitch says a session is lost only after no notification or keepalive has
 // arrived for longer than its advertised window. Allow a small scheduling
 // margin around that boundary while still rechecking with a monotonic clock.
-export const KEEPALIVE_TIMEOUT_GRACE_MS = 250;
+// Operational tolerance, not a change to Twitch's advertised timeout. At 30s
+// this permits up to 2.5s of delivery/event-loop jitter (8.33%), while bounding
+// additional silent authority to 2.5s for every welcomed session. Handshakes,
+// socket errors/close and revocations receive no additional tolerance.
+export const KEEPALIVE_TIMEOUT_GRACE_MS = 2_500;
 const MessageHeaderSchema = z.object({
   metadata: z.object({
     message_id: z.string().min(1).max(100),

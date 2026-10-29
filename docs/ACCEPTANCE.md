@@ -1427,3 +1427,23 @@ GitHub Actions were not run and are **UNVERIFIED**. These results are
 deterministic/local evidence only; they do not establish genuine Twitch
 acceptance or native OBS rendering. Gates B–D remain NOT AUTHORIZED or NOT
 TESTED as stated in the runbook.
+
+## Issue #16 — EventSub keepalive tolerance
+
+Independent branch from main `2893ba8b8d26de0fe032689c5ab69497f03a1486`:
+`fix/eventsub-jitter-allowance`. Owner-reported live voting cancellations at
+30,250–30,251 ms match the former 250 ms watchdog boundary; the source of late
+processing remains unknown. A fixed 2,500 ms allowance is tested against late
+validated frames and genuine silence without weakening notification checks,
+transport fencing, resubscription or fail-closed cancellation. No auto-resume.
+
+Manual Node 24.21.0 / pnpm 11.25.0 validation: frozen install, build,
+typecheck, lint, formatting, asset reproducibility, 84 focused tests and
+isolated four-category mock simulation passed. All 270 tests passed separately
+(41 shared / 155 server / 74 web). Root parallel test execution retained the
+known SVG checksum timeout; a separate 15-second-timeout web rerun passed.
+Hosted CI and genuine Twitch retest are not claimed. The owner's checkout,
+private configuration, runtime ports and OBS were untouched by this work.
+See [the incident evidence and owner retest procedure](M2-D-LIVE-TWITCH-OBS-ACCEPTANCE.md#issue-16--bounded-keepalive-jitter-remediation-2026-10-30).
+Keep the remediation Draft and unmerged pending independent review; activation
+requires separate owner approval.
