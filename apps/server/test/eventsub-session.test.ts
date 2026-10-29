@@ -319,7 +319,7 @@ describe("offline injected EventSub lifecycle", () => {
     activeTimeout.callback();
     expect(h.session.status).toBe("connected");
     const grace = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
-    monotonicMs = 30_250;
+    monotonicMs = 32_500;
     grace.callback();
     expect(h.session.status).toBe("retry-wait");
   });
@@ -350,7 +350,7 @@ describe("offline injected EventSub lifecycle", () => {
     deadline.callback();
     expect(h.session.status).toBe("connected");
     const grace = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
-    monotonicMs = 30_250;
+    monotonicMs = 32_500;
     grace.callback();
     expect(h.session.status).toBe("retry-wait");
   });
@@ -381,7 +381,7 @@ describe("offline injected EventSub lifecycle", () => {
     deadline.callback();
     expect(h.session.status).toBe("connected");
     const grace = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
-    monotonicMs = 30_250;
+    monotonicMs = 32_500;
     grace.callback();
     expect(h.session.status).toBe("retry-wait");
   });
@@ -478,21 +478,80 @@ describe("offline injected EventSub lifecycle", () => {
     expect(h.session.status).toBe("connected");
     const grace = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
     expect(grace.delayMs).toBe(KEEPALIVE_TIMEOUT_GRACE_MS - 1);
-    monotonicMs = 30_250;
+    monotonicMs = 32_500;
     grace.cancelled = true;
     grace.callback();
 
     expect(h.session.status).toBe("retry-wait");
     expect(diagnostics.snapshot()).toMatchObject({
       disconnectReasons: { "keepalive-timeout": 1 },
-      keepalive: { lastElapsedMs: 30_250, advertisedTimeoutMs: 30_000 },
+      keepalive: { lastElapsedMs: 32_500, advertisedTimeoutMs: 30_000 },
       lastDisconnect: {
         reason: "keepalive-timeout",
-        elapsedMs: 30_250,
+        elapsedMs: 32_500,
         timeoutMs: 30_000,
       },
     });
     expect(JSON.stringify(diagnostics.snapshot())).not.toContain("welcome-expiration");
+    h.session.shutdown();
+  });
+
+  it.each([250, 251, 2_000, 2_499])(
+    "accepts validated traffic delayed %i ms, and fences a queued stale watchdog",
+    (jitterMs) => {
+      let now = 0;
+      const h = harness({ monotonicNow: () => now });
+      h.session.start();
+      const socket = h.sockets[0]!;
+      h.welcome(socket, "welcome-jitter");
+      now = 30_000;
+      h.fireNextTimer();
+      const oldGrace = h.timers.filter((timer) => !timer.cancelled).at(-1)!;
+      now += jitterMs;
+      oldGrace.callback(); // Early/delayed scheduling must recheck elapsed time.
+      expect(h.session.status).toBe("connected");
+      h.send(socket, message("late-valid-keepalive", "session_keepalive"));
+      now = 32_500;
+      oldGrace.callback(); // A callback already queued before refresh is inert.
+      expect(h.session.status).toBe("connected");
+      h.session.shutdown();
+    },
+  );
+
+  it.each([2_500, 2_501, 10_000])(
+    "fails closed for true silence with %i ms overdue, even with control pings",
+    (jitterMs) => {
+      let now = 0;
+      const h = harness({ monotonicNow: () => now });
+      h.session.start();
+      const socket = h.sockets[0]!;
+      h.welcome(socket, "welcome-silence");
+      now = 30_000 + jitterMs;
+      socket.handlers.ping();
+      h.fireNextTimer();
+      expect(h.session.status).toBe("retry-wait");
+      expect(socket.closed).toBe(true);
+      h.session.shutdown();
+    },
+  );
+
+  it("keeps a smaller welcome timeout authoritative and bounds the same allowance", () => {
+    let now = 0;
+    const h = harness({ monotonicNow: () => now });
+    h.session.start();
+    h.send(
+      h.sockets[0]!,
+      message("welcome-short", "session_welcome", {
+        session: { id: "short-session", keepalive_timeout_seconds: 10 },
+      }),
+    );
+    now = 10_000;
+    h.fireNextTimer();
+    expect(h.session.status).toBe("connected");
+    expect(h.timers.filter((timer) => !timer.cancelled).at(-1)?.delayMs).toBe(2_500);
+    now = 12_500;
+    h.fireNextTimer();
+    expect(h.session.status).toBe("retry-wait");
     h.session.shutdown();
   });
 

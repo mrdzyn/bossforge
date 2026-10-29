@@ -1,8 +1,8 @@
 # Project status
 
-## Current snapshot — 2026-10-29
+## Current snapshot — 2026-10-30
 
-- **Current `main` baseline:** `50d4523873873328847f3d4c830220a869788b96`; M2-C SVG polish PR #14 was squash-merged after the M2-C OBS HUD PR #13. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
+- **Current `main` baseline:** `953c52f720bed59dc3ab2514054e6a954b4777ff`; PR #19 was squash-merged after M2-C SVG polish PR #14 and M2-D preparation PR #15. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
 - **M1-B merged:** PR #10 includes the Generic dashboard/read-only OBS presentation, freshness protection and reveal visibility remediation. PR #10 is no longer Draft or pending review.
 - **M1-A merged:** PR #9 was squash-merged into `main` at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. Its historical remediation and review evidence remain in [ACCEPTANCE](ACCEPTANCE.md).
 - **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access later created Draft PR #9, which is now merged; the former blocker is historical only.
@@ -421,3 +421,30 @@ A verified local Twitch broadcaster logs in securely; server-side EventSub recei
   created through connected GitHub access. The original GitHub CLI `Forbidden`
   failure is retained as a historical environment issue and is not a current
   PR-creation blocker.
+
+## Issue #16 — EventSub keepalive tolerance
+
+Independent branch from main `2893ba8b8d26de0fe032689c5ab69497f03a1486`:
+`fix/eventsub-jitter-allowance`. Owner-reported live voting cancellations at
+30,250–30,251 ms match the former 250 ms watchdog boundary; the source of late
+processing remains unknown. A fixed 2,500 ms allowance is tested against late
+validated frames and genuine silence without weakening notification checks,
+transport fencing, resubscription or fail-closed cancellation. No auto-resume.
+
+Manual Node 24.21.0 / pnpm 11.25.0 validation: frozen install, build,
+typecheck, lint, formatting, asset reproducibility, 84 focused tests and
+isolated four-category mock simulation passed. All 270 tests passed separately
+(41 shared / 155 server / 74 web). Root parallel test execution retained the
+known SVG checksum timeout; a separate 15-second-timeout web rerun passed.
+Hosted CI was not claimed at the remediation checkpoint. The owner's checkout,
+private configuration, runtime ports and OBS were untouched by this work.
+See [the incident evidence and owner retest procedure](M2-D-LIVE-TWITCH-OBS-ACCEPTANCE.md#issue-16--bounded-keepalive-jitter-remediation-2026-10-30).
+The remediation was subsequently independently reviewed and squash-merged via PR #19 into main at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed. The owner-reported retest is recorded below.
+
+## Issue #16 — owner-reported live reliability retest (2026-10-30)
+
+[Issue #16's acceptance comment](https://github.com/mrdzyn/bossforge/issues/16#issuecomment-6504011541) records six owner-attested PASS checks: (1) Twitch connected with an enabled/verified EventSub subscription; (2) connection stability over 10 minutes with OBS and game load; (3) a four-stage forge with no reported watchdog cancellation; (4) accepted Twitch chat votes; (5) a deliberate disconnect cancelled a separate active encounter; and (6) reconnect did not automatically resume it. These are owner-reported observations, not independently reproduced results.
+
+PR #19 was squash-merged into `main` at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed for the scoped watchdog remediation. The running-process SHA during the owner retest and exact before/after diagnostic counter deltas were not independently verified. No numeric snapshot or timestamped event log was supplied. The original cause of silence remains unknown; ten minutes of stability does not guarantee future availability.
+
+M2-D end-to-end acceptance remains open: base-hit damage, BossForge two-second cooldown rejection, Community Victory, native OBS active-HP synchronization, native source sizing/fit and long-duration motion performance remain unverified. The previously observed dashboard/API terminal-state mismatch also remains unresolved. Owner-supplied OBS screenshots were not independently reproduced. The earlier deterministic tests and root parallel-test limitation remain historical evidence; hosted CI is unverified.

@@ -1457,9 +1457,36 @@ Rime Veil encounter in the dashboard and read-only overlay. A later fresh
 `GET /battle/state` returned idle while the already-open dashboard still
 showed the expired encounter. This authority mismatch was not resolved here;
 no further live actions were taken. Therefore the stale UI is not counted as
-current authoritative state, and reconnect/disconnect acceptance remains
-open.
+current authoritative state. At that October 29 checkpoint, reconnect/disconnect
+acceptance remained open; the later owner-reported retest is recorded below.
 
 **Explicitly not claimed:** verified base 8 damage, BossForge cooldown
 rejection, Community Victory, active HP synchronization in native OBS,
 independent reproduction of owner screenshots, or full native OBS acceptance.
+
+## Issue #16 — EventSub keepalive tolerance
+
+Independent branch from main `2893ba8b8d26de0fe032689c5ab69497f03a1486`:
+`fix/eventsub-jitter-allowance`. Owner-reported live voting cancellations at
+30,250–30,251 ms match the former 250 ms watchdog boundary; the source of late
+processing remains unknown. A fixed 2,500 ms allowance is tested against late
+validated frames and genuine silence without weakening notification checks,
+transport fencing, resubscription or fail-closed cancellation. No auto-resume.
+
+Manual Node 24.21.0 / pnpm 11.25.0 validation: frozen install, build,
+typecheck, lint, formatting, asset reproducibility, 84 focused tests and
+isolated four-category mock simulation passed. All 270 tests passed separately
+(41 shared / 155 server / 74 web). Root parallel test execution retained the
+known SVG checksum timeout; a separate 15-second-timeout web rerun passed.
+Hosted CI was not claimed at the remediation checkpoint. The owner's checkout,
+private configuration, runtime ports and OBS were untouched by this work.
+See [the incident evidence and owner retest procedure](M2-D-LIVE-TWITCH-OBS-ACCEPTANCE.md#issue-16--bounded-keepalive-jitter-remediation-2026-10-30).
+The remediation was subsequently independently reviewed and squash-merged via PR #19 into main at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed. The owner-reported retest is recorded below.
+
+## Issue #16 — owner-reported live reliability retest (2026-10-30)
+
+[Issue #16's acceptance comment](https://github.com/mrdzyn/bossforge/issues/16#issuecomment-6504011541) records six owner-attested PASS checks: (1) Twitch connected with an enabled/verified EventSub subscription; (2) connection stability over 10 minutes with OBS and game load; (3) a four-stage forge with no reported watchdog cancellation; (4) accepted Twitch chat votes; (5) a deliberate disconnect cancelled a separate active encounter; and (6) reconnect did not automatically resume it. These are owner-reported observations, not independently reproduced results.
+
+PR #19 was squash-merged into `main` at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed for the scoped watchdog remediation. The running-process SHA during the owner retest and exact before/after diagnostic counter deltas were not independently verified. No numeric snapshot or timestamped event log was supplied. The original cause of silence remains unknown; ten minutes of stability does not guarantee future availability.
+
+M2-D end-to-end acceptance remains open: base-hit damage, BossForge two-second cooldown rejection, Community Victory, native OBS active-HP synchronization, native source sizing/fit and long-duration motion performance remain unverified. The previously observed dashboard/API terminal-state mismatch also remains unresolved. Owner-supplied OBS screenshots were not independently reproduced. The earlier deterministic tests and root parallel-test limitation remain historical evidence; hosted CI is unverified.

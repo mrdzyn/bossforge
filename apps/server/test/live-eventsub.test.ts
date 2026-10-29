@@ -204,9 +204,9 @@ describe("live EventSub adapter with fake Twitch transports", () => {
     keepalive.cancelled = true;
     keepalive.callback();
     expect(live.connected).toBe(true);
-    const grace = timers.find((timer) => timer.delayMs === 250 && !timer.cancelled)!;
+    const grace = timers.find((timer) => timer.delayMs === 2_500 && !timer.cancelled)!;
     expect(grace).toBeDefined();
-    monotonicMs = 30_250;
+    monotonicMs = 32_500;
     grace.cancelled = true;
     grace.callback();
     expect(live.connected).toBe(false);
