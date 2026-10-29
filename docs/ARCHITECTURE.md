@@ -221,3 +221,39 @@ URL, or free-form error. OBS remains read-only and has no battle admin controls.
 encounter identity; a new server epoch is adopted only from a current-generation
 HTTP snapshot, and feed loss hides cached battle state until fresh authority is
 re-established.
+
+## M2-B server-side chat attack path
+
+The M2-B implementation extends the private ingress path without changing the
+browser schemas for chat. `LiveEventSub` calls the app only after its normalized
+notification and verified enabled subscription checks pass. The app binds that
+callback to the current adapter generation and current Twitch connection. The
+development-only mock event route validates `NormalizedChatEventSchema` and
+requires provider `mock`; both sources then enter `BattleAttackRouter`.
+
+The router accepts only the bounded anchored forms `!hit`, `!hit water`,
+`!hit light`, `!hit earth`, and `!hit wind`. It binds each event to the current
+provider, forge authority identity (server instance, start epoch, mode and
+cycle), active encounter and server process. It uses monotonic receipt time;
+provider timestamps are not trusted for combat eligibility. Only
+`BossBattleSession.applyAcceptedDamage` mutates HP, hit aggregates, revision or
+terminal outcome. Router draining is serialized synchronously in receipt-time
+and sequence order, so a scheduled expiry cannot interleave a partial hit
+transition; a receipt at or after the exact deadline is excluded. Pre-deadline
+receipts may complete before expiry while within the 500 ms queue-age bound.
+
+The immutable Generic profile snapshot supplies 8 base / 14 matching weakness
+damage, 2,000 ms per-viewer cooldown, 50/s ingress with burst 100, 8 accepted
+hits/s with burst 16, queue 64, 500 ms maximum age, 10-minute/10,000-ID replay
+retention, and 5,000 active cooldown entries. A recognized nonmatching element
+is an accepted base attack and increments a separate mismatch aggregate.
+Replay IDs are reserved before cooldown/queue rejection and survive provider and
+encounter changes for this process. Viewer IDs are HMACed with a random
+process-local key before cooldown storage. Raw identity and message data remain
+transient private ingress values.
+
+Coalesced fixed-code battle attempt aggregates use a strict dashboard-only
+event contract. No such event is serialized to OBS; OBS remains read-only and
+the dedicated attack HUD/instructions remain M2-C work. No public or browser
+damage route is registered. Mock combat uses only the existing loopback,
+Origin-protected development simulation route and is forbidden in Twitch mode.

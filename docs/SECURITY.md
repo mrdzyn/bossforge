@@ -231,3 +231,35 @@ are browser evidence only; actual OBS capture remains unverified.
   Generic tuning/processing profile configuration or owner controls. Sentinel
   tests inspect serialized event frames; no raw chat is newly exposed or
   logged.
+
+## M2-B chat combat boundary
+
+- Combat ingress is private server code. Twitch input can reach it only through
+  the current `LiveEventSub` callback after normalized notification and verified
+  Helix subscription checks pass. The callback also checks that its adapter and
+  captured provider generation are still current.
+- Mock input can reach it only through the development simulation ingress,
+  which retains the loopback peer, Origin/Fetch Metadata, rate limit, strict
+  normalized-event validation, and mock-provider-only checks. It is disabled in
+  Twitch mode and absent in production.
+- There is no HTTP/WebSocket/Phaser/OBS damage mutation path. `!hit` commands
+  are parsed only inside the server router and never broadcast or logged.
+  Battle attempt diagnostics are fixed, bounded dashboard aggregates and are
+  not sent to OBS.
+- Source checks bind the current provider, server instance/start epoch, mode,
+  forge cycle, encounter, subscription lease and process-local adapter
+  generation. Disconnect, session invalidation or mode change cancels the
+  battle under M2-A; reconnect cannot resume it.
+- Replay retention is monotonic, process-local, ten minutes and capped at
+  10,000 IDs; expired entries are pruned and capacity exhaustion fails closed.
+  Per-viewer cooldowns use HMAC-SHA-256 pseudonyms with a random process-local
+  key, last 2,000 ms, and are capped at 5,000 active entries. Pseudonyms,
+  viewer identities, message IDs, text and provider errors do not enter logs or
+  public frames. Terminal/encounter changes clear queued work and cooldowns
+  without prematurely releasing replay IDs.
+- Deadline eligibility uses server monotonic receipt time. Equality is late;
+  a pre-deadline hit is applied atomically before expiration when queue age is
+  within 500 ms. HP and aggregate mutation occurs only in `BossBattleSession`;
+  terminal states remain immutable.
+- Automated evidence is synthetic and does not establish genuine Twitch
+  operation. No Twitch credentials or live endpoint is used by M2-B tests.

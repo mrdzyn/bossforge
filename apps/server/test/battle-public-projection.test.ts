@@ -55,4 +55,59 @@ describe("battle public projection", () => {
       expect(overlayEvent.payload.state).not.toHaveProperty("profileSnapshot");
     expect(frames.join(" ")).not.toMatch(/private-(viewer|name|chat|token)-sentinel/);
   });
+
+  it("allows fixed battle rejection aggregates to dashboard only", () => {
+    const hub = new EventHub();
+    const dashboardFrames: string[] = [];
+    const overlayFrames: string[] = [];
+    const dashboard = {
+      readyState: 1,
+      once: () => undefined,
+      send: (frame: string) => dashboardFrames.push(frame),
+    } as unknown as WebSocket;
+    const overlay = {
+      readyState: 1,
+      once: () => undefined,
+      send: (frame: string) => overlayFrames.push(frame),
+    } as unknown as WebSocket;
+    const activity = {
+      serverInstanceId: "server",
+      encounterId: "encounter",
+      attempted: 4,
+      accepted: 1,
+      rejected: 3,
+      base: 1,
+      weakness: 0,
+      weaknessMismatch: 1,
+      reasons: {
+        invalid: 1,
+        duplicate: 1,
+        inactive: 0,
+        wrong_provider: 0,
+        cooldown: 1,
+        rate_limited: 0,
+        queue_full: 0,
+        queue_expired: 0,
+        replay_capacity: 0,
+        busy: 0,
+        late: 0,
+      },
+    };
+    hub.publishDashboard({ kind: "battle.activity", activity });
+    expect(dashboardFrames).toHaveLength(0);
+    expect(overlayFrames).toHaveLength(0);
+    hub.addDashboardClient(dashboard);
+    hub.addOverlayClient(overlay);
+    hub.publishDashboard({ kind: "battle.activity", activity });
+    expect(dashboardFrames).toHaveLength(1);
+    expect(overlayFrames).toHaveLength(0);
+    const parsed = DashboardEventEnvelopeSchema.parse(JSON.parse(dashboardFrames[0]!));
+    expect(parsed.type).toBe("battle.activity");
+    expect(dashboardFrames.join(" ")).not.toMatch(
+      /viewer|displayName|messageId|chatText|pseudonym/i,
+    );
+    expect(OverlayEventEnvelopeSchema.safeParse(JSON.parse(dashboardFrames[0]!)).success).toBe(
+      false,
+    );
+  });
 });

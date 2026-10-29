@@ -453,7 +453,7 @@ export function Dashboard() {
           <section className="panel battle-owner-panel" aria-label="Streamer battle controls">
             <div className="panel-heading">
               <h2>Community encounter</h2>
-              <span className="eyebrow">M2-A · CHAT ATTACKS NOT YET ENABLED</span>
+              <span className="eyebrow">M2-B · SERVER-VALIDATED CHAT ATTACKS</span>
             </div>
             {!battleLive.fresh || !battle ? (
               <p className="muted">
@@ -524,10 +524,26 @@ export function Dashboard() {
                   </div>
                 )}
                 {battle.status === "active" && (
-                  <p aria-live="polite">
-                    Boss HP {battle.currentHp}/{battle.maxHp} · {battleCountdown}s remaining ·{" "}
-                    {battle.acceptedHitCount} accepted attacks
-                  </p>
+                  <div aria-live="polite">
+                    <p>
+                      Boss HP {battle.currentHp}/{battle.maxHp} · {battleCountdown}s remaining ·{" "}
+                      {battle.acceptedHitCount} accepted attacks
+                    </p>
+                    <p>
+                      Attack in chat: <code>!hit</code> · Weakness:{" "}
+                      <code>!hit {battle.bossSnapshot?.attributes.weakness}</code>
+                    </p>
+                    <p>
+                      {forge?.mode === "mock"
+                        ? "SIMULATED"
+                        : forge?.connectedToTwitch
+                          ? "LIVE TWITCH"
+                          : "TWITCH DISCONNECTED"}
+                      {battleLive.activity &&
+                        battleLive.activity.encounterId === battle.encounterId &&
+                        ` · ${battleLive.activity.rejected} rejected commands · ${battleLive.activity.weaknessMismatch} nonmatching weakness attacks`}
+                    </p>
+                  </div>
                 )}
                 {battle.status === "active" || battle.status === "ready" ? (
                   <button

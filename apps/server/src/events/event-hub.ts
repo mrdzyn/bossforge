@@ -6,6 +6,7 @@ import {
   CommunityBattleStateV1Schema,
   OverlayBattleStateV1Schema,
   type DashboardActivity,
+  type DashboardBattleActivity,
   type ForgeState,
   type CommunityBattleStateV1,
 } from "@bossforge/shared";
@@ -20,6 +21,8 @@ type PublicPayload =
     }
   | { kind: "battle.state"; state: CommunityBattleStateV1 }
   | DashboardActivity;
+type BattleActivityPayload = { kind: "battle.activity"; activity: DashboardBattleActivity };
+type DashboardOnlyPayload = PublicPayload | BattleActivityPayload;
 
 export class EventHub {
   readonly #dashboardClients = new Set<WebSocket>();
@@ -37,7 +40,7 @@ export class EventHub {
     this.add(client, this.#overlayClients);
   }
 
-  publishDashboard(payload: PublicPayload): void {
+  publishDashboard(payload: DashboardOnlyPayload): void {
     this.sendTo(this.#dashboardClients, payload, "dashboard");
   }
 
@@ -45,7 +48,7 @@ export class EventHub {
     this.sendTo(this.#overlayClients, payload, "overlay");
   }
 
-  sendDashboard(client: WebSocket, payload: PublicPayload): void {
+  sendDashboard(client: WebSocket, payload: DashboardOnlyPayload): void {
     this.sendOne(client, payload, "dashboard");
   }
 
@@ -61,7 +64,7 @@ export class EventHub {
 
   private sendTo(
     clients: Set<WebSocket>,
-    payload: PublicPayload,
+    payload: DashboardOnlyPayload,
     recipient: "dashboard" | "overlay",
   ): void {
     for (const client of clients) this.sendOne(client, payload, recipient);
@@ -69,7 +72,7 @@ export class EventHub {
 
   private sendOne(
     client: WebSocket,
-    payload: PublicPayload,
+    payload: DashboardOnlyPayload,
     recipient: "dashboard" | "overlay",
   ): void {
     if (client.readyState !== 1) return;
@@ -79,14 +82,7 @@ export class EventHub {
     } catch {
       return;
     }
-    const type =
-      safePayload.kind === "connection.status"
-        ? "connection.status"
-        : safePayload.kind === "forge.state"
-          ? "forge.state"
-          : safePayload.kind === "battle.state"
-            ? "battle.state"
-            : "dashboard.activity";
+    const type = "kind" in payload ? payload.kind : "dashboard.activity";
     const candidate = {
       type,
       schemaVersion: 1,
@@ -102,7 +98,7 @@ export class EventHub {
   }
 
   private project(
-    payload: PublicPayload,
+    payload: DashboardOnlyPayload,
     recipient: "dashboard" | "overlay",
   ): Record<string, unknown> {
     if ("kind" in payload && payload.kind === "forge.state") {
@@ -124,6 +120,20 @@ export class EventHub {
             ? toOverlayBattleState(payload.state)
             : toPublicBattleState(payload.state),
       };
+    if ("kind" in payload && payload.kind === "battle.activity") {
+      const activity = payload.activity;
+      return {
+        serverInstanceId: activity.serverInstanceId,
+        encounterId: activity.encounterId,
+        attempted: activity.attempted,
+        accepted: activity.accepted,
+        rejected: activity.rejected,
+        base: activity.base,
+        weakness: activity.weakness,
+        weaknessMismatch: activity.weaknessMismatch,
+        reasons: { ...activity.reasons },
+      };
+    }
     const activity = payload as DashboardActivity;
     return {
       serverInstanceId: activity.serverInstanceId,

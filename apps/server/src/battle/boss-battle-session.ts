@@ -12,6 +12,7 @@ import {
 export interface BattleScheduler {
   schedule(callback: () => void, delayMs: number): () => void;
 }
+export type BattleDeadlineDrain = (encounterId: string, finalize: () => void) => void;
 const realScheduler: BattleScheduler = {
   schedule(callback, delayMs) {
     const timer = setTimeout(callback, delayMs);
@@ -38,6 +39,9 @@ export class BossBattleSession {
   private readonly seenForgeIdentities = new Set<string>();
   private cancelTimer: (() => void) | undefined;
   private monotonicDeadline: number | null = null;
+  private lastMonotonicDeadline: { encounterId: string; deadline: number } | null = null;
+  private deadlineDrain: BattleDeadlineDrain | undefined;
+  private deadlineResolutionPending = false;
   private readonly idempotency = new Map<string, CacheEntry>();
   private readonly monotonicNow: () => number;
   private readonly wallNow: () => Date;
@@ -58,6 +62,32 @@ export class BossBattleSession {
   getState(): CommunityBattleStateV1 {
     this.resolveDeadline();
     return structuredClone(this.state);
+  }
+
+  setDeadlineDrain(handler: BattleDeadlineDrain): void {
+    this.deadlineDrain = handler;
+  }
+
+  isLateReceipt(encounterId: string, receiptMonotonicMs: number): boolean {
+    return (
+      (this.state.status === "expired" || this.state.status === "active") &&
+      this.state.encounterId === encounterId &&
+      this.lastMonotonicDeadline?.encounterId === encounterId &&
+      Number.isFinite(receiptMonotonicMs) &&
+      receiptMonotonicMs >= this.lastMonotonicDeadline.deadline
+    );
+  }
+
+  /** Returns the active snapshot for an ingress receipt made before its deadline. */
+  getStateForReceipt(receiptMonotonicMs: number): CommunityBattleStateV1 {
+    if (
+      this.state.status === "active" &&
+      this.monotonicDeadline !== null &&
+      Number.isFinite(receiptMonotonicMs) &&
+      receiptMonotonicMs < this.monotonicDeadline
+    )
+      return structuredClone(this.state);
+    return this.getState();
   }
 
   onForgeState(forge: ForgeState): CommunityBattleStateV1 {
@@ -160,6 +190,8 @@ export class BossBattleSession {
         maxHp: hp,
       });
       this.monotonicDeadline = monoDeadline;
+      this.lastMonotonicDeadline = { encounterId: next.encounterId!, deadline: monoDeadline };
+      this.deadlineResolutionPending = false;
       this.scheduleExpiry(monoDeadline, next.encounterId!);
       result = { ok: true, state: next };
     }
@@ -194,6 +226,7 @@ export class BossBattleSession {
     this.cancelTimer?.();
     this.cancelTimer = undefined;
     this.monotonicDeadline = null;
+    this.deadlineResolutionPending = false;
     return this.commit({ ...this.state, status: "cancelled", cancelReason: reason });
   }
 
@@ -204,11 +237,25 @@ export class BossBattleSession {
     if (!ready) this.cancel(reason);
   }
 
-  /** Internal seam for isolated reducer tests; no route or event handler calls this in M2-A. */
-  applyDamageForTest(amount: number, weakness = false): CommunityBattleStateV1 {
-    this.resolveDeadline();
-    if (this.state.status !== "active" || !Number.isInteger(amount) || amount <= 0)
-      return this.state;
+  /** Private server combat transition. Only BattleAttackRouter calls this in production. */
+  applyAcceptedDamage(
+    amount: number,
+    weakness: boolean,
+    expectedEncounterId: string,
+    receiptMonotonicMs: number,
+  ): CommunityBattleStateV1 | null {
+    if (
+      this.state.status !== "active" ||
+      this.state.encounterId !== expectedEncounterId ||
+      this.monotonicDeadline === null ||
+      !Number.isFinite(receiptMonotonicMs) ||
+      receiptMonotonicMs >= this.monotonicDeadline ||
+      !Number.isInteger(amount) ||
+      amount <= 0
+    ) {
+      this.resolveDeadline();
+      return null;
+    }
     const damage = Math.min(amount, this.state.currentHp!);
     const hp = this.state.currentHp! - damage;
     const next = this.commit({
@@ -224,6 +271,7 @@ export class BossBattleSession {
       this.cancelTimer?.();
       this.cancelTimer = undefined;
       this.monotonicDeadline = null;
+      this.deadlineResolutionPending = false;
     }
     return next;
   }
@@ -255,17 +303,30 @@ export class BossBattleSession {
     );
   }
   private expire(encounter: string): void {
-    if (this.state.status === "active" && this.state.encounterId === encounter) {
+    if (
+      this.state.status !== "active" ||
+      this.state.encounterId !== encounter ||
+      this.deadlineResolutionPending
+    )
+      return;
+    this.deadlineResolutionPending = true;
+    const finalize = () => {
+      if (!this.deadlineResolutionPending) return;
+      this.deadlineResolutionPending = false;
+      if (this.state.status !== "active" || this.state.encounterId !== encounter) return;
       this.cancelTimer?.();
       this.cancelTimer = undefined;
       this.monotonicDeadline = null;
       this.commit({ ...this.state, status: "expired" });
-    }
+    };
+    if (this.deadlineDrain) this.deadlineDrain(encounter, finalize);
+    else finalize();
   }
   private toIdle(): void {
     this.cancelTimer?.();
     this.cancelTimer = undefined;
     this.monotonicDeadline = null;
+    this.deadlineResolutionPending = false;
     this.commit(this.buildIdle());
   }
   private buildIdle(): CommunityBattleStateV1 {
