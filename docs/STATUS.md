@@ -42,12 +42,21 @@
   no-vote fallback stages, starts the authoritative encounter, routes eight
   synthetic `!hit water` events through `/dev/simulation/events`, and reaches
   victory at zero HP. This is synthetic local evidence, not a real Twitch test.
+- **Audit remediation:** At GPT-6 audited HEAD
+  `c0df65b1022999a52ba1ac1391a75e712bf8f30d`, MAJOR-1 and MINOR-1/MINOR-2 are
+  fixed. Deadline expiry closes intake and coordinates router queue draining
+  before `expired`; accepted tokens debit only after a successful session
+  transition; late classification uses monotonic battle-deadline eligibility.
+  Real router/session fake-scheduler tests cover both deadline/drain orderings,
+  lethal and surviving queued hits, exact/after-boundary `late` reasons, and
+  rejected-transition token preservation.
 - **Validation:** Node `v24.21.0` / pnpm `11.25.0`; frozen install, build,
-  typecheck, lint, Prettier, all 218 tests (39 shared / 142 server / 37 web),
-  four-category synthetic simulation and `git diff --check` passed. Socket
+  typecheck, lint, Prettier, all 222 tests (39 shared / 146 server / 37 web),
+  89 focused battle/security tests, four-category synthetic simulation and
+  `git diff --check` passed. Socket
   binding required the authorized local rerun after sandbox `EPERM`. The build
   retains the optional Phaser large-chunk advisory; hosted CI is not claimed.
-- **Implementation commit:** `7f548d1f1c53a85da203115cac601fcc1028bfc2`.
+- **Implementation commit:** `304ed6f777d4069e710b05e2aefff615dc7fc266`.
 - **Delivery:** Draft PR [#12](https://github.com/mrdzyn/bossforge/pull/12)
   targets `main` at the exact base above. It remains open, Draft and unmerged;
   independent exact-head review is requested.

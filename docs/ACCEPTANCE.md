@@ -1146,16 +1146,35 @@ damage through `BossBattleSession`. It adds no browser damage endpoint and no
 Phaser damage bridge. Dashboard-only diagnostics are bounded, strict aggregate
 DTOs; OBS does not receive them or administrative controls.
 
-**Regression evidence:** the focused parser and router files pass 20 tests;
+**Regression evidence:** the focused parser and router files pass 24 tests;
 battle-session, server, dashboard and projection regressions also pass in the
 full suite. The actual server-route
 synthetic integration completed four no-vote fallback forge categories,
 reached authoritative `ready`, started the low/60-second battle, routed eight
 synthetic weakness hits through guarded `/dev/simulation/events`, and resolved
-`victory` with HP clamped to zero. A second routed integration accepted one
-hit at monotonic 59,999 ms and rejected one at the exact 60,000 ms deadline,
-then resolved `expired` with the earlier damage preserved. These tests use no
-real Twitch traffic and are not evidence of genuine viewer chat.
+`victory` with HP clamped to zero. Fake-scheduler tests exercise the actual
+`BattleAttackRouter`/`BossBattleSession` interaction with queued work and the
+deadline callback in both execution orders: eight eligible queued weakness
+hits produce victory; one eligible hit is applied before expiration; and
+exact/after-deadline attempts are rejected with fixed `late` counters. These
+tests use no real Twitch traffic and are not evidence of genuine viewer chat.
+
+### M2-B exact-head audit remediation
+
+At audited HEAD `c0df65b1022999a52ba1ac1391a75e712bf8f30d`, independent GPT-6
+identified MAJOR-1 and MINOR-1/MINOR-2. Deadline handling now closes intake,
+drains the bounded FIFO of eligible pre-deadline receipts in receipt/sequence
+order, and finalizes `expired` only after draining if HP remains positive.
+Both timer/drain orders use actual router/session instances; queue-age,
+cancellation, provider invalidation and terminal guards remain in force.
+
+Accepted-hit capacity now uses a non-mutating token preview and commits the
+debit only after `BossBattleSession` accepts the damage transition. A rejected
+transition followed by valid operations proves the full 16-hit burst remains
+available. Late classification uses the session's monotonic deadline instead
+of comparing monotonic time with wall-clock `deadlineAt`; exact/after-deadline
+attempts assert fixed `late`, and a non-late rejected transition asserts
+`inactive`.
 
 **Security/privacy evidence:** private sentinel tests validate that dashboard
 battle aggregates contain fixed counts/reason codes only and cannot parse as
@@ -1165,15 +1184,18 @@ production-route, loopback, Origin, Fetch Metadata, owner-session, OAuth,
 EventSub and Phaser tests remain in the full suite.
 
 **Validation record:** Node `v24.21.0`, pnpm `11.25.0`; frozen install,
-build, typecheck, lint, format check, full suite (218 tests: 39 shared, 142
-server, 37 web), four-category `pnpm simulate`, and `git diff --check` passed.
+build, typecheck, lint, format check, full suite (222 tests: 39 shared, 146
+server, 37 web), 89 focused battle/security tests, four-category `pnpm simulate`,
+and `git diff --check` passed. The previous 218-test suite remains passing.
 Sandbox `EPERM` for loopback-bound tests was followed by an authorized local
 rerun. Simulation used an isolated loopback-only port with Twitch disabled.
 GitHub Actions are not claimed as passing unless the exact review head reports
 successful hosted workflows. No real Twitch credentials, API calls, live hits,
 native OBS testing, merge or deployment were used.
 
-**M2-B implementation commit:** `7f548d1f1c53a85da203115cac601fcc1028bfc2`.
+**M2-B audit-remediation implementation commit:**
+`304ed6f777d4069e710b05e2aefff615dc7fc266` (following initial implementation
+`7f548d1f1c53a85da203115cac601fcc1028bfc2`).
 The work is published in Draft [PR #12](https://github.com/mrdzyn/bossforge/pull/12)
 against `main` at the exact base above. Its description and independent review
 request identify the final pushed review HEAD.

@@ -805,11 +805,27 @@ subsequently squash-merged into `main` at
   monotonic 59,999 ms and excluded one at 60,000 ms. These are automated mock
   results, not genuine Twitch evidence.
 - **Validation:** Node `v24.21.0`, pnpm `11.25.0`; frozen install, build,
-  typecheck, lint, Prettier, and 218 tests (39 shared / 142 server / 37 web)
-  passed. `pnpm simulate` completed four synthetic voting categories on an
-  isolated loopback-only server with Twitch disabled. `git diff --check`
-  passed. Socket-binding tests first encountered sandbox `EPERM`; authorized
-  local reruns passed. The optional Phaser large-chunk advisory remains.
+  typecheck, lint, Prettier, 222 tests (39 shared / 146 server / 37 web), 89
+  focused battle/security tests, isolated `pnpm simulate`, and
+  `git diff --check` passed. Socket-binding tests first encountered sandbox
+  `EPERM`; authorized local reruns passed. The optional Phaser large-chunk
+  advisory remains.
+- **Audit remediation:** At `c0df65b1022999a52ba1ac1391a75e712bf8f30d`, GPT-6
+  identified a deadline/queue race, premature accepted-token debit, and
+  wall-clock/monotonic comparison. Expiry now closes intake, drains eligible
+  queued receipts in receipt/sequence order within the 500ms cap, then expires
+  only if HP remains positive. Scheduler-order tests with actual router/session
+  instances cover queued victory, surviving expiry, and exact/after-deadline
+  `late` classification. Token refill is previewed without mutation and debited
+  only after successful damage; rejected-then-valid tests preserve burst
+  capacity. Terminal cancellation and provider safeguards remain fail-closed.
+- **Remediation implementation commit:**
+  `304ed6f777d4069e710b05e2aefff615dc7fc266`, following initial M2-B commit
+  `7f548d1f1c53a85da203115cac601fcc1028bfc2`.
+- **Remediation validation:** Node 24.21.0 / pnpm 11.25.0; frozen install,
+  build, typecheck, lint, format, all 222 tests, 89 focused tests, isolated
+  four-category mock simulation and `git diff --check` passed. Hosted Actions
+  remain unavailable/unclaimed. No real Twitch access or credentials were used.
 - **Security/evidence boundary:** No real Twitch API, OAuth, credentials,
   genuine chat hit, native OBS testing, hosted CI success, merge or deployment
   is claimed. Replay and cooldown identity remain process-local and bounded;
