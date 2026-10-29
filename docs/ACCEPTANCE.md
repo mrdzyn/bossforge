@@ -1428,6 +1428,42 @@ deterministic/local evidence only; they do not establish genuine Twitch
 acceptance or native OBS rendering. Gates B–D remain NOT AUTHORIZED or NOT
 TESTED as stated in the runbook.
 
+## M2-D — owner-supplied live Twitch and OBS results (2026-10-29)
+
+**Authorization:** The owner confirmed the registered callback and intentional
+local integration setting, then authorized bounded local QA in [PR #15's
+authorization record](https://github.com/mrdzyn/bossforge/pull/15#issuecomment-6499359393).
+OAuth consent and Twitch chat actions remained owner-controlled. The
+observations below combine owner-supplied results and a sanitized local UI
+inspection; they are not an independent reproduction of the owner's entire
+test session.
+
+| Gate                                                      | Result                                | Evidence and limits                                                                                                                                                                                                                                                         |
+| --------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B: OAuth/EventSub connection                              | PASS — observed                       | Dashboard showed Twitch connected; local diagnostics showed one valid welcome, one enabled `channel.chat.message` subscription, and accepted/normalized notification flow. Authenticated identity was privately compared with the intended broadcaster and is omitted here. |
+| C: four genuine voting stages                             | PASS — owner-supplied                 | Four genuine stages completed. One accepted vote per stage produced Rime Veil: Wraith / Ice / Ember Burst / Water. Sanitized diagnostics showed 4 accepted ballots and 0 rejected ballots.                                                                                  |
+| C: weakness hit                                           | PASS — owner-supplied and UI-observed | `!hit water` reduced server HP 550 → 536; accepted attack count was 1. This demonstrates the matching-weakness 14 damage outcome for this run. It does not establish base 8 damage.                                                                                         |
+| C: duplicate/cooldown                                     | NOT VERIFIED — platform rejection     | Twitch rejected an identical repeated command within 30 seconds. This was Twitch-side rejection; it does not demonstrate BossForge's 2-second per-viewer cooldown or its rejection telemetry.                                                                               |
+| C: terminal outcome                                       | PASS — owner-supplied                 | Rime Veil reached server-authoritative expired/survived. A second display showed Cinder Granite (Golem / Fire / Thunder Dash / Water) survived; no HP, hit-count, or independent encounter trace was supplied for that display. Community Victory was not demonstrated.     |
+| D: OBS presence                                           | PARTIAL — owner-supplied              | BossForge appeared in an owner-operated OBS stream alongside Elevator, Please! Owner screenshots are the evidence source. They were not independently reproduced and do not prove live HP synchronization or continuous animation performance.                              |
+| D: native source sizing and active battle synchronization | NOT VERIFIED                          | No evidence establishes separate 1920×1080 and 1280×720 Browser Source dimensions/fit or that changing active HP was synchronized in native OBS.                                                                                                                            |
+
+**Privacy and provenance:** No usernames, viewer/channel IDs, raw chat,
+message IDs, OAuth URLs/codes, cookies, credentials, or full EventSub payloads
+are included. The owner supplied the genuine live results and OBS screenshots;
+the screenshots are not committed because no source image artifacts were
+attached to this evidence update. The local observation showed the expired
+Rime Veil encounter in the dashboard and read-only overlay. A later fresh
+`GET /battle/state` returned idle while the already-open dashboard still
+showed the expired encounter. This authority mismatch was not resolved here;
+no further live actions were taken. Therefore the stale UI is not counted as
+current authoritative state. At that October 29 checkpoint, reconnect/disconnect
+acceptance remained open; the later owner-reported retest is recorded below.
+
+**Explicitly not claimed:** verified base 8 damage, BossForge cooldown
+rejection, Community Victory, active HP synchronization in native OBS,
+independent reproduction of owner screenshots, or full native OBS acceptance.
+
 ## Issue #16 — EventSub keepalive tolerance
 
 Independent branch from main `2893ba8b8d26de0fe032689c5ab69497f03a1486`:
@@ -1442,8 +1478,15 @@ typecheck, lint, formatting, asset reproducibility, 84 focused tests and
 isolated four-category mock simulation passed. All 270 tests passed separately
 (41 shared / 155 server / 74 web). Root parallel test execution retained the
 known SVG checksum timeout; a separate 15-second-timeout web rerun passed.
-Hosted CI and genuine Twitch retest are not claimed. The owner's checkout,
+Hosted CI was not claimed at the remediation checkpoint. The owner's checkout,
 private configuration, runtime ports and OBS were untouched by this work.
 See [the incident evidence and owner retest procedure](M2-D-LIVE-TWITCH-OBS-ACCEPTANCE.md#issue-16--bounded-keepalive-jitter-remediation-2026-10-30).
-Keep the remediation Draft and unmerged pending independent review; activation
-requires separate owner approval.
+The remediation was subsequently independently reviewed and squash-merged via PR #19 into main at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed. The owner-reported retest is recorded below.
+
+## Issue #16 — owner-reported live reliability retest (2026-10-30)
+
+[Issue #16's acceptance comment](https://github.com/mrdzyn/bossforge/issues/16#issuecomment-6504011541) records six owner-attested PASS checks: (1) Twitch connected with an enabled/verified EventSub subscription; (2) connection stability over 10 minutes with OBS and game load; (3) a four-stage forge with no reported watchdog cancellation; (4) accepted Twitch chat votes; (5) a deliberate disconnect cancelled a separate active encounter; and (6) reconnect did not automatically resume it. These are owner-reported observations, not independently reproduced results.
+
+PR #19 was squash-merged into `main` at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed for the scoped watchdog remediation. The running-process SHA during the owner retest and exact before/after diagnostic counter deltas were not independently verified. No numeric snapshot or timestamped event log was supplied. The original cause of silence remains unknown; ten minutes of stability does not guarantee future availability.
+
+M2-D end-to-end acceptance remains open: base-hit damage, BossForge two-second cooldown rejection, Community Victory, native OBS active-HP synchronization, native source sizing/fit and long-duration motion performance remain unverified. The previously observed dashboard/API terminal-state mismatch also remains unresolved. Owner-supplied OBS screenshots were not independently reproduced. The earlier deterministic tests and root parallel-test limitation remain historical evidence; hosted CI is unverified.

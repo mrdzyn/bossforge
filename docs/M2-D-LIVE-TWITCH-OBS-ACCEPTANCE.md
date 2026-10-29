@@ -1,8 +1,8 @@
 # M2-D — Verified Twitch Combat and Native OBS Acceptance
 
-**Phase state:** PREPARATION AUTHORIZED; REAL TWITCH AND NATIVE OBS ACCEPTANCE NOT STARTED.  
-**Baseline:** `main` at `50d4523873873328847f3d4c830220a869788b96` (PR #14 squash merge).  
-**Implementation model:** M2-A/B/C and SVG polish are merged. M2-D gathers bounded deterministic evidence and owner-operated end-to-end acceptance; it does not add new damage, authentication, public routes, or gameplay features by default.  
+**Phase state:** OWNER-SUPPLIED PARTIAL LIVE ACCEPTANCE RECORDED; remaining gates are open.
+**Baseline:** `main` at `953c52f720bed59dc3ab2514054e6a954b4777ff` (PR #19 squash merge).
+**Implementation model:** M2-A/B/C and SVG polish are merged. M2-D gathers bounded deterministic evidence and owner-operated end-to-end acceptance; it does not add new damage, authentication, public routes, or gameplay features by default.
 **Deadline context:** Codex × TwitchCon submission planned for November 3, 2026, 06:00 Asia/Manila; reconfirm official deadline before publishing.
 
 ## Entry conditions
@@ -23,11 +23,11 @@
 - Report all commands, actual pass/fail counts, retries, timeout changes, source commit, and whether hosted CI ran. No secret-bearing environment dumps or live credentials in evidence.
 - A preflight defect gets a narrowly scoped remediation branch/PR and independent source/security audit before real-service acceptance.
 
-## M2-D gate B — Owner authorization and local Twitch preflight (STOP until separately approved)
+## M2-D gate B — Owner authorization and local Twitch preflight
 
-**Current state: NOT AUTHORIZED TO ACTIVATE.** The owner must explicitly authorize a **bounded real Twitch QA session** and personally initiate OAuth consent. This M2-D kickoff alone does not authorize connection, credential use, chat posting, EventSub creation or changing the local `.env`.
+**Owner authorization and connection observed:** The owner confirmed the registered callback and intentional local enablement, then authorized bounded local QA in [PR #15](https://github.com/mrdzyn/bossforge/pull/15#issuecomment-6499359393). OAuth consent and Twitch chat actions remained owner-controlled. The dashboard and sanitized diagnostics showed Twitch connected, one valid welcome, and one enabled `channel.chat.message` subscription. Authenticated identity was compared privately; do not copy it into reports. This records the observed session and does not authorize another OAuth session.
 
-- Confirm developer-console callback **exactly** `http://localhost:3001/auth/twitch/callback`. Verify app registration and intended broadcaster/reader account through the owner. Do not paste account identities into a public report.
+- Callback confirmed by owner as exactly `http://localhost:3001/auth/twitch/callback`; preserve this requirement. Do not paste account identities into a public report.
 - Verify independently that 3001/5173 are free with `lsof -nP -iTCP:3001 -iTCP:5173 -sTCP:LISTEN`. If occupied, identify and seek owner direction; **never terminate an unknown process** or silently change callback ports.
 - Existing confidential-client settings are local and gitignored: `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_INTEGRATION_ENABLED=false` until authorized. Verify existence/ignore status without disclosing, printing or checking secrets into Git. Only the owner enables live integration and completes consent.
 - When explicitly authorized, run loopback-only Fastify/Vite and open the owner dashboard at the origin required for cookie/Host policy. The registered Fastify callback must match; do not redirect OAuth to Vite.
@@ -36,7 +36,9 @@
 
 ## M2-D gate C — Bounded genuine Twitch vote-and-battle QA (owner-operated)
 
-Run one low-volume authorized test using a real viewer in the intended channel. Document **aggregate counts and safe observed HP**, not usernames, raw chat, broadcaster user ID or tokens.
+**Owner-supplied partial run (2026-10-29):** Four genuine stages produced Rime Veil (Wraith / Ice / Ember Burst / Water). One `!hit water` changed server-authoritative HP from 550 to 536 with one accepted attack. This is evidence of a matching-weakness hit in that encounter. Twitch rejected a repeated identical command within 30 seconds; that is not evidence that BossForge's 2-second cooldown rejected a command. Rime Veil expired/survived. A second display showed Cinder Granite (Golem / Fire / Thunder Dash / Water) survived. See [ACCEPTANCE](ACCEPTANCE.md) for provenance and limitations.
+
+The full Low/60 sequence is not established by these results. Do not infer base 8 damage, BossForge cooldown rejection, Community Victory, or active HP synchronization in native OBS.
 
 1. Open the authenticated dashboard and a separately read-only overlay; confirm **LIVE TWITCH** is shown only after verified EventSub subscription.
 2. Start a four-stage forge. Have an actual viewer submit the exact currently displayed `!vote <category> <choice>` syntax during each open category; record which categories received accepted genuine votes and which used a server default. Verify a server-authoritative reveal and **BATTLE READY**.
@@ -58,16 +60,18 @@ If the test encounters an authorization, source-isolation, privacy or authority 
 - Capture screenshots **from OBS Studio**. Chromium's 80 measured captures are valuable prior UI evidence but **not** native OBS proof.
 - Before sharing demo or screenshots, exclude chat docks, viewer names/IDs, cookies, OAuth callback/query strings, credentials, account emails, console secrets, and raw logs. OBS must remain read-only.
 
-## M2-D pass/fail record template
+## M2-D pass/fail record — current evidence
 
-| Gate                                             | Result         | Evidence / limitation                                                                                                                                                                   |
-| ------------------------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A: deterministic security and full suite         | PARTIAL        | All 262 package tests pass separately; root parallel `pnpm test` has a recorded SVG test timeout. See [M2-D Gate A evidence](ACCEPTANCE.md#m2-d-gate-a--deterministic-local-preflight). |
-| B: owner permission, OAuth and verified EventSub | NOT AUTHORIZED | Owner-only consent; sanitized subscription verification                                                                                                                                 |
-| C: genuine votes and 8/14 damage                 | NOT TESTED     | Genuine viewer source; HP before/after; aggregate only                                                                                                                                  |
-| C: cooldown and source/disconnect safety         | NOT TESTED     | One low-volume rejection; safe cancellation and new encounter                                                                                                                           |
-| D: OBS 1920×1080 and 1280×720                    | NOT TESTED     | Native screenshots, fit, transparency, timing                                                                                                                                           |
-| E: evidence hygiene and independent audit        | PENDING        | No private data; full explicit gate report                                                                                                                                              |
+| Gate                                             | Result                   | Evidence / limitation                                                                                                                                                                   |
+| ------------------------------------------------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A: deterministic security and full suite         | PARTIAL                  | All 262 package tests pass separately; root parallel `pnpm test` has a recorded SVG test timeout. See [M2-D Gate A evidence](ACCEPTANCE.md#m2-d-gate-a--deterministic-local-preflight). |
+| B: owner permission, OAuth and verified EventSub | PASS — observed          | Owner-authorized, owner-operated consent; one valid welcome and one enabled subscription; identity privately checked                                                                    |
+| C: genuine votes                                 | PASS — owner-supplied    | Four genuine categories, one accepted ballot each; Rime Veil revealed                                                                                                                   |
+| C: matching-weakness hit                         | PASS — owner-supplied    | 550 → 536 HP; one accepted hit; base damage not verified                                                                                                                                |
+| C: BossForge cooldown and base damage            | NOT VERIFIED             | Platform rejected duplicate within 30 seconds; no BossForge cooldown rejection or base-8 result established                                                                             |
+| C: terminal and recovery                         | PARTIAL                  | Rime Veil expired; second boss shown survived. Community Victory not verified; owner later reported disconnect/no-resume PASS; dashboard/API stale-state mismatch observed after expiry |
+| D: OBS presence                                  | PARTIAL — owner-supplied | BossForge visible alongside Elevator, Please! Native source sizes/fit and active HP synchronization not verified                                                                        |
+| E: evidence hygiene and independent audit        | PENDING                  | Sanitized records only; screenshots owner-supplied/not attached; authority mismatch must be resolved before further live testing                                                        |
 
 For each owner test, record: Asia/Manila date/time, branch and exact HEAD, source environment (mock/Twitch), exact server-authoritative before/after HP, accepted/rejected aggregates, UI/OBS outcome, screenshot paths, reason for failure, retry status, and whether evidence is owner-supplied or independently observed.
 
@@ -144,7 +148,7 @@ Four-category `pnpm simulate` passed with two synthetic votes/category on an
 owned mock-only server at `127.0.0.1:33316`, empty environment allowlist,
 Twitch explicitly disabled; that process was stopped afterward.
 
-### Owner-operated retest — only after independent review and activation approval
+### Historical owner-operated retest procedure — review and activation approval required
 
 1. End or pause the broadcast at the owner's chosen time. Verify no active
    forge/battle; separately approve synchronizing the reviewed SHA and restarting
@@ -166,4 +170,12 @@ Twitch explicitly disabled; that process was stopped afterward.
    obtain fresh verification and must not resume the cancelled encounter.
    Begin a new forge explicitly if further QA is desired.
 
-Genuine Twitch stability and native OBS acceptance remain pending this retest.
+The subsequent owner-reported reliability retest is recorded below. Full native OBS and end-to-end acceptance remain pending.
+
+## Issue #16 — owner-reported live reliability retest (2026-10-30)
+
+[Issue #16's acceptance comment](https://github.com/mrdzyn/bossforge/issues/16#issuecomment-6504011541) records six owner-attested PASS checks: (1) Twitch connected with an enabled/verified EventSub subscription; (2) connection stability over 10 minutes with OBS and game load; (3) a four-stage forge with no reported watchdog cancellation; (4) accepted Twitch chat votes; (5) a deliberate disconnect cancelled a separate active encounter; and (6) reconnect did not automatically resume it. These are owner-reported observations, not independently reproduced results.
+
+PR #19 was squash-merged into `main` at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed for the scoped watchdog remediation. The running-process SHA during the owner retest and exact before/after diagnostic counter deltas were not independently verified. No numeric snapshot or timestamped event log was supplied. The original cause of silence remains unknown; ten minutes of stability does not guarantee future availability.
+
+M2-D end-to-end acceptance remains open: base-hit damage, BossForge two-second cooldown rejection, Community Victory, native OBS active-HP synchronization, native source sizing/fit and long-duration motion performance remain unverified. The previously observed dashboard/API terminal-state mismatch also remains unresolved. Owner-supplied OBS screenshots were not independently reproduced. The earlier deterministic tests and root parallel-test limitation remain historical evidence; hosted CI is unverified.
