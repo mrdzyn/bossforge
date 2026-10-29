@@ -254,6 +254,34 @@ transient private ingress values.
 
 Coalesced fixed-code battle attempt aggregates use a strict dashboard-only
 event contract. No such event is serialized to OBS; OBS remains read-only and
-the dedicated attack HUD/instructions remain M2-C work. No public or browser
+the dedicated attack HUD/instructions were M2-C work. No public or browser
 damage route is registered. Mock combat uses only the existing loopback,
 Origin-protected development simulation route and is forbidden in Twitch mode.
+
+## M2-C OBS battle presentation
+
+The overlay keeps its single `/events/overlay` WebSocket. `useLiveEvents("overlay")`
+strictly parses `OverlayEventEnvelopeSchema`, applies battle frames through a
+separate generic `BattleStateReconciler<OverlayBattleStateV1>`, and bootstraps
+the overlay DTO from `GET /battle/overlay-state` after the active connection
+opens. The endpoint exists only in development with simulation routes enabled,
+requires loopback/local request validation, returns `toOverlayBattleState()`
+under the strict overlay schema, and sets `Cache-Control: no-store`.
+
+Forge snapshots remain independently reconciled. The HUD requires both sources
+to be fresh and the battle's complete `forgeIdentity` (server instance, server
+start epoch, provider mode, and cycle ID) to match the revealed forge before it
+shows ready/active/terminal claims. The battle reconciler rejects lower or
+conflicting equal revisions, retired encounters, retired socket generations,
+old epochs, and WebSocket state until a fresh HTTP snapshot has established
+authority in the current generation. Failed snapshots and feed loss hide HP,
+timer, attack aggregates, outcome claims, and attack instructions.
+
+`OverlayBattleHud` consumes only the overlay DTO. It shows server HP and
+accepted-hit aggregates, a read-only `!hit`/weakness instruction, server
+deadline estimate, and fixed terminal/cancellation copy. Countdown zero displays
+resolving until the server publishes terminal state. Hit feedback requires a
+same-epoch, same-encounter revision increase that includes an accepted-hit
+increase; snapshots/reconnects cannot replay it. Reduced motion disables the
+transitions. The OBS document background is transparent with translucent
+panels; there are no controls or Phaser/game-data dependencies.

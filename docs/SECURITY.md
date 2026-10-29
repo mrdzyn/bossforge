@@ -263,3 +263,21 @@ are browser evidence only; actual OBS capture remains unverified.
   terminal states remain immutable.
 - Automated evidence is synthetic and does not establish genuine Twitch
   operation. No Twitch credentials or live endpoint is used by M2-B tests.
+
+## M2-C overlay boundary
+
+The overlay uses the existing strict `/events/overlay` recipient and consumes
+only `OverlayBattleStateV1`; no dashboard battle activity or rejection
+aggregates are admitted by its event envelope. Its bootstrap
+`GET /battle/overlay-state` endpoint is development/simulation-only, loopback
+and local-origin protected, no-store, and serializes only `toOverlayBattleState`
+validated by the strict overlay schema. It never returns the dashboard profile
+snapshot. Forge and battle authority must both be fresh on the current
+WebSocket generation and match complete server epoch/provider/cycle identity;
+otherwise the UI suppresses combat state and instructions. The browser timer
+does not mutate battle state or determine terminal outcomes.
+
+The HUD contains no damage/admin control. No names, IDs, chat text, message IDs,
+cookies, tokens, pseudonyms, private limits, or dashboard-only metrics are
+available to its projection. Real Twitch and native OBS validation remain
+separate from synthetic tests and Chromium screenshots.

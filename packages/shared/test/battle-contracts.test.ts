@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CommunityBattleStateV1Schema,
+  OverlayBattleStateV1Schema,
   GENERIC_PROFILE_V1,
   GenericProfileV1Schema,
 } from "../src/battle.js";
@@ -117,6 +118,38 @@ describe("authoritative completed forge reveal", () => {
 });
 
 describe("BattleStateReconciler", () => {
+  it("reconciles the strict overlay projection without dashboard profile fields", () => {
+    const overlay = Object.fromEntries(
+      Object.entries(idle()).filter(
+        ([key]) => !["profileId", "profileVersion", "profileSnapshot"].includes(key),
+      ),
+    );
+    const projected = OverlayBattleStateV1Schema.parse(overlay);
+    const r = new BattleStateReconciler<typeof projected>();
+    const generation = r.beginConnection();
+    expect(r.apply(projected, generation, "snapshot")).toBe(true);
+    expect(r.state).toEqual(projected);
+  });
+  it("requires current-generation overlay snapshots before adopting a new server epoch", () => {
+    const overlay = (source: ReturnType<typeof idle>) =>
+      OverlayBattleStateV1Schema.parse(
+        Object.fromEntries(
+          Object.entries(source).filter(
+            ([key]) => !["profileId", "profileVersion", "profileSnapshot"].includes(key),
+          ),
+        ),
+      );
+    const r = new BattleStateReconciler<ReturnType<typeof overlay>>();
+    const g1 = r.beginConnection();
+    const first = overlay(idle());
+    expect(r.apply(first, g1, "snapshot")).toBe(true);
+    const g2 = r.beginConnection();
+    const replacement = overlay(idle(0, "replacement", "2026-10-30T00:00:00.000Z"));
+    expect(r.apply(replacement, g2, "websocket")).toBe(false);
+    expect(r.apply(replacement, g2, "snapshot")).toBe(true);
+    expect(r.apply(first, g1, "snapshot")).toBe(false);
+    expect(r.state).toEqual(replacement);
+  });
   it("requires an HTTP snapshot before first adoption and rejects stale generations and revisions", () => {
     const r = new BattleStateReconciler();
     const g1 = r.beginConnection();

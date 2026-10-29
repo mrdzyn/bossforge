@@ -126,6 +126,8 @@ function installHookState({
     error: "",
     notice: "",
     snapshotAvailable,
+    overlayBattle: null,
+    overlayBattleFresh: true,
     post: vi.fn(async () => true),
   };
 }
@@ -237,7 +239,7 @@ describe("actual dashboard and overlay live state composition", () => {
     expect(dashboard).toContain("GENERIC / OBS");
     expect(dashboard).toContain("Ready to forge");
     expect(dashboard).toContain("Chat fights the boss");
-    expect(dashboard).toContain("coming in M2");
+    expect(dashboard).toContain("Chat creates the boss. Chat fights the boss.");
     expect(dashboard).toContain("does not read, control, or integrate with the game");
     expect(overlay).toContain("AWAITING FORGE");
     expect(overlay).not.toContain("BATTLE READY");
@@ -250,7 +252,7 @@ describe("actual dashboard and overlay live state composition", () => {
     const overlay = renderToStaticMarkup(<OverlayPreview />);
     for (const html of [dashboard, overlay]) {
       expect(html).toContain("Cinder Granite");
-      expect(html).toContain("REVEALED — BATTLE COMING SOON");
+      expect(html).toContain("WAITING FOR VERIFIED BATTLE STATE");
       expect(html).toContain("Golem");
       expect(html).toContain("Fire");
       expect(html).toContain("Ember Burst");
@@ -262,7 +264,7 @@ describe("actual dashboard and overlay live state composition", () => {
       expect(html).not.toContain("24 DMG");
     }
     const inlineStatus = dashboard.indexOf(
-      '<span class="reveal-inline-status" role="status">REVEALED — BATTLE COMING SOON</span>',
+      '<span class="reveal-inline-status" role="status">WAITING FOR VERIFIED BATTLE STATE</span>',
     );
     const bossArtwork = dashboard.indexOf('class="boss-art');
     expect(inlineStatus).toBeGreaterThanOrEqual(0);
@@ -306,7 +308,7 @@ describe("actual dashboard and overlay live state composition", () => {
     const overlay = renderToStaticMarkup(<OverlayPreview />);
     expect(dashboard).toContain("TWITCH DISCONNECTED");
     expect(overlay).toContain("TWITCH DISCONNECTED / VOTING PAUSED");
-    expect(overlay).toContain("REVEALED — BATTLE COMING SOON");
+    expect(overlay).toContain("TWITCH DISCONNECTED");
     expect(overlay).not.toContain("LIVE TWITCH");
   });
 
@@ -337,6 +339,6 @@ describe("actual dashboard and overlay live state composition", () => {
     installHookState({ forge: freshReveal, connection: "connected", snapshotAvailable: true });
     const restored = renderToStaticMarkup(<OverlayPreview />);
     expect(restored).toContain("Cinder Granite");
-    expect(restored).toContain("REVEALED — BATTLE COMING SOON");
+    expect(restored).toContain("WAITING FOR VERIFIED BATTLE STATE");
   });
 });

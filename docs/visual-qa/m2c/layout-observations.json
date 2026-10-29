@@ -1,0 +1,1157 @@
+[
+  {
+    "path": "docs/visual-qa/m2c/awaiting-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "scrollHeight": 1080,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 340,
+        "y": 37.8,
+        "width": 1240,
+        "height": 98,
+        "right": 1580,
+        "bottom": 135.8,
+        "visible": true
+      },
+      ".m2c-status": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 97,
+        "right": 1580,
+        "bottom": 254.4,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 340,
+        "y": 276,
+        "width": 1240,
+        "height": 141,
+        "right": 1580,
+        "bottom": 417,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nAWAITING FORGE\nAWAITING FORGE\nTHE FORGE IS LISTENING\nAWAITING FORGE\nThe forge is ready when you are.\n\nAwaiting the first forge cycle.\n\nLOCAL SYNTHETIC CHAT · VOTES ARE SERVER AUTHORITATIVE\nOBS BROWSER SOURCE · RUNS BESIDE YOUR GAME"
+  },
+  {
+    "path": "docs/visual-qa/m2c/live-voting-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "scrollHeight": 1080,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 340,
+        "y": 37.8,
+        "width": 1240,
+        "height": 98,
+        "right": 1580,
+        "bottom": 135.8,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 252,
+        "right": 1580,
+        "bottom": 409.4,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 340,
+        "y": 431,
+        "width": 1240,
+        "height": 280.5,
+        "right": 1580,
+        "bottom": 711.5,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-12\nFORGE ENTITY / forge-12\nGOLEM · FIRE\n✹\n◉\nTHE CHAT IS FORGING\nA BOSS IN THE MAKING\nBODY TBD\nELEMENT TBD\nTHE FORGE IS LISTENING\nVOTE: BODY · 5s\nChoose the boss body\n\nSIMULATED · Twitch is not connected. Use Generate event in"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-ready-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "scrollHeight": 1080,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 340,
+        "y": 37.8,
+        "width": 1240,
+        "height": 98,
+        "right": 1580,
+        "bottom": 135.8,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 252,
+        "right": 1580,
+        "bottom": 409.4,
+        "visible": true
+      },
+      ".m2c-status": {
+        "x": 340,
+        "y": 431,
+        "width": 1240,
+        "height": 97,
+        "right": 1580,
+        "bottom": 528,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 340,
+        "y": 549.6,
+        "width": 1240,
+        "height": 190,
+        "right": 1580,
+        "bottom": 739.6,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-12\nFORGE ENTITY / forge-12\nGOLEM · FIRE\n✹\n◉\nTHE COMMUNITY HAS FORGED\nCinder Granite\nBODY · GOLEM\nELEMENT · FIRE\nSPECIAL · EMBER BURST\nWEAKNESS · WATER\nBATTLE READY\nFORGE COMPLETE\nBOSS REVEALED\nA boss built by the whole chat\nB"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-active-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "scrollHeight": 1104,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 340,
+        "y": 37.8,
+        "width": 1240,
+        "height": 98,
+        "right": 1580,
+        "bottom": 135.8,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 252,
+        "right": 1580,
+        "bottom": 409.4,
+        "visible": true
+      },
+      ".m2c-battle-hud": {
+        "x": 340,
+        "y": 431,
+        "width": 1240,
+        "height": 323,
+        "right": 1580,
+        "bottom": 754,
+        "visible": true
+      },
+      ".m2c-hp-track": {
+        "x": 373,
+        "y": 636,
+        "width": 1174,
+        "height": 28,
+        "right": 1547,
+        "bottom": 664,
+        "visible": true
+      },
+      ".m2c-commands": {
+        "x": 373,
+        "y": 684,
+        "width": 1174,
+        "height": 37,
+        "right": 1547,
+        "bottom": 721,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 340,
+        "y": 775.6,
+        "width": 1240,
+        "height": 190,
+        "right": 1580,
+        "bottom": 965.6,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-12\nFORGE ENTITY / forge-12\nGOLEM · FIRE\n✹\n◉\nTHE COMMUNITY HAS FORGED\nCinder Granite\nBODY · GOLEM\nELEMENT · FIRE\nSPECIAL · EMBER BURST\nWEAKNESS · WATER\nBATTLE ACTIVE · COMMUNITY BOSS\nCinder Granite\nSIMULATED\nWEAKNESS WATER\nATT"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-active-1280x720.png",
+    "width": 1280,
+    "height": 720,
+    "scrollWidth": 1280,
+    "scrollHeight": 796,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 51.2,
+        "y": 12,
+        "width": 1177.6,
+        "height": 43,
+        "right": 1228.8,
+        "bottom": 55,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 51.2,
+        "y": 64,
+        "width": 1177.6,
+        "height": 174,
+        "right": 1228.8,
+        "bottom": 238,
+        "visible": true
+      },
+      ".m2c-battle-hud": {
+        "x": 51.2,
+        "y": 247,
+        "width": 1177.6,
+        "height": 323,
+        "right": 1228.8,
+        "bottom": 570,
+        "visible": true
+      },
+      ".m2c-hp-track": {
+        "x": 84.2,
+        "y": 452,
+        "width": 1111.6,
+        "height": 28,
+        "right": 1195.8,
+        "bottom": 480,
+        "visible": true
+      },
+      ".m2c-commands": {
+        "x": 84.2,
+        "y": 500,
+        "width": 1111.6,
+        "height": 37,
+        "right": 1195.8,
+        "bottom": 537,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 51.2,
+        "y": 579,
+        "width": 1177.6,
+        "height": 142,
+        "right": 1228.8,
+        "bottom": 721,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-12\nFORGE ENTITY / forge-12\nGOLEM · FIRE\n✹\n◉\nTHE COMMUNITY HAS FORGED\nCinder Granite\nBODY · GOLEM\nELEMENT · FIRE\nSPECIAL · EMBER BURST\nWEAKNESS · WATER\nBATTLE ACTIVE · COMMUNITY BOSS\nCinder Granite\nSIMULATED\nWEAKNESS WATER\nATT"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-active-1600x900.png",
+    "width": 1600,
+    "height": 900,
+    "scrollWidth": 1600,
+    "scrollHeight": 1073,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 180,
+        "y": 31.5,
+        "width": 1240,
+        "height": 98,
+        "right": 1420,
+        "bottom": 129.5,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 180,
+        "y": 147.5,
+        "width": 1240,
+        "height": 252,
+        "right": 1420,
+        "bottom": 399.5,
+        "visible": true
+      },
+      ".m2c-battle-hud": {
+        "x": 180,
+        "y": 417.5,
+        "width": 1240,
+        "height": 323,
+        "right": 1420,
+        "bottom": 740.5,
+        "visible": true
+      },
+      ".m2c-hp-track": {
+        "x": 213,
+        "y": 622.5,
+        "width": 1174,
+        "height": 28,
+        "right": 1387,
+        "bottom": 650.5,
+        "visible": true
+      },
+      ".m2c-commands": {
+        "x": 213,
+        "y": 670.5,
+        "width": 1174,
+        "height": 37,
+        "right": 1387,
+        "bottom": 707.5,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 180,
+        "y": 758.5,
+        "width": 1240,
+        "height": 190,
+        "right": 1420,
+        "bottom": 948.5,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-12\nFORGE ENTITY / forge-12\nGOLEM · FIRE\n✹\n◉\nTHE COMMUNITY HAS FORGED\nCinder Granite\nBODY · GOLEM\nELEMENT · FIRE\nSPECIAL · EMBER BURST\nWEAKNESS · WATER\nBATTLE ACTIVE · COMMUNITY BOSS\nCinder Granite\nSIMULATED\nWEAKNESS WATER\nATT"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-active-390x844.png",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "scrollHeight": 1166,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 12,
+        "y": 12,
+        "width": 366,
+        "height": 98,
+        "right": 378,
+        "bottom": 110,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 12,
+        "y": 122,
+        "width": 366,
+        "height": 359.2,
+        "right": 378,
+        "bottom": 481.2,
+        "visible": true
+      },
+      ".m2c-battle-hud": {
+        "x": 12,
+        "y": 493.2,
+        "width": 366,
+        "height": 291.2,
+        "right": 378,
+        "bottom": 784.4,
+        "visible": true
+      },
+      ".m2c-hp-track": {
+        "x": 31,
+        "y": 664.4,
+        "width": 328,
+        "height": 18,
+        "right": 359,
+        "bottom": 682.4,
+        "visible": true
+      },
+      ".m2c-commands": {
+        "x": 31,
+        "y": 702.4,
+        "width": 328,
+        "height": 63,
+        "right": 359,
+        "bottom": 765.4,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 12,
+        "y": 796.4,
+        "width": 366,
+        "height": 278,
+        "right": 378,
+        "bottom": 1074.4,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-12\nFORGE ENTITY / forge-12\nGOLEM · FIRE\n✹\n◉\nTHE COMMUNITY HAS FORGED\nCinder Granite\nBODY · GOLEM\nELEMENT · FIRE\nSPECIAL · EMBER BURST\nWEAKNESS · WATER\nBATTLE ACTIVE · COMMUNITY BOSS\nCinder Granite\nSIMULATED\nWEAKNESS WATER\nATT"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-low-hp-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "scrollHeight": 1104,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 340,
+        "y": 37.8,
+        "width": 1240,
+        "height": 98,
+        "right": 1580,
+        "bottom": 135.8,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 252,
+        "right": 1580,
+        "bottom": 409.4,
+        "visible": true
+      },
+      ".m2c-battle-hud": {
+        "x": 340,
+        "y": 431,
+        "width": 1240,
+        "height": 323,
+        "right": 1580,
+        "bottom": 754,
+        "visible": true
+      },
+      ".m2c-hp-track": {
+        "x": 373,
+        "y": 636,
+        "width": 1174,
+        "height": 28,
+        "right": 1547,
+        "bottom": 664,
+        "visible": true
+      },
+      ".m2c-commands": {
+        "x": 373,
+        "y": 684,
+        "width": 1174,
+        "height": 37,
+        "right": 1547,
+        "bottom": 721,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 340,
+        "y": 775.6,
+        "width": 1240,
+        "height": 190,
+        "right": 1580,
+        "bottom": 965.6,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-12\nFORGE ENTITY / forge-12\nGOLEM · FIRE\n✹\n◉\nTHE COMMUNITY HAS FORGED\nCinder Granite\nBODY · GOLEM\nELEMENT · FIRE\nSPECIAL · EMBER BURST\nWEAKNESS · WATER\nBATTLE ACTIVE · COMMUNITY BOSS\nCinder Granite\nSIMULATED\nWEAKNESS WATER\nATT"
+  },
+  {
+    "path": "docs/visual-qa/m2c/community-victory-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "scrollHeight": 1080,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 340,
+        "y": 37.8,
+        "width": 1240,
+        "height": 98,
+        "right": 1580,
+        "bottom": 135.8,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 252,
+        "right": 1580,
+        "bottom": 409.4,
+        "visible": true
+      },
+      ".m2c-terminal": {
+        "x": 340,
+        "y": 431,
+        "width": 1240,
+        "height": 97,
+        "right": 1580,
+        "bottom": 528,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 340,
+        "y": 549.6,
+        "width": 1240,
+        "height": 190,
+        "right": 1580,
+        "bottom": 739.6,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-12\nFORGE ENTITY / forge-12\nGOLEM · FIRE\n✹\n◉\nTHE COMMUNITY HAS FORGED\nCinder Granite\nBODY · GOLEM\nELEMENT · FIRE\nSPECIAL · EMBER BURST\nWEAKNESS · WATER\nCOMMUNITY VICTORY! BOSS DEFEATED!\nFORGE COMPLETE\nBOSS REVEALED\nA boss buil"
+  },
+  {
+    "path": "docs/visual-qa/m2c/community-victory-1280x720.png",
+    "width": 1280,
+    "height": 720,
+    "scrollWidth": 1280,
+    "scrollHeight": 720,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 51.2,
+        "y": 12,
+        "width": 1177.6,
+        "height": 43,
+        "right": 1228.8,
+        "bottom": 55,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 51.2,
+        "y": 64,
+        "width": 1177.6,
+        "height": 174,
+        "right": 1228.8,
+        "bottom": 238,
+        "visible": true
+      },
+      ".m2c-terminal": {
+        "x": 51.2,
+        "y": 247,
+        "width": 1177.6,
+        "height": 97,
+        "right": 1228.8,
+        "bottom": 344,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 51.2,
+        "y": 353,
+        "width": 1177.6,
+        "height": 142,
+        "right": 1228.8,
+        "bottom": 495,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-12\nFORGE ENTITY / forge-12\nGOLEM · FIRE\n✹\n◉\nTHE COMMUNITY HAS FORGED\nCinder Granite\nBODY · GOLEM\nELEMENT · FIRE\nSPECIAL · EMBER BURST\nWEAKNESS · WATER\nCOMMUNITY VICTORY! BOSS DEFEATED!\nFORGE COMPLETE\nBOSS REVEALED\nA boss buil"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-active-second-encounter-1600x900.png",
+    "width": 1600,
+    "height": 900,
+    "scrollWidth": 1600,
+    "scrollHeight": 1073,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 180,
+        "y": 31.5,
+        "width": 1240,
+        "height": 98,
+        "right": 1420,
+        "bottom": 129.5,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 180,
+        "y": 147.5,
+        "width": 1240,
+        "height": 252,
+        "right": 1420,
+        "bottom": 399.5,
+        "visible": true
+      },
+      ".m2c-battle-hud": {
+        "x": 180,
+        "y": 417.5,
+        "width": 1240,
+        "height": 323,
+        "right": 1420,
+        "bottom": 740.5,
+        "visible": true
+      },
+      ".m2c-hp-track": {
+        "x": 213,
+        "y": 622.5,
+        "width": 1174,
+        "height": 28,
+        "right": 1387,
+        "bottom": 650.5,
+        "visible": true
+      },
+      ".m2c-commands": {
+        "x": 213,
+        "y": 670.5,
+        "width": 1174,
+        "height": 37,
+        "right": 1387,
+        "bottom": 707.5,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 180,
+        "y": 758.5,
+        "width": 1240,
+        "height": 190,
+        "right": 1420,
+        "bottom": 948.5,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-13\nFORGE ENTITY / forge-13\nGOLEM · FIRE\n✹\n◉\nTHE COMMUNITY HAS FORGED\nCinder Granite\nBODY · GOLEM\nELEMENT · FIRE\nSPECIAL · EMBER BURST\nWEAKNESS · WATER\nBATTLE ACTIVE · COMMUNITY BOSS\nCinder Granite\nSIMULATED\nWEAKNESS WATER\nATT"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-active-second-encounter-390x844.png",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "scrollHeight": 1166,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 12,
+        "y": 12,
+        "width": 366,
+        "height": 98,
+        "right": 378,
+        "bottom": 110,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 12,
+        "y": 122,
+        "width": 366,
+        "height": 359.2,
+        "right": 378,
+        "bottom": 481.2,
+        "visible": true
+      },
+      ".m2c-battle-hud": {
+        "x": 12,
+        "y": 493.2,
+        "width": 366,
+        "height": 291.2,
+        "right": 378,
+        "bottom": 784.4,
+        "visible": true
+      },
+      ".m2c-hp-track": {
+        "x": 31,
+        "y": 664.4,
+        "width": 328,
+        "height": 18,
+        "right": 359,
+        "bottom": 682.4,
+        "visible": true
+      },
+      ".m2c-commands": {
+        "x": 31,
+        "y": 702.4,
+        "width": 328,
+        "height": 63,
+        "right": 359,
+        "bottom": 765.4,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 12,
+        "y": 796.4,
+        "width": 366,
+        "height": 278,
+        "right": 378,
+        "bottom": 1074.4,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-13\nFORGE ENTITY / forge-13\nGOLEM · FIRE\n✹\n◉\nTHE COMMUNITY HAS FORGED\nCinder Granite\nBODY · GOLEM\nELEMENT · FIRE\nSPECIAL · EMBER BURST\nWEAKNESS · WATER\nBATTLE ACTIVE · COMMUNITY BOSS\nCinder Granite\nSIMULATED\nWEAKNESS WATER\nATT"
+  },
+  {
+    "path": "docs/visual-qa/m2c/boss-survived-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "scrollHeight": 1080,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 340,
+        "y": 37.8,
+        "width": 1240,
+        "height": 98,
+        "right": 1580,
+        "bottom": 135.8,
+        "visible": true
+      },
+      ".overlay-boss-card": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 252,
+        "right": 1580,
+        "bottom": 409.4,
+        "visible": true
+      },
+      ".m2c-terminal": {
+        "x": 340,
+        "y": 431,
+        "width": 1240,
+        "height": 97,
+        "right": 1580,
+        "bottom": 528,
+        "visible": true
+      },
+      ".overlay-vote-card": {
+        "x": 340,
+        "y": 549.6,
+        "width": 1240,
+        "height": 190,
+        "right": 1580,
+        "bottom": 739.6,
+        "visible": true
+      }
+    },
+    "overflow": [],
+    "background": "rgba(0, 0, 0, 0)",
+    "bodyBackground": "rgba(0, 0, 0, 0)",
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-13\nFORGE ENTITY / forge-13\nGOLEM · FIRE\n✹\n◉\nTHE COMMUNITY HAS FORGED\nCinder Granite\nBODY · GOLEM\nELEMENT · FIRE\nSPECIAL · EMBER BURST\nWEAKNESS · WATER\nBOSS SURVIVED! TRY AGAIN!\nFORGE COMPLETE\nBOSS REVEALED\nA boss built by the"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-active-final-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "scrollHeight": 1138,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 340,
+        "y": 37.8,
+        "width": 1240,
+        "height": 98,
+        "right": 1580,
+        "bottom": 135.8
+      },
+      ".overlay-boss-card": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 252,
+        "right": 1580,
+        "bottom": 409.4
+      },
+      ".m2c-battle-hud": {
+        "x": 340,
+        "y": 431,
+        "width": 1240,
+        "height": 323,
+        "right": 1580,
+        "bottom": 754
+      },
+      ".m2c-hp-track": {
+        "x": 373,
+        "y": 636,
+        "width": 1174,
+        "height": 28,
+        "right": 1547,
+        "bottom": 664
+      },
+      ".m2c-commands": {
+        "x": 373,
+        "y": 684,
+        "width": 1174,
+        "height": 37,
+        "right": 1547,
+        "bottom": 721
+      },
+      ".overlay-vote-card": {
+        "x": 340,
+        "y": 775.6,
+        "width": 1240,
+        "height": 190,
+        "right": 1580,
+        "bottom": 965.6
+      }
+    },
+    "overflow": [],
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-3\nFORGE ENTITY / forge-3\nDRAKE · STORM\nϟ\n✧\nTHE COMMUNITY HAS FORGED\nThunder Tempest\nBODY · DRAKE\nELEMENT · STORM\nSPECIAL · THUNDER DASH\nWEAKNESS · LIGHT\nBATTLE ACTIVE · COMMUNITY BOSS\nThunder Tempest\nSIMUL",
+    "rootBg": "rgba(0, 0, 0, 0)",
+    "bodyBg": "rgba(0, 0, 0, 0)"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-active-final-1280x720.png",
+    "width": 1280,
+    "height": 720,
+    "scrollWidth": 1280,
+    "scrollHeight": 834,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 51.2,
+        "y": 12,
+        "width": 1177.6,
+        "height": 43,
+        "right": 1228.8,
+        "bottom": 55
+      },
+      ".overlay-boss-card": {
+        "x": 51.2,
+        "y": 64,
+        "width": 1177.6,
+        "height": 174,
+        "right": 1228.8,
+        "bottom": 238
+      },
+      ".m2c-battle-hud": {
+        "x": 51.2,
+        "y": 247,
+        "width": 1177.6,
+        "height": 323,
+        "right": 1228.8,
+        "bottom": 570
+      },
+      ".m2c-hp-track": {
+        "x": 84.2,
+        "y": 452,
+        "width": 1111.6,
+        "height": 28,
+        "right": 1195.8,
+        "bottom": 480
+      },
+      ".m2c-commands": {
+        "x": 84.2,
+        "y": 500,
+        "width": 1111.6,
+        "height": 37,
+        "right": 1195.8,
+        "bottom": 537
+      },
+      ".overlay-vote-card": {
+        "x": 51.2,
+        "y": 579,
+        "width": 1177.6,
+        "height": 142,
+        "right": 1228.8,
+        "bottom": 721
+      }
+    },
+    "overflow": [],
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-3\nFORGE ENTITY / forge-3\nDRAKE · STORM\nϟ\n✧\nTHE COMMUNITY HAS FORGED\nThunder Tempest\nBODY · DRAKE\nELEMENT · STORM\nSPECIAL · THUNDER DASH\nWEAKNESS · LIGHT\nBATTLE ACTIVE · COMMUNITY BOSS\nThunder Tempest\nSIMUL",
+    "rootBg": "rgba(0, 0, 0, 0)",
+    "bodyBg": "rgba(0, 0, 0, 0)"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-active-final-1600x900.png",
+    "width": 1600,
+    "height": 900,
+    "scrollWidth": 1600,
+    "scrollHeight": 1107,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 180,
+        "y": 31.5,
+        "width": 1240,
+        "height": 98,
+        "right": 1420,
+        "bottom": 129.5
+      },
+      ".overlay-boss-card": {
+        "x": 180,
+        "y": 147.5,
+        "width": 1240,
+        "height": 252,
+        "right": 1420,
+        "bottom": 399.5
+      },
+      ".m2c-battle-hud": {
+        "x": 180,
+        "y": 417.5,
+        "width": 1240,
+        "height": 323,
+        "right": 1420,
+        "bottom": 740.5
+      },
+      ".m2c-hp-track": {
+        "x": 213,
+        "y": 622.5,
+        "width": 1174,
+        "height": 28,
+        "right": 1387,
+        "bottom": 650.5
+      },
+      ".m2c-commands": {
+        "x": 213,
+        "y": 670.5,
+        "width": 1174,
+        "height": 37,
+        "right": 1387,
+        "bottom": 707.5
+      },
+      ".overlay-vote-card": {
+        "x": 180,
+        "y": 758.5,
+        "width": 1240,
+        "height": 190,
+        "right": 1420,
+        "bottom": 948.5
+      }
+    },
+    "overflow": [],
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-3\nFORGE ENTITY / forge-3\nDRAKE · STORM\nϟ\n✧\nTHE COMMUNITY HAS FORGED\nThunder Tempest\nBODY · DRAKE\nELEMENT · STORM\nSPECIAL · THUNDER DASH\nWEAKNESS · LIGHT\nBATTLE ACTIVE · COMMUNITY BOSS\nThunder Tempest\nSIMUL",
+    "rootBg": "rgba(0, 0, 0, 0)",
+    "bodyBg": "rgba(0, 0, 0, 0)"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-active-final-390x844.png",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "scrollHeight": 1210,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 12,
+        "y": 12,
+        "width": 366,
+        "height": 96,
+        "right": 378,
+        "bottom": 108
+      },
+      ".overlay-boss-card": {
+        "x": 12,
+        "y": 120,
+        "width": 366,
+        "height": 359.2,
+        "right": 378,
+        "bottom": 479.2
+      },
+      ".m2c-battle-hud": {
+        "x": 12,
+        "y": 491.2,
+        "width": 366,
+        "height": 291.2,
+        "right": 378,
+        "bottom": 782.4
+      },
+      ".m2c-hp-track": {
+        "x": 31,
+        "y": 662.4,
+        "width": 328,
+        "height": 18,
+        "right": 359,
+        "bottom": 680.4
+      },
+      ".m2c-commands": {
+        "x": 31,
+        "y": 700.4,
+        "width": 328,
+        "height": 63,
+        "right": 359,
+        "bottom": 763.4
+      },
+      ".overlay-vote-card": {
+        "x": 12,
+        "y": 794.4,
+        "width": 366,
+        "height": 290,
+        "right": 378,
+        "bottom": 1084.4
+      }
+    },
+    "overflow": [],
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-3\nFORGE ENTITY / forge-3\nDRAKE · STORM\nϟ\n✧\nTHE COMMUNITY HAS FORGED\nThunder Tempest\nBODY · DRAKE\nELEMENT · STORM\nSPECIAL · THUNDER DASH\nWEAKNESS · LIGHT\nBATTLE ACTIVE · COMMUNITY BOSS\nThunder Tempest\nSIMUL",
+    "rootBg": "rgba(0, 0, 0, 0)",
+    "bodyBg": "rgba(0, 0, 0, 0)"
+  },
+  {
+    "path": "docs/visual-qa/m2c/battle-active-light-background-1280x720.png",
+    "width": 1280,
+    "height": 720,
+    "scrollWidth": 1280,
+    "scrollHeight": 834,
+    "boxes": {
+      ".overlay-topline": {
+        "x": 51.2,
+        "y": 12,
+        "width": 1177.6,
+        "height": 43,
+        "right": 1228.8,
+        "bottom": 55
+      },
+      ".overlay-boss-card": {
+        "x": 51.2,
+        "y": 64,
+        "width": 1177.6,
+        "height": 174,
+        "right": 1228.8,
+        "bottom": 238
+      },
+      ".m2c-battle-hud": {
+        "x": 51.2,
+        "y": 247,
+        "width": 1177.6,
+        "height": 323,
+        "right": 1228.8,
+        "bottom": 570
+      },
+      ".m2c-hp-track": {
+        "x": 84.2,
+        "y": 452,
+        "width": 1111.6,
+        "height": 28,
+        "right": 1195.8,
+        "bottom": 480
+      },
+      ".m2c-commands": {
+        "x": 84.2,
+        "y": 500,
+        "width": 1111.6,
+        "height": 37,
+        "right": 1195.8,
+        "bottom": 537
+      },
+      ".overlay-vote-card": {
+        "x": 51.2,
+        "y": 579,
+        "width": 1177.6,
+        "height": 142,
+        "right": 1228.8,
+        "bottom": 721
+      }
+    },
+    "overflow": [],
+    "text": "B\nF\nBOSSFORGE LIVE\nGENERIC / OBS\nSIMULATED / NOT CONNECTED TO TWITCH\nFORGE-3\nFORGE ENTITY / forge-3\nDRAKE · STORM\nϟ\n✧\nTHE COMMUNITY HAS FORGED\nThunder Tempest\nBODY · DRAKE\nELEMENT · STORM\nSPECIAL · THUNDER DASH\nWEAKNESS · LIGHT\nBATTLE ACTIVE · COMMUNITY BOSS\nThunder Tempest\nSIMUL",
+    "rootBg": "rgba(0, 0, 0, 0)",
+    "bodyBg": "rgba(0, 0, 0, 0)"
+  },
+  {
+    "path": "docs/visual-qa/m2c/remediation-twitch-cancelled-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "boxes": {
+      ".m2c-terminal": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 128,
+        "right": 1580,
+        "bottom": 285.4
+      }
+    },
+    "overflow": [],
+    "text": "TWITCH DISCONNECTED / VOTING PAUSED · BATTLE CANCELLED · TWITCH CONNECTION LOST",
+    "impact": false,
+    "weakness": false,
+    "source": "synthetic component-composition Chromium QA"
+  },
+  {
+    "path": "docs/visual-qa/m2c/remediation-accepted-hit-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "boxes": {
+      ".m2c-battle-hud": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 323,
+        "right": 1580,
+        "bottom": 480.4
+      }
+    },
+    "overflow": [],
+    "text": "LIVE TWITCH · BATTLE ACTIVE · Cinder Granite · WEAKNESS WATER · ATTACKS 1 · TIME 00:45 · 92 / 100 · !hit · !hit water",
+    "impact": true,
+    "weakness": true,
+    "source": "synthetic component-composition Chromium QA"
+  },
+  {
+    "path": "docs/visual-qa/m2c/remediation-hit-cancelled-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "boxes": {
+      ".m2c-terminal": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 128,
+        "right": 1580,
+        "bottom": 285.4
+      }
+    },
+    "overflow": [],
+    "text": "TWITCH DISCONNECTED / VOTING PAUSED · BATTLE CANCELLED · TWITCH CONNECTION LOST",
+    "impact": false,
+    "weakness": false,
+    "source": "synthetic component-composition Chromium QA"
+  },
+  {
+    "path": "docs/visual-qa/m2c/remediation-new-encounter-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "scrollWidth": 1920,
+    "boxes": {
+      ".m2c-battle-hud": {
+        "x": 340,
+        "y": 157.4,
+        "width": 1240,
+        "height": 323,
+        "right": 1580,
+        "bottom": 480.4
+      }
+    },
+    "overflow": [],
+    "text": "LIVE TWITCH · ENC-2 · BATTLE ACTIVE · ATTACKS 0 · TIME 00:45 · 100 / 100 · no inherited impact classes",
+    "impact": false,
+    "weakness": false,
+    "source": "synthetic component-composition Chromium QA"
+  },
+  {
+    "path": "docs/visual-qa/m2c/remediation-new-encounter-1280x720.png",
+    "width": 1280,
+    "height": 720,
+    "scrollWidth": 1280,
+    "boxes": {
+      ".m2c-battle-hud": {
+        "x": 51.2,
+        "y": 64,
+        "width": 1177.6,
+        "height": 323,
+        "right": 1228.8,
+        "bottom": 387
+      }
+    },
+    "overflow": [],
+    "text": "LIVE TWITCH · ENC-2 · BATTLE ACTIVE · ATTACKS 0 · TIME 00:45 · 100 / 100 · no inherited impact classes",
+    "impact": false,
+    "weakness": false,
+    "source": "synthetic component-composition Chromium QA"
+  }
+]

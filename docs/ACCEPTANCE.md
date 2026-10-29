@@ -5,9 +5,9 @@ Status vocabulary: **PASS** ran successfully; **FAIL** ran and failed;
 actual outcomes; do not infer a pass from a configured script.
 
 The older Phase 3-B remediation sections below retain historical results and
-review gates as recorded at those checkpoints. P4A PR #6 and M2-A PR #11 are
-merged into `main`; the M2-B implementation base is
-`15a917e229813df6d6ee344aed766c606ec17749`. P4A acceptance and owner OBS
+review gates as recorded at those checkpoints. P4A PR #6, M2-A PR #11, and
+M2-B PR #12 are merged into `main`; the M2-C base is
+`6fb37e827b7466559970f714ef5f05c04af27157`. P4A acceptance and owner OBS
 evidence are recorded in the final closure below.
 
 ## Required checks
@@ -1196,6 +1196,135 @@ native OBS testing, merge or deployment were used.
 **M2-B audit-remediation implementation commit:**
 `304ed6f777d4069e710b05e2aefff615dc7fc266` (following initial implementation
 `7f548d1f1c53a85da203115cac601fcc1028bfc2`).
-The work is published in Draft [PR #12](https://github.com/mrdzyn/bossforge/pull/12)
-against `main` at the exact base above. Its description and independent review
-request identify the final pushed review HEAD.
+The implementation was delivered through Draft [PR #12](https://github.com/mrdzyn/bossforge/pull/12)
+and squash-merged into main at `6fb37e827b7466559970f714ef5f05c04af27157`.
+The prior Draft/unmerged wording is historical.
+
+## M2-C — OBS battle HUD and full integration
+
+**Base:** M2-B PR #12 squash merge at
+`6fb37e827b7466559970f714ef5f05c04af27157`.
+
+The overlay consumes strict `OverlayBattleStateV1` projections from the
+existing `/events/overlay` connection. It requires a fresh authoritative HTTP
+snapshot on the current WebSocket generation and matching server epoch,
+provider, forge cycle, and battle identity. Development-only
+`/battle/overlay-state` is projected through `toOverlayBattleState`, strictly
+parsed and marked `no-store`. The overlay has no owner controls or damage
+mutation route.
+
+**Synthetic browser acceptance:** on an isolated loopback runtime with Twitch
+explicitly disabled, a four-category mock forge reached authoritative `ready`,
+owner Start opened a battle, and eight weakness-matching synthetic `!hit`
+events reduced 100 HP to zero. The server produced the exact
+`COMMUNITY VICTORY! BOSS DEFEATED!` result. A separate encounter reached
+`expired` and displayed `BOSS SURVIVED! TRY AGAIN!`; owner cancellation
+displayed `BATTLE CANCELLED` with fixed `OWNER CANCELLED`. The simulated
+disclosure remained visible. These are synthetic local events, not genuine
+Twitch chat results.
+
+**Chromium visual QA:** actual headless Google Chrome captures and measured
+element bounds are in [`visual-qa/m2c`](visual-qa/m2c/README.md). Tested
+1920×1080, 1280×720, 1600×900 and 390×844. At 1280×720 the active battle HUD
+ends at y=570; at 390×844 it ends at y=784.4. Document scroll widths matched
+the viewport and measured visible elements remained inside horizontal
+boundaries. Lower forge recap content may continue below the viewport; battle
+status, HP, timer, weakness and commands are visible without scrolling. The
+root and body computed backgrounds are transparent, with translucent dark
+panels. A forced white compositor background was also captured to check the
+transparent HUD over a light scene; the dark text panels and labels remained
+legible. Server loss hid HP and attack prompts and showed
+`SERVER LINK UNAVAILABLE / BATTLE STATUS UNKNOWN`. After isolated server
+restart, a fresh socket and HTTP snapshot adopted the new epoch and returned
+to simulated idle without restoring the old encounter.
+
+**Evidence boundaries:** these are automated/synthetic and Chromium-only
+results. No real Twitch network, credentials, owner authorization, or native
+OBS application rendering was used. Node `v24.21.0` / pnpm `11.25.0` manual
+validation passed: frozen install, build, typecheck, lint, format check, full
+suite (**233 tests: 41 shared, 147 server, 45 web**), `pnpm simulate`, and
+`git diff --check`. The first sandbox full-suite run had 8 loopback-related
+`EPERM` failures; the authorized local rerun passed all tests. Hosted GitHub
+Actions are not claimed as passing. No merge, deployment, or release claim is
+made.
+
+### M2-C exact-head audit remediation
+
+Starting from audited HEAD `cf7a1a2eb47368301708f98012e17b01c9dc1942`, the
+same-generation overlay snapshot race is fenced by a latest-request sequence,
+an invalidation increment, transport-generation checks, and a limit of two
+simultaneous HTTP snapshot fetches. A validated newer WebSocket battle event
+also retires older in-flight HTTP snapshots. Deferred-fetch hook tests prove
+that older A cannot restore HP after B fails, older A cannot erase B's fresh
+snapshot, same-generation out-of-order responses cannot regress revision, and
+G1 responses cannot override G2 after reconnect/backend restart. Fresh G2
+authority restores the correct battle view.
+
+The presentation now permits a fresh, identity-matching Twitch `cancelled`
+battle to show `BATTLE CANCELLED` with its fixed reason when Twitch is lost.
+The overlay header retains `TWITCH DISCONNECTED / VOTING PAUSED`; active HP,
+timer and `!hit` prompts stay suppressed. Stale, mismatched, retired-encounter,
+and provider-switched states do not show an old cancellation.
+
+Mounted fake-timer React regressions verify hit and weakness effects reset on
+immediate victory/cancellation, replacement encounter, and server loss;
+historical hit counters do not replay on reconnect. Reduced-motion disables
+both effect classes. The effects are tied to same-epoch/same-encounter
+authoritative accepted-hit increments, and their timers are cleared on state
+replacement and unmount. Thirteen added web tests cover the deferred fetches,
+mounted transitions and the actual `OverlayPreview` composition.
+
+**Visual evidence:** Chromium component-composition screenshots are recorded
+under `docs/visual-qa/m2c/` with exact bounding rectangles in
+`layout-observations.json`. At 1920×1080, the Twitch-disconnected cancellation
+panel ended at y=285.4 and showed the fixed message/reason with no combat data.
+An accepted weakness hit rendered 92/100 and one attack with both brief
+effects; cancellation cleared them. The replacement encounter had 100/100,
+zero attacks, and no stale effects. At 1280×720 the replacement HUD ended at
+y=387 with scroll width matching the viewport. These browser fixtures used
+synthetic state and the production HUD component; they do not establish live
+Twitch or native OBS acceptance.
+
+**Validation:** Node `v24.21.0` / pnpm `11.25.0`; frozen install, build,
+typecheck, lint, Prettier, all **246 tests** (41 shared / 147 server / 58 web),
+four-category `pnpm simulate`, and `git diff --check` passed. The first
+sandbox suite run failed eight socket-binding checks with `EPERM`; the
+authorized local rerun passed. The existing optional Phaser chunk-size
+warning remains. Hosted GitHub Actions, real Twitch operations, and native OBS
+remain unverified.
+
+Implementation/remediation commit: `c175f104189b378e16bebe21e89fc43ab2cadade`.
+The final documentation follow-up is also on existing Draft PR #13.
+
+### M2-C follow-up re-audit remediation — generation retirement and hit feedback
+
+Starting from re-audited HEAD
+`f470c5424f4beb0967db0570e30eb0795ced4d8c`, overlay snapshot requests now
+carry an `AbortController` and a unique token under their WebSocket generation.
+Closing/erroring a transport, beginning its replacement, or unmounting aborts
+the retired generation and immediately releases its logical request slots.
+Each completion and `finally` handler can remove only its own token from its
+own generation; a late G1 completion cannot change G2 counts, freshness or
+rendered battle authority. The two-request cap remains per active generation.
+A mounted deferred-fetch test leaves both G1 requests unresolved, reconnects
+to G2, adopts a fresh G2 battle snapshot while both old promises are still
+pending, then settles the old promises and verifies G2 state and later polling
+remain intact.
+
+For hit feedback, an accepted ordinary hit now clears any current weakness
+accent immediately while retaining the ordinary impact pulse. A subsequent
+weakness hit restarts its bounded 520 ms accent timer. Mounted fake-timer tests
+cover weakness-to-ordinary timing, repeated weakness hits, timer completion and
+encounter replacement; existing epoch, terminal, reconnect and reduced-motion
+regressions remain green.
+
+Validation on Node `v24.21.0` / pnpm `11.25.0`: frozen install, build,
+typecheck, lint, format check and all **249 tests** passed (41 shared, 147
+server, 61 web). The sandbox full-suite run had the existing eight local socket
+binding `EPERM` failures; the authorized local rerun passed. Four-category
+`pnpm simulate` passed on an isolated loopback mock-only server at port 33304
+with Twitch disabled. `git diff --check` passed. No new Chromium screenshot was
+captured for this bounded follow-up; the earlier synthetic component captures
+remain the visual evidence, and are not genuine Twitch or native OBS results.
+Hosted GitHub Actions, real Twitch and native OBS remain unverified.
+Implementation commit: `7b27bc0e7d479ee98df69bec5e89f4332663ecb3`.

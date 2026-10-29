@@ -6,10 +6,16 @@ import {
   BattleCancelRequestSchema,
   BattleStartRequestSchema,
   ForgeStartRequestSchema,
+  OverlayBattleStateV1Schema,
   type ForgeState,
 } from "@bossforge/shared";
 import { MockChatAdapter } from "./adapters/mock-chat-adapter.js";
-import { EventHub, toPublicBattleState, toPublicForgeState } from "./events/event-hub.js";
+import {
+  EventHub,
+  toOverlayBattleState,
+  toPublicBattleState,
+  toPublicForgeState,
+} from "./events/event-hub.js";
 import { NormalizedChatEventSchema } from "./events/normalized-chat-event.js";
 import {
   getAllowedViteOrigins,
@@ -656,6 +662,14 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       async (_request, reply) => {
         reply.header("cache-control", "no-store");
         return toPublicBattleState(battle.getState());
+      },
+    );
+    app.get(
+      "/battle/overlay-state",
+      { onRequest: requireLocalDevelopmentRequest },
+      async (_request, reply) => {
+        reply.header("cache-control", "no-store");
+        return OverlayBattleStateV1Schema.parse(toOverlayBattleState(battle.getState()));
       },
     );
     app.post(

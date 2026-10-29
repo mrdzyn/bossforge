@@ -2,7 +2,7 @@
 
 ## Current snapshot — 2026-10-29
 
-- **Current `main`:** `15a917e229813df6d6ee344aed766c606ec17749`; M2-A was squash-merged through PR #11 after M1-B PR #10. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
+- **Current `main` baseline for M2-C:** `6fb37e827b7466559970f714ef5f05c04af27157`; M2-B PR #12 was squash-merged after M2-A PR #11. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
 - **M1-B merged:** PR #10 includes the Generic dashboard/read-only OBS presentation, freshness protection and reveal visibility remediation. PR #10 is no longer Draft or pending review.
 - **M1-A merged:** PR #9 was squash-merged into `main` at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. Its historical remediation and review evidence remain in [ACCEPTANCE](ACCEPTANCE.md).
 - **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access later created Draft PR #9, which is now merged; the former blocker is historical only.
@@ -25,10 +25,13 @@
   after sandbox `EPERM`. Hosted CI was not represented as passing. These
   automated results do not establish live Twitch or native OBS acceptance.
 
-### M2-B — secure Twitch chat combat (implementation branch)
+### M2-B — secure Twitch chat combat (merged)
 
 - **Base:** `main` at `15a917e229813df6d6ee344aed766c606ec17749`, containing the
   M2-A PR #11 squash merge.
+- **Merge:** Draft PR #12 was squash-merged into `main` at
+  `6fb37e827b7466559970f714ef5f05c04af27157`; the earlier Draft status below is
+  historical. M2-B remains synthetic-only evidence, not live Twitch acceptance.
 - **Scope:** `feat/m2b-twitch-chat-attacks` adds the strict `!hit` grammar,
   private server attack router, bounded ingress/replay/cooldown/rate controls,
   source/provider/encounter checks, server-session damage transitions,
@@ -65,6 +68,79 @@
   real stream, M2-C polished overlay/animations, challenges and Arena profile
   remain unverified or deferred. Hosted GitHub Actions is not claimed as
   passing.
+
+### M2-C — OBS battle HUD and full integration (implementation)
+
+- **Base:** `main` at `6fb37e827b7466559970f714ef5f05c04af27157`, including the
+  M2-B PR #12 squash merge. The working branch is `feat/m2c-obs-battle-hud`.
+- The OBS overlay now consumes strict `OverlayBattleStateV1` events on its
+  existing single `/events/overlay` connection and bootstraps from the
+  development-only, loopback-protected, no-store `/battle/overlay-state`
+  projection. Battle epochs/revisions/encounters and full forge identity must
+  reconcile on the current socket generation. Missing authority hides combat
+  values and prompts.
+- **Implementation and synthetic Chromium QA are complete on this branch.**
+  The read-only HUD consumes strict overlay projections and requires fresh,
+  generation-bound HTTP/WS authority. At 1920×1080, 1280×720, 1600×900 and
+  390×844, the key battle panel stayed inside the viewport with no horizontal
+  overflow; loss/restart hid stale combat data and recovered only after a new
+  epoch snapshot. Synthetic mock tests cover ready, active, hit, victory,
+  expired and cancellation states. See `docs/visual-qa/m2c/` and M2-C acceptance.
+- **Not verified:** genuine Twitch traffic, native OBS rendering, hosted CI,
+  and release behavior. Chromium captures are not native OBS evidence.
+- **Validation:** Node `v24.21.0`, pnpm `11.25.0`; frozen install, build,
+  typecheck, lint, format check, full suite (233 tests: 41 shared, 147 server,
+  45 web), `pnpm simulate`, and `git diff --check` passed. A sandbox run first
+  hit `EPERM` on loopback socket tests; the authorized local rerun passed.
+  These are manual/local CI-equivalent results; hosted GitHub Actions are not
+  claimed as passing. The existing optional Phaser chunk-size advisory remains.
+- **Delivery:** implementation commit `b646f140354b9c3e7aad1f378d59139d057968dc`
+  is on Draft [PR #13](https://github.com/mrdzyn/bossforge/pull/13), targeting
+  the verified M2-B main baseline. Independent exact-head review is requested
+  after the final documentation follow-up is pushed. PR remains unmerged.
+- **M2-C audit remediation:** On the existing PR #13 branch, the exact-head
+  review findings for stale overlapping overlay snapshots, Twitch-disconnect
+  cancellation presentation, and impact-effect lifecycle were addressed.
+  Overlay snapshot requests now use request/invalidation sequencing and allow
+  at most two concurrent fetches; a newer validated WebSocket battle event or
+  transport invalidation fences older HTTP responses. The overlay can show a
+  fresh matching cancelled result with its fixed reason while the header says
+  `TWITCH DISCONNECTED / VOTING PAUSED`; active HP and commands remain hidden.
+  Hit and weakness effects reset on terminal/unavailable states, epoch or
+  encounter change, and teardown. Added 13 web regressions (5 deferred-fetch
+  hook tests, 5 mounted fake-timer tests, and 3 cancellation/disconnect
+  presentation/composition tests). Chromium screenshots and measured bounds
+  are recorded in `docs/visual-qa/m2c/README.md`. Node `v24.21.0` / pnpm
+  `11.25.0`: frozen install, build, typecheck, lint, format, all **246 tests**
+  (41 shared / 147 server / 58 web), four-category mock simulation, and diff check passed. The
+  sandbox run had eight existing socket-binding `EPERM` failures; the full
+  suite passed in the authorized local environment. Hosted Actions, real
+  Twitch, and native OBS remain unverified. Original M2-C implementation is
+  `b646f140354b9c3e7aad1f378d59139d057968dc`; audit-remediation commit is
+  `c175f104189b378e16bebe21e89fc43ab2cadade`. PR #13 remains Draft and
+  unmerged; an independent exact-head re-audit is requested after push.
+- **Follow-up exact-head re-audit fixes:** Overlay HTTP snapshot slots and
+  abort controllers are now scoped to the WebSocket generation. Disconnect,
+  reconnect and unmount abort old requests and immediately release only that
+  generation's logical slots; late response and `finally` handlers cannot
+  alter replacement-generation accounting or authority. The active generation
+  remains capped at two requests. A mounted deferred-fetch regression keeps
+  both G1 requests pending through disconnect, adopts a valid G2 snapshot, and
+  then settles the retired requests without stale restoration. A subsequent G2
+  poll remains available. The HUD clears the 520 ms weakness accent as soon as
+  a normal accepted hit arrives while retaining its ordinary impact pulse;
+  repeated weakness hits restart the accent timer and replacement encounters
+  retire prior timers. Three new mounted regressions bring the full suite to
+  **249 tests** (41 shared / 147 server / 61 web). Node `v24.21.0` / pnpm
+  `11.25.0`, frozen install, build, typecheck, lint, format, tests, four-stage
+  mock simulation and diff check passed. Sandbox socket/IPC restrictions were
+  recorded; the authorized local test rerun passed. No new Chromium capture was
+  taken for these request-accounting and animation-lifecycle changes; existing
+  synthetic Chromium evidence remains as previously qualified. Hosted Actions,
+  genuine Twitch and native OBS remain unverified. VecSynIQ animated SVG boss
+  assets and the BossForge logo are the next approved development priority;
+  M2-D was not started. Implementation commit:
+  `7b27bc0e7d479ee98df69bec5e89f4332663ecb3`.
 
 ### M1-A merged status
 

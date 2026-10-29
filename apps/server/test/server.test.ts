@@ -6,6 +6,7 @@ import WebSocket from "ws";
 import {
   DashboardEventEnvelopeSchema,
   ForgeStateReconciler,
+  OverlayBattleStateV1Schema,
   OverlayEventEnvelopeSchema,
 } from "@bossforge/shared";
 import { createBossForgeApp, type BossForgeApp } from "../src/app.js";
@@ -42,6 +43,15 @@ describe("BossForge server", () => {
       timestamp: "2026-10-26T12:00:00.000Z",
       connections: { websocketClients: 0, mockAdapter: "connected" },
     });
+  });
+
+  it("serves a strict privacy-projected overlay battle snapshot without caching", async () => {
+    const response = await server.app.inject({ method: "GET", url: "/battle/overlay-state" });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.json().status).toBe("idle");
+    expect(response.json()).not.toHaveProperty("profileSnapshot");
+    expect(response.json()).not.toHaveProperty("profileId");
   });
 
   it("publishes one ready battle after forge reveal and starts only by authenticated same-origin local action", async () => {
@@ -1289,9 +1299,19 @@ describe("BossForge server", () => {
     await new Promise((resolve) => setTimeout(resolve, 350));
 
     const snapshot = await server.app.inject({ method: "GET", url: "/forge/state" });
-    const serialized = [...dashboardFrames, ...overlayFrames, snapshot.body, started.body].join(
-      "\n",
-    );
+    const overlayBattleSnapshot = await server.app.inject({
+      method: "GET",
+      url: "/battle/overlay-state",
+    });
+    expect(overlayBattleSnapshot.statusCode).toBe(200);
+    expect(OverlayBattleStateV1Schema.safeParse(overlayBattleSnapshot.json()).success).toBe(true);
+    const serialized = [
+      ...dashboardFrames,
+      ...overlayFrames,
+      snapshot.body,
+      overlayBattleSnapshot.body,
+      started.body,
+    ].join("\n");
     for (const sentinel of [
       "SENTINEL_MESSAGE_ID_80ac",
       "SENTINEL_VIEWER_ID_d2a1",
