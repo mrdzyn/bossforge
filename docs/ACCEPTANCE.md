@@ -5,10 +5,10 @@ Status vocabulary: **PASS** ran successfully; **FAIL** ran and failed;
 actual outcomes; do not infer a pass from a configured script.
 
 The older Phase 3-B remediation sections below retain historical results and
-review gates as recorded at those checkpoints. PR #5 merged to `main` at
-`76a5dde`, and Phase 4-A PR #6 subsequently merged into the current main
-baseline `5655dea53e3eba5425b6ead8926659a0bb72ae5e`. P4A acceptance and owner
-OBS evidence are recorded in the final closure below.
+review gates as recorded at those checkpoints. P4A PR #6 and M2-A PR #11 are
+merged into `main`; the M2-B implementation base is
+`15a917e229813df6d6ee344aed766c606ec17749`. P4A acceptance and owner OBS
+evidence are recorded in the final closure below.
 
 ## Required checks
 
@@ -1086,7 +1086,7 @@ not claimed as passing. No real Twitch API, OAuth, credentials, live votes or OB
 application test was used. Automated fake-clock/mock results are not live
 acceptance evidence.
 
-**Delivery:** Implementation commit `0e2cf394910629cc39467d1023647ec9032a77ee`
+**Delivery:** M2-A implementation commit `0e2cf394910629cc39467d1023647ec9032a77ee`
 is published in Draft [PR #11](https://github.com/mrdzyn/bossforge/pull/11)
 against the exact main base above. The final pushed review head is recorded in
 HANDOFFS. The PR remains Draft and unmerged.
@@ -1132,5 +1132,47 @@ The audit-remediation implementation commit is
 `e787b8167ae98c613f66d3b96e656ae94b10d4df`; M2-A's original implementation
 commit remains `0e2cf394910629cc39467d1023647ec9032a77ee`. The final pushed
 review HEAD is the documentation follow-up after these commits and is named in
-the exact-head PR review request. PR #11 remains Draft and unmerged pending
-independent exact-head re-audit. M2-B remains out of scope.
+the exact-head PR review request. The original M2-A branch checkpoint had PR
+#11 Draft and unmerged; it was later squash-merged into main at the baseline
+above.
+
+## M2-B — secure Twitch chat combat (synthetic validation)
+
+**Scope:** M2-B adds a strict parser for `!hit`, `!hit water`, `!hit light`,
+`!hit earth`, and `!hit wind`; a private router on validated normalized
+EventSub/mock ingress; M0-bounded ingress, replay, cooldown, queue and accepted
+rate controls; source/provider/forge/encounter checks; and server-authoritative
+damage through `BossBattleSession`. It adds no browser damage endpoint and no
+Phaser damage bridge. Dashboard-only diagnostics are bounded, strict aggregate
+DTOs; OBS does not receive them or administrative controls.
+
+**Regression evidence:** the focused parser and router files pass 20 tests;
+battle-session, server, dashboard and projection regressions also pass in the
+full suite. The actual server-route
+synthetic integration completed four no-vote fallback forge categories,
+reached authoritative `ready`, started the low/60-second battle, routed eight
+synthetic weakness hits through guarded `/dev/simulation/events`, and resolved
+`victory` with HP clamped to zero. A second routed integration accepted one
+hit at monotonic 59,999 ms and rejected one at the exact 60,000 ms deadline,
+then resolved `expired` with the earlier damage preserved. These tests use no
+real Twitch traffic and are not evidence of genuine viewer chat.
+
+**Security/privacy evidence:** private sentinel tests validate that dashboard
+battle aggregates contain fixed counts/reason codes only and cannot parse as
+an OBS event. Existing EventHub battle projections remain strict and avoid
+viewer names/IDs, message IDs, raw text, credentials and pseudonyms. Existing
+production-route, loopback, Origin, Fetch Metadata, owner-session, OAuth,
+EventSub and Phaser tests remain in the full suite.
+
+**Validation record:** Node `v24.21.0`, pnpm `11.25.0`; frozen install,
+build, typecheck, lint, format check, full suite (218 tests: 39 shared, 142
+server, 37 web), four-category `pnpm simulate`, and `git diff --check` passed.
+Sandbox `EPERM` for loopback-bound tests was followed by an authorized local
+rerun. Simulation used an isolated loopback-only port with Twitch disabled.
+GitHub Actions are not claimed as passing unless the exact review head reports
+successful hosted workflows. No real Twitch credentials, API calls, live hits,
+native OBS testing, merge or deployment were used.
+
+**M2-B implementation commit:** `7f548d1f1c53a85da203115cac601fcc1028bfc2`.
+The final review HEAD is the pushed tip of `feat/m2b-twitch-chat-attacks` and
+will be identified in its new Draft PR against `main`.

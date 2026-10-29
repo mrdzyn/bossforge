@@ -80,10 +80,12 @@ sentinel regression tests. The bounded
 [M0 contract lock](M0-ANY-GAME-CONTRACT-LOCK.md) specifies battle state,
 privacy, duration-by-band balance, authorization, and delivery contracts.
 M1-B was a presentation-only revealed-boss / “BATTLE COMING SOON” preview from
-fresh ForgeState. The current M2-A implementation branch adds authoritative
-`CommunityBattleStateV1`, BATTLE READY and owner Start Battle; Twitch chat hit
-routing remains reserved for M2-B. Generic/Arena profile loading beyond the
-locked Generic v1 snapshot is deferred. M2-A is a separate unmerged branch.
+fresh ForgeState. M2-A added authoritative `CommunityBattleStateV1`, BATTLE
+READY and owner Start Battle and was squash-merged through PR #11 at
+`15a917e229813df6d6ee344aed766c606ec17749`. M2-B is the current bounded
+implementation branch for private validated `!hit` routing and server-
+authoritative damage. Generic/Arena profile loading beyond the locked Generic
+v1 snapshot is deferred; M2-C remains separate work.
 The PDCP-001 schedule and November 3, 2026 06:00
 Asia/Manila deadline remain; prioritize Generic OBS and a genuine server-
 authoritative Twitch attack over optional challenges, Arena profile polish,

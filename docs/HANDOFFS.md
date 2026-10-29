@@ -787,3 +787,36 @@ subsequently squash-merged into `main` at
   evidence in the follow-up commit; the final exact pushed HEAD is included in
   the PR re-audit request. Request independent GPT-6 exact-head delta re-audit
   on existing Draft PR #11. Keep the PR Draft and unmerged; do not start M2-B.
+
+## M2-B — secure Twitch chat combat
+
+- **Base:** `main` at `15a917e229813df6d6ee344aed766c606ec17749` (M2-A PR #11
+  squash merge). Branch: `feat/m2b-twitch-chat-attacks`.
+- **Implementation:** Strict bounded `!hit` parser and private
+  `BattleAttackRouter` consume only validated current EventSub callbacks or
+  loopback mock simulation events. `BossBattleSession` is the only damage,
+  HP, aggregate, revision and victory authority. No public/browser damage route
+  or Phaser path was added. Dashboard-only counts are fixed, aggregate and
+  coalesced; the OBS projection remains read-only.
+- **Synthetic end-to-end evidence:** Four mock fallback forge stages reached
+  authoritative `ready`; owner Start created an active low/60-second battle;
+  eight routed synthetic `!hit water` events produced `victory` at 0 HP with
+  100 damage applied. A separate deadline regression accepted a receipt at
+  monotonic 59,999 ms and excluded one at 60,000 ms. These are automated mock
+  results, not genuine Twitch evidence.
+- **Validation:** Node `v24.21.0`, pnpm `11.25.0`; frozen install, build,
+  typecheck, lint, Prettier, and 218 tests (39 shared / 142 server / 37 web)
+  passed. `pnpm simulate` completed four synthetic voting categories on an
+  isolated loopback-only server with Twitch disabled. `git diff --check`
+  passed. Socket-binding tests first encountered sandbox `EPERM`; authorized
+  local reruns passed. The optional Phaser large-chunk advisory remains.
+- **Security/evidence boundary:** No real Twitch API, OAuth, credentials,
+  genuine chat hit, native OBS testing, hosted CI success, merge or deployment
+  is claimed. Replay and cooldown identity remain process-local and bounded;
+  diagnostics expose no viewer identity, chat text, IDs, tokens or secrets.
+- **Delivery/review:** Implementation and final documentation commit SHAs will
+  be recorded after commit. The implementation commit is
+  `7f548d1f1c53a85da203115cac601fcc1028bfc2`. Push the final documentation
+  follow-up to this branch and request independent GPT-6 exact-head review on
+  its resulting PR head. Keep the single new Draft PR against `main` unmerged;
+  M2-C remains deferred.

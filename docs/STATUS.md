@@ -2,7 +2,7 @@
 
 ## Current snapshot — 2026-10-29
 
-- **Current `main`:** `21953184fbd8f7034b680134b9b2efccbe40ab4e`; M1-B was squash-merged through PR #10. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
+- **Current `main`:** `15a917e229813df6d6ee344aed766c606ec17749`; M2-A was squash-merged through PR #11 after M1-B PR #10. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
 - **M1-B merged:** PR #10 includes the Generic dashboard/read-only OBS presentation, freshness protection and reveal visibility remediation. PR #10 is no longer Draft or pending review.
 - **M1-A merged:** PR #9 was squash-merged into `main` at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. Its historical remediation and review evidence remain in [ACCEPTANCE](ACCEPTANCE.md).
 - **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access later created Draft PR #9, which is now merged; the former blocker is historical only.
@@ -10,13 +10,49 @@
 - **Historical live/OBS evidence:** Genuine Twitch activity and native OBS evidence remain owner-supplied at their original checkpoints. Chromium captures are separate browser evidence and do not establish live Twitch or native OBS acceptance. See the historical P3-B and P4A sections and [acceptance](ACCEPTANCE.md).
 - **M1-B:** Original Generic dashboard/OBS implementation commit is `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`; the MINOR-2 reveal-visibility remediation commit is `c4e20c5a571ec188232fa2379d580d067dedb87d`. Connected GitHub access created the existing Draft PR [#10](https://github.com/mrdzyn/bossforge/pull/10). Its pre-remediation reviewed HEAD was `4e2ee256ccb09347e143f76242dc9a106c5b8c1d`; the final exact review HEAD is the pushed branch tip identified in the final review request. The earlier invalid GitHub CLI token incident is historical evidence only. This work is presentation-only and does not start M2.
 
-### M2-A — server-authoritative battle engine (implementation branch)
+### M2-A — server-authoritative battle engine (merged)
 
-- **Base:** `main` at `21953184fbd8f7034b680134b9b2efccbe40ab4e`, including the M1-B PR #10 squash merge.
-- **Scope:** `feat/m2a-authoritative-battle-engine` adds strict Generic v1 and `CommunityBattleStateV1` contracts, an isolated `BossBattleSession`, reveal-to-ready binding, explicit owner Start Battle/cancel routes, authoritative HP/deadline and terminal state, privacy-safe battle events, a separate `BattleStateReconciler`, and minimal dashboard-only owner controls. The audited findings are remediated with full forge epoch/cycle identity, dispatch-time mutation generation/context fencing, and shared validation of completed reveals.
-- **Not included:** Twitch chat `!hit` intake, cooldown/queue enforcement, attack presentation, battle overlay UI, Arena profile, challenges, or live Twitch verification. The owner panel labels the encounter as M2-A and says chat attacks are not enabled.
-- **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build, typecheck, lint, repository format check, 196 tests (39 shared / 121 server / 36 web), four-category synthetic simulation, and diff check passed. All 182 pre-remediation tests remain passing. Socket/IPC checks required the authorized local environment after sandbox `EPERM`. Hosted CI is not represented as passing. Automated mock/fake-clock evidence is not live Twitch or OBS evidence.
-- **Delivery:** M2-A implementation commit `0e2cf394910629cc39467d1023647ec9032a77ee`; audit-remediation implementation commit `e787b8167ae98c613f66d3b96e656ae94b10d4df`. Both are on `feat/m2a-authoritative-battle-engine`; Draft PR [#11](https://github.com/mrdzyn/bossforge/pull/11) remains open and unmerged against the verified main baseline. The final exact review HEAD is the documentation follow-up pushed after these commits and is reported in the latest PR review request. M2-B remains a separate authorization gate.
+- M2-A was squash-merged through PR #11 into `main` at
+  `15a917e229813df6d6ee344aed766c606ec17749`. Its strict Generic v1 and
+  `CommunityBattleStateV1` contracts, `BossBattleSession`, reveal-to-ready
+  binding, owner Start/Cancel routes, authoritative HP/deadline and terminal
+  state, privacy-safe projections, `BattleStateReconciler`, and owner controls
+  are the base for M2-B. The final M2-A audit/remediation evidence is historical
+  and remains documented in ACCEPTANCE and HANDOFFS.
+- Historical M2-A validation: Node v24.21.0 / pnpm 11.25.0; frozen install,
+  build, typecheck, lint, format check, 196 tests, synthetic simulation and diff
+  check passed. Socket/IPC checks required the authorized local environment
+  after sandbox `EPERM`. Hosted CI was not represented as passing. These
+  automated results do not establish live Twitch or native OBS acceptance.
+
+### M2-B — secure Twitch chat combat (implementation branch)
+
+- **Base:** `main` at `15a917e229813df6d6ee344aed766c606ec17749`, containing the
+  M2-A PR #11 squash merge.
+- **Scope:** `feat/m2b-twitch-chat-attacks` adds the strict `!hit` grammar,
+  private server attack router, bounded ingress/replay/cooldown/rate controls,
+  source/provider/encounter checks, server-session damage transitions,
+  dashboard-only fixed rejection aggregates, and accurate active-encounter
+  command/status presentation. The read-only OBS projection receives no
+  diagnostics or controls. No browser damage endpoint exists.
+- **Synthetic evidence:** deterministic tests cover parser inputs, mock routed
+  damage, base/weakness/mismatch outcomes, replay, cooldown, provider generation,
+  Twitch verification gating, exact deadline behavior, terminal victory and
+  private aggregate projection. The server integration test completes four
+  no-vote fallback stages, starts the authoritative encounter, routes eight
+  synthetic `!hit water` events through `/dev/simulation/events`, and reaches
+  victory at zero HP. This is synthetic local evidence, not a real Twitch test.
+- **Validation:** Node `v24.21.0` / pnpm `11.25.0`; frozen install, build,
+  typecheck, lint, Prettier, all 218 tests (39 shared / 142 server / 37 web),
+  four-category synthetic simulation and `git diff --check` passed. Socket
+  binding required the authorized local rerun after sandbox `EPERM`. The build
+  retains the optional Phaser large-chunk advisory; hosted CI is not claimed.
+- **Implementation commit:** `7f548d1f1c53a85da203115cac601fcc1028bfc2`.
+- **Not claimed:** no real Twitch API/EventSub or owner credentials were used;
+  live `!hit` acceptance, native OBS battle presentation, chat-driven HP over a
+  real stream, M2-C polished overlay/animations, challenges and Arena profile
+  remain unverified or deferred. Hosted GitHub Actions is not claimed as
+  passing.
 
 ### M1-A merged status
 
