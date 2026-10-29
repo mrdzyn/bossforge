@@ -1427,3 +1427,28 @@ GitHub Actions were not run and are **UNVERIFIED**. These results are
 deterministic/local evidence only; they do not establish genuine Twitch
 acceptance or native OBS rendering. Gates B–D remain NOT AUTHORIZED or NOT
 TESTED as stated in the runbook.
+
+## Boss Motion V1 — integrated synthetic Chromium QA
+
+On 2026-10-30, a separate CSS-only implementation branch based on
+`2893ba8b8d26de0fe032689c5ab69497f03a1486` was exercised against the actual
+integrated dashboard and `/overlay` using an isolated loopback mock app. The
+server had Twitch disabled and an empty environment allowlist. No live
+credentials, Twitch messages, or owner runtime were used for the browser run.
+
+The final capture set covers all four original characters in both dashboard
+and read-only overlay at 1920×1080 and 1280×720. Automated bounds checks found
+no horizontal overflow, clipped/off-stage boss image, or broken character
+asset. The overlay root remains transparent. The active synthetic encounter
+showed mock HP transitions 100→92→78, then 22 HP after nine accepted mock
+hits; the UI did not invent damage. Feed loss hid current battle authority and
+fresh recovery restored it. Mock cancellation showed the cancelled scene, and
+reduced-motion mode disabled character animation. Evidence and measurements
+are in [`visual-qa/boss-motion-v1/README.md`](visual-qa/boss-motion-v1/README.md)
+and its JSON/screenshot artifacts.
+
+This does not establish native OBS rendering, actual Twitch behavior, or
+continuous animation performance. The exact Chromium build was not retained.
+The local owner's ports 3001/5173 were initially listening and not
+intentionally stopped; after an unexpected dependency-restoration incident,
+read-only checks found them no longer listening. They were not restarted.

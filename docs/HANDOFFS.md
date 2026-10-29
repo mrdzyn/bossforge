@@ -972,3 +972,30 @@ subsequently squash-merged into `main` at
   live acceptance from synthetic tests. Next action is independent GPT-6
   review of the exact pushed PR #15 head; owner approval remains necessary
   before any real-service activity.
+
+## Boss Motion V1 — CSS character motion
+
+- **Base:** `main@2893ba8b8d26de0fe032689c5ab69497f03a1486`; independent from
+  unmerged documentation-only M2-D live evidence PR #17.
+- **Implementation branch:** `feat/boss-motion-v1`. The patch strengthens
+  per-character idle motion and authoritative hit/weakness recoil, increases
+  original SVG visibility within its existing presentation stage, and keeps
+  reduced-motion and terminal/disconnect behavior. No server or combat code
+  changed.
+- **Validation:** Node 24.21.0 / pnpm 11.25.0. Frozen install, build,
+  typecheck, lint, assets reproducibility, and package tests passed: 41 shared,
+  147 server, 76 web (264 total). The web tests used a 15-second timeout for
+  the SVG checksum test. The root parallel run encountered sandbox socket
+  `EPERM` and the known concurrency-sensitive SVG checksum timeout; package
+  tests passed separately in the authorized local environment. Four-category
+  mock simulation passed against isolated loopback ports with Twitch disabled.
+  Final integrated Chromium evidence is in
+  `docs/visual-qa/boss-motion-v1/`; no native OBS or genuine Twitch QA was run.
+- **Runtime limitation:** During dependency recovery, an install/format tool
+  unexpectedly attempted to recreate `node_modules` and registry DNS failed.
+  The owner's ports 3001/5173 were not intentionally stopped or restarted but
+  were later found not listening. No attempt was made to restore them. Details
+  are recorded in the visual QA README.
+- **Review:** Request independent GPT-6 exact-head review on the dedicated
+  Draft PR. Keep it unmerged; do not change battle authority, initiate live
+  Twitch activity, deploy, publish, or begin M2-D implementation.

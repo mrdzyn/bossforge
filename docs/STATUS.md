@@ -1,8 +1,8 @@
 # Project status
 
-## Current snapshot — 2026-10-29
+## Current snapshot — 2026-10-30
 
-- **Current `main` baseline:** `50d4523873873328847f3d4c830220a869788b96`; M2-C SVG polish PR #14 was squash-merged after the M2-C OBS HUD PR #13. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
+- **Current `main` baseline:** `2893ba8b8d26de0fe032689c5ab69497f03a1486`; M2-C SVG polish PR #14 and M2-D preparation PR #15 are merged. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
 - **M1-B merged:** PR #10 includes the Generic dashboard/read-only OBS presentation, freshness protection and reveal visibility remediation. PR #10 is no longer Draft or pending review.
 - **M1-A merged:** PR #9 was squash-merged into `main` at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. Its historical remediation and review evidence remain in [ACCEPTANCE](ACCEPTANCE.md).
 - **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access later created Draft PR #9, which is now merged; the former blocker is historical only.
@@ -41,11 +41,48 @@
   was revealed. Ports 3001/5173 were not listening before or after and were
   untouched. This is mock evidence only.
 - **Current gates:** deterministic M2-D Gate A evidence is recorded; hosted
-  GitHub Actions are **UNVERIFIED**. Live Twitch OAuth/EventSub/chat combat
-  remain **NOT AUTHORIZED/NOT TESTED** and native OBS battle integration
-  remains **NOT TESTED**. No production-code defect was identified by the
-  executed checks. Owner-controlled Gates B–D remain separate and require
-  authorization; no merge/deployment/publication is authorized by this entry.
+  GitHub Actions are **UNVERIFIED**. The 2026-10-29 owner-supervised Twitch
+  run reports OAuth/EventSub connection, four genuine voting stages and one
+  genuine weakness hit, but did not verify base damage, BossForge cooldown
+  rejection or community victory. The encounter expired and a terminal-state
+  mismatch was observed, so additional live testing stopped. OBS showed
+  BossForge in the owner's stream; authoritative battle HP synchronization
+  and a full native OBS acceptance pass remain **UNVERIFIED**. Do not claim
+  end-to-end M2-D acceptance until the reported mismatch is resolved and the
+  missing behavior is separately verified.
+
+- **Owner-supplied live checkpoint (2026-10-29):** The sanitized Twitch and
+  stream observations are being recorded separately in Draft PR
+  [#17](https://github.com/mrdzyn/bossforge/pull/17), branched independently
+  from this baseline. The report says four genuine vote stages revealed Rime
+  Veil, one genuine `!hit water` changed authoritative HP 550→536, Twitch
+  rejected a duplicate within 30 seconds, and the encounter expired. It also
+  records Cinder Granite's survived presentation and BossForge visible in an
+  owner-operated OBS stream. These are owner-supplied, not independently
+  reproduced; they do not establish base damage, BossForge cooldown rejection,
+  community victory, or active HP synchronization in native OBS. A terminal
+  state mismatch was reported after expiry and live testing stopped. See the
+  Draft PR evidence and its M2-D runbook update; it is not merged into this
+  baseline.
+
+### Boss Motion V1 — CSS-only character presentation (proposed)
+
+- **Baseline:** `main@2893ba8b8d26de0fe032689c5ab69497f03a1486`. The separate
+  implementation branch `feat/boss-motion-v1` builds on the merged original
+  VecSynIQ asset integration and does not depend on the unmerged M2-D evidence
+  PR #17.
+- **Scope:** strengthen bounded idle and authoritative hit/weakness reactions
+  for the four existing SVG characters, and fit the original art within the
+  existing stage. CSS transforms/opacity only; no animation framework, server
+  combat change, or change to Twitch/EventSub authority. Synthetic Chromium
+  screenshots and observations are in `docs/visual-qa/boss-motion-v1/`.
+- **Validation status:** package tests, build, typecheck, lint, assets and
+  isolated mock simulation passed on the implementation branch. The root
+  parallel test runner had sandbox socket `EPERM` and a pre-existing web asset
+  checksum timeout under parallel load; separate authorized package suites
+  passed 264 tests. The ignored `.kilo/agent-manager.json` was not changed.
+  Native OBS and genuine Twitch were not retested. See the QA README for the
+  full command provenance and local runtime incident.
 
 ### M2-A — server-authoritative battle engine (merged)
 

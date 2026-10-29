@@ -1,0 +1,15 @@
+{
+  "provenance": "Actual local Chrome 141, loopback-only isolated mock app, empty environment with TWITCH_INTEGRATION_ENABLED=false; synthetic mock voting and hit ingress only.",
+  "body": "drake",
+  "weakness": "light",
+  "startHp": 100,
+  "afterBaseHit": 92,
+  "afterWeaknessHit": 78,
+  "finalLowHp": 22,
+  "acceptedHits": 9,
+  "weaknessHits": 1,
+  "reducedMotionAnimationName": "none",
+  "disconnect": "SERVER LINK UNAVAILABLE and BATTLE STATUS UNKNOWN; stale active HP/timer/commands hidden.",
+  "recovery": "fresh authoritative active state restored with unchanged HP/hit totals.",
+  "terminal": "cancelled"
+}

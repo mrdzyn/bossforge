@@ -1,0 +1,282 @@
+[
+  {
+    "body": "wraith",
+    "status": "ready",
+    "file": "visual-qa/boss-motion-v1/dashboard-scrolled-wraith-1920x1080.png",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "scrollWidth": 1920,
+    "figure": {
+      "x": 389,
+      "y": 863,
+      "width": 648,
+      "height": 172,
+      "right": 1037,
+      "bottom": 1035
+    },
+    "stage": {
+      "x": 421,
+      "y": 868,
+      "width": 583,
+      "height": 162,
+      "right": 1005,
+      "bottom": 1030
+    },
+    "image": {
+      "x": 414,
+      "y": 869,
+      "width": 592,
+      "height": 592,
+      "right": 1007,
+      "bottom": 1461
+    },
+    "imageLoaded": true
+  },
+  {
+    "body": "wraith",
+    "status": "ready",
+    "file": "visual-qa/boss-motion-v1/dashboard-scrolled-wraith-1280x720.png",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "scrollWidth": 1280,
+    "figure": {
+      "x": 301,
+      "y": 274,
+      "width": 423,
+      "height": 172,
+      "right": 724,
+      "bottom": 446
+    },
+    "stage": {
+      "x": 322,
+      "y": 279,
+      "width": 381,
+      "height": 162,
+      "right": 703,
+      "bottom": 441
+    },
+    "image": {
+      "x": 320,
+      "y": 277,
+      "width": 385,
+      "height": 385,
+      "right": 704,
+      "bottom": 661
+    },
+    "imageLoaded": true
+  },
+  {
+    "body": "golem",
+    "status": "ready",
+    "file": "visual-qa/boss-motion-v1/dashboard-scrolled-golem-1920x1080.png",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "scrollWidth": 1920,
+    "figure": {
+      "x": 389,
+      "y": 274,
+      "width": 648,
+      "height": 172,
+      "right": 1037,
+      "bottom": 446
+    },
+    "stage": {
+      "x": 421,
+      "y": 279,
+      "width": 583,
+      "height": 162,
+      "right": 1005,
+      "bottom": 441
+    },
+    "image": {
+      "x": 415,
+      "y": 277,
+      "width": 592,
+      "height": 591,
+      "right": 1007,
+      "bottom": 868
+    },
+    "imageLoaded": true
+  },
+  {
+    "body": "golem",
+    "status": "ready",
+    "file": "visual-qa/boss-motion-v1/dashboard-scrolled-golem-1280x720.png",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "scrollWidth": 1280,
+    "figure": {
+      "x": 301,
+      "y": 274,
+      "width": 423,
+      "height": 172,
+      "right": 724,
+      "bottom": 446
+    },
+    "stage": {
+      "x": 322,
+      "y": 279,
+      "width": 381,
+      "height": 162,
+      "right": 703,
+      "bottom": 441
+    },
+    "image": {
+      "x": 321,
+      "y": 280,
+      "width": 384,
+      "height": 379,
+      "right": 704,
+      "bottom": 659
+    },
+    "imageLoaded": true
+  },
+  {
+    "body": "drake",
+    "status": "ready",
+    "file": "visual-qa/boss-motion-v1/dashboard-scrolled-drake-1920x1080.png",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "scrollWidth": 1920,
+    "figure": {
+      "x": 389,
+      "y": 274,
+      "width": 648,
+      "height": 172,
+      "right": 1037,
+      "bottom": 446
+    },
+    "stage": {
+      "x": 421,
+      "y": 279,
+      "width": 583,
+      "height": 162,
+      "right": 1005,
+      "bottom": 441
+    },
+    "image": {
+      "x": 412,
+      "y": 277,
+      "width": 595,
+      "height": 595,
+      "right": 1007,
+      "bottom": 872
+    },
+    "imageLoaded": true
+  },
+  {
+    "body": "drake",
+    "status": "ready",
+    "file": "visual-qa/boss-motion-v1/dashboard-scrolled-drake-1280x720.png",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "scrollWidth": 1280,
+    "figure": {
+      "x": 301,
+      "y": 274,
+      "width": 423,
+      "height": 172,
+      "right": 724,
+      "bottom": 446
+    },
+    "stage": {
+      "x": 322,
+      "y": 279,
+      "width": 381,
+      "height": 162,
+      "right": 703,
+      "bottom": 441
+    },
+    "image": {
+      "x": 317,
+      "y": 261,
+      "width": 397,
+      "height": 397,
+      "right": 714,
+      "bottom": 658
+    },
+    "imageLoaded": true
+  },
+  {
+    "body": "mimic",
+    "status": "ready",
+    "file": "visual-qa/boss-motion-v1/dashboard-scrolled-mimic-1920x1080.png",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "scrollWidth": 1920,
+    "figure": {
+      "x": 389,
+      "y": 274,
+      "width": 648,
+      "height": 172,
+      "right": 1037,
+      "bottom": 446
+    },
+    "stage": {
+      "x": 421,
+      "y": 279,
+      "width": 583,
+      "height": 162,
+      "right": 1005,
+      "bottom": 441
+    },
+    "image": {
+      "x": 421,
+      "y": 281,
+      "width": 583,
+      "height": 583,
+      "right": 1005,
+      "bottom": 864
+    },
+    "imageLoaded": true
+  },
+  {
+    "body": "mimic",
+    "status": "ready",
+    "file": "visual-qa/boss-motion-v1/dashboard-scrolled-mimic-1280x720.png",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "scrollWidth": 1280,
+    "figure": {
+      "x": 301,
+      "y": 274,
+      "width": 423,
+      "height": 172,
+      "right": 724,
+      "bottom": 446
+    },
+    "stage": {
+      "x": 322,
+      "y": 279,
+      "width": 381,
+      "height": 162,
+      "right": 703,
+      "bottom": 441
+    },
+    "image": {
+      "x": 322,
+      "y": 281,
+      "width": 381,
+      "height": 381,
+      "right": 703,
+      "bottom": 662
+    },
+    "imageLoaded": true
+  }
+]
