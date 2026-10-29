@@ -2,8 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DashboardEventEnvelopeSchema,
   OverlayEventEnvelopeSchema,
+  BattleStateReconciler,
+  OverlayBattleStateV1Schema,
   ForgeStateReconciler,
   PublicForgeStateSchema,
+  type OverlayBattleStateV1,
   type ForgeState,
 } from "@bossforge/shared";
 import { isTwitchVoteCancelled, sanitizedForgeStartError } from "../live-forge-ui.js";
@@ -12,12 +15,17 @@ import { DashboardActivityReconciler } from "../dashboard-activity-reconciler.js
 export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") {
   const reconciler = useRef<ForgeStateReconciler | null>(null);
   if (!reconciler.current) reconciler.current = new ForgeStateReconciler();
+  const overlayBattleReconciler = useRef<BattleStateReconciler<OverlayBattleStateV1> | null>(null);
+  if (!overlayBattleReconciler.current)
+    overlayBattleReconciler.current = new BattleStateReconciler<OverlayBattleStateV1>();
   const activityReconciler = useRef<DashboardActivityReconciler | null>(null);
   if (!activityReconciler.current) activityReconciler.current = new DashboardActivityReconciler();
   const [, setActivityRevision] = useState(0);
   const [forge, setForge] = useState<ForgeState | null>(null);
   const forgeRef = useRef<ForgeState | null>(null);
   const [snapshotAvailable, setSnapshotAvailable] = useState(false);
+  const [overlayBattle, setOverlayBattle] = useState<OverlayBattleStateV1 | null>(null);
+  const [overlayBattleFresh, setOverlayBattleFresh] = useState(false);
   const appliedVersion = useRef(0);
   const [connection, setConnection] = useState("connecting");
   const transportReadyGeneration = useRef<number | null>(null);
@@ -74,21 +82,60 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
     },
     [applyForge],
   );
+  const refreshOverlayBattle = useCallback(
+    async (generation: number) => {
+      if (recipient !== "overlay" || transportReadyGeneration.current !== generation) return;
+      try {
+        const response = await fetch("/api/battle/overlay-state", { cache: "no-store" });
+        if (!response.ok) throw new Error("unavailable");
+        const parsed = OverlayBattleStateV1Schema.safeParse(await response.json());
+        if (!parsed.success) throw new Error("invalid");
+        if (
+          transportReadyGeneration.current !== generation ||
+          reconciler.current?.connectionGeneration !== generation ||
+          overlayBattleReconciler.current?.connectionGeneration !== generation
+        )
+          return;
+        if (overlayBattleReconciler.current?.apply(parsed.data, generation, "snapshot")) {
+          setOverlayBattle(overlayBattleReconciler.current.state);
+          setOverlayBattleFresh(overlayBattleReconciler.current.hasFreshState);
+        }
+      } catch {
+        if (
+          transportReadyGeneration.current === generation &&
+          overlayBattleReconciler.current?.connectionGeneration === generation
+        ) {
+          overlayBattleReconciler.current.invalidate();
+          setOverlayBattle(null);
+          setOverlayBattleFresh(false);
+        }
+      }
+    },
+    [recipient],
+  );
   useEffect(() => {
     let active = true;
     let retry: ReturnType<typeof setTimeout> | undefined;
     const snapshotPoll = setInterval(() => {
-      if (active) void refresh(reconciler.current!.connectionGeneration);
+      if (active) {
+        const generation = reconciler.current!.connectionGeneration;
+        void refresh(generation);
+        void refreshOverlayBattle(generation);
+      }
     }, 2000);
     let socket: WebSocket | undefined;
     const connect = () => {
       if (!active) return;
       const generation = reconciler.current!.beginConnection();
+      const battleGeneration = overlayBattleReconciler.current!.beginConnection();
+      if (battleGeneration !== generation) throw new Error("Battle state generations diverged");
       const activityGeneration = activityReconciler.current!.beginConnection();
       if (activityGeneration !== generation) throw new Error("Live state generations diverged");
       transportReadyGeneration.current = null;
       setActivityRevision((revision) => revision + 1);
       setSnapshotAvailable(false);
+      setOverlayBattle(null);
+      setOverlayBattleFresh(false);
       socket = new WebSocket(
         `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/events/${recipient}`,
       );
@@ -99,11 +146,15 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
           setActivityRevision((revision) => revision + 1);
           setConnection("connected");
           void refresh(generation);
+          void refreshOverlayBattle(generation);
         }
       });
       socket.addEventListener("close", () => {
         if (active && reconciler.current?.connectionGeneration === generation) {
           transportReadyGeneration.current = null;
+          overlayBattleReconciler.current?.invalidate();
+          setOverlayBattle(null);
+          setOverlayBattleFresh(false);
           activityReconciler.current?.setTransportReady(generation, false);
           setActivityRevision((revision) => revision + 1);
           setSnapshotAvailable(false);
@@ -114,6 +165,9 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
       socket.addEventListener("error", () => {
         if (active && reconciler.current?.connectionGeneration === generation) {
           transportReadyGeneration.current = null;
+          overlayBattleReconciler.current?.invalidate();
+          setOverlayBattle(null);
+          setOverlayBattleFresh(false);
           activityReconciler.current?.setTransportReady(generation, false);
           setActivityRevision((revision) => revision + 1);
           setSnapshotAvailable(false);
@@ -140,6 +194,15 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
             envelope.payload.kind === "forge.state"
           )
             applyForge(envelope.payload.state, generation);
+          if (
+            recipient === "overlay" &&
+            transportReadyGeneration.current === generation &&
+            envelope.type === "battle.state" &&
+            overlayBattleReconciler.current?.apply(envelope.payload.state, generation, "websocket")
+          ) {
+            setOverlayBattle(overlayBattleReconciler.current.state);
+            setOverlayBattleFresh(overlayBattleReconciler.current.hasFreshState);
+          }
         } catch {
           setError("An invalid event was rejected by the browser.");
         }
@@ -152,7 +215,7 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
       clearInterval(snapshotPoll);
       socket?.close();
     };
-  }, [applyForge, recipient, refresh]);
+  }, [applyForge, recipient, refresh, refreshOverlayBattle]);
   const post = useCallback(
     async (path: string, body?: unknown): Promise<boolean> => {
       const generation = reconciler.current?.connectionGeneration ?? 0;
@@ -194,5 +257,15 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
       connection === "connected",
       snapshotAvailable,
     ) ?? null;
-  return { activity, forge, connection, error, notice, post, snapshotAvailable };
+  return {
+    activity,
+    forge,
+    connection,
+    error,
+    notice,
+    post,
+    snapshotAvailable,
+    overlayBattle: recipient === "overlay" && overlayBattleFresh ? overlayBattle : null,
+    overlayBattleFresh,
+  };
 }

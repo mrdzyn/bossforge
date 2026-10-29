@@ -5,9 +5,9 @@ Status vocabulary: **PASS** ran successfully; **FAIL** ran and failed;
 actual outcomes; do not infer a pass from a configured script.
 
 The older Phase 3-B remediation sections below retain historical results and
-review gates as recorded at those checkpoints. P4A PR #6 and M2-A PR #11 are
-merged into `main`; the M2-B implementation base is
-`15a917e229813df6d6ee344aed766c606ec17749`. P4A acceptance and owner OBS
+review gates as recorded at those checkpoints. P4A PR #6, M2-A PR #11, and
+M2-B PR #12 are merged into `main`; the M2-C base is
+`6fb37e827b7466559970f714ef5f05c04af27157`. P4A acceptance and owner OBS
 evidence are recorded in the final closure below.
 
 ## Required checks
@@ -1196,6 +1196,54 @@ native OBS testing, merge or deployment were used.
 **M2-B audit-remediation implementation commit:**
 `304ed6f777d4069e710b05e2aefff615dc7fc266` (following initial implementation
 `7f548d1f1c53a85da203115cac601fcc1028bfc2`).
-The work is published in Draft [PR #12](https://github.com/mrdzyn/bossforge/pull/12)
-against `main` at the exact base above. Its description and independent review
-request identify the final pushed review HEAD.
+The implementation was delivered through Draft [PR #12](https://github.com/mrdzyn/bossforge/pull/12)
+and squash-merged into main at `6fb37e827b7466559970f714ef5f05c04af27157`.
+The prior Draft/unmerged wording is historical.
+
+## M2-C — OBS battle HUD and full integration
+
+**Base:** M2-B PR #12 squash merge at
+`6fb37e827b7466559970f714ef5f05c04af27157`.
+
+The overlay consumes strict `OverlayBattleStateV1` projections from the
+existing `/events/overlay` connection. It requires a fresh authoritative HTTP
+snapshot on the current WebSocket generation and matching server epoch,
+provider, forge cycle, and battle identity. Development-only
+`/battle/overlay-state` is projected through `toOverlayBattleState`, strictly
+parsed and marked `no-store`. The overlay has no owner controls or damage
+mutation route.
+
+**Synthetic browser acceptance:** on an isolated loopback runtime with Twitch
+explicitly disabled, a four-category mock forge reached authoritative `ready`,
+owner Start opened a battle, and eight weakness-matching synthetic `!hit`
+events reduced 100 HP to zero. The server produced the exact
+`COMMUNITY VICTORY! BOSS DEFEATED!` result. A separate encounter reached
+`expired` and displayed `BOSS SURVIVED! TRY AGAIN!`; owner cancellation
+displayed `BATTLE CANCELLED` with fixed `OWNER CANCELLED`. The simulated
+disclosure remained visible. These are synthetic local events, not genuine
+Twitch chat results.
+
+**Chromium visual QA:** actual headless Google Chrome captures and measured
+element bounds are in [`visual-qa/m2c`](visual-qa/m2c/README.md). Tested
+1920×1080, 1280×720, 1600×900 and 390×844. At 1280×720 the active battle HUD
+ends at y=570; at 390×844 it ends at y=784.4. Document scroll widths matched
+the viewport and measured visible elements remained inside horizontal
+boundaries. Lower forge recap content may continue below the viewport; battle
+status, HP, timer, weakness and commands are visible without scrolling. The
+root and body computed backgrounds are transparent, with translucent dark
+panels. A forced white compositor background was also captured to check the
+transparent HUD over a light scene; the dark text panels and labels remained
+legible. Server loss hid HP and attack prompts and showed
+`SERVER LINK UNAVAILABLE / BATTLE STATUS UNKNOWN`. After isolated server
+restart, a fresh socket and HTTP snapshot adopted the new epoch and returned
+to simulated idle without restoring the old encounter.
+
+**Evidence boundaries:** these are automated/synthetic and Chromium-only
+results. No real Twitch network, credentials, owner authorization, or native
+OBS application rendering was used. Node `v24.21.0` / pnpm `11.25.0` manual
+validation passed: frozen install, build, typecheck, lint, format check, full
+suite (**233 tests: 41 shared, 147 server, 45 web**), `pnpm simulate`, and
+`git diff --check`. The first sandbox full-suite run had 8 loopback-related
+`EPERM` failures; the authorized local rerun passed all tests. Hosted GitHub
+Actions are not claimed as passing. No merge, deployment, or release claim is
+made.

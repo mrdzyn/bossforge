@@ -834,5 +834,32 @@ subsequently squash-merged into `main` at
   `7f548d1f1c53a85da203115cac601fcc1028bfc2` is part of Draft PR
   [#12](https://github.com/mrdzyn/bossforge/pull/12), targeting `main` at the
   exact base above. The PR description and review comment identify the exact
-  pushed review head. Independent GPT-6 exact-head review is requested. Keep
-  this single new PR Draft and unmerged; M2-C remains deferred.
+  pushed review head. Independent GPT-6 exact-head review was requested.
+- **Merge:** PR #12 was subsequently squash-merged at
+  `6fb37e827b7466559970f714ef5f05c04af27157`; its earlier Draft/unmerged
+  status is historical. M2-C is the next bounded scope.
+
+## M2-C — OBS battle HUD and full integration
+
+- **Base/branch:** M2-B PR #12 is squash-merged at
+  `6fb37e827b7466559970f714ef5f05c04af27157`; branch
+  `feat/m2c-obs-battle-hud` is based on that exact main SHA.
+- **Scope:** Consume strict overlay battle state through the existing overlay
+  WebSocket and a development-only, loopback-protected, no-store overlay
+  snapshot. Require fresh forge and battle authority with matching server
+  epoch, provider, and cycle. Keep HUD read-only and hide combat claims on feed
+  loss. The optional Phaser arena remains independent.
+- **Evidence boundary:** Synthetic acceptance and Chromium viewport captures
+  do not prove live Twitch chat or native OBS behavior. Do not claim those
+  gates without owner-run evidence. No credentials or real Twitch traffic are
+  authorized in this implementation.
+- **QA result:** Implementation and isolated synthetic Chromium QA are complete
+  on this branch. Screenshots and measured bounds are under
+  `docs/visual-qa/m2c/`; the acceptance record distinguishes synthetic,
+  automated and unverified evidence.
+- The HUD uses strict overlay DTOs, fresh same-generation snapshots and
+  matching forge/battle authority. Server loss hides HP, timer and attack
+  commands; recovery requires a current-generation socket plus a fresh HTTP
+  snapshot. Native OBS, genuine Twitch activity and hosted CI remain unverified.
+- **Review request:** Independently review the exact pushed HEAD of Draft PR
+  against the M2-B main baseline. Do not merge, deploy, publish, or start M2-D.

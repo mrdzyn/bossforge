@@ -104,7 +104,7 @@ describe("M2-A battle dashboard projection", () => {
     const html = renderToStaticMarkup(<Dashboard />);
     expect(html).toContain("BATTLE READY");
     expect(html).toContain("Start Battle");
-    expect(html).toContain("M2-B · SERVER-VALIDATED CHAT ATTACKS");
+    expect(html).toContain("SERVER-AUTHORITATIVE ENCOUNTER");
   });
   it("keeps Start Battle controls out of the OBS overlay", () => {
     mocks.live = {
@@ -118,6 +118,40 @@ describe("M2-A battle dashboard projection", () => {
     };
     mocks.battle = { state: readyBattle, fresh: true, error: "", mutate: vi.fn() };
     expect(renderToStaticMarkup(<OverlayPreview />)).not.toContain("Start Battle");
+  });
+
+  it("shows authoritative active battle state and commands in the actual overlay composition only when fresh", () => {
+    const activeForOverlay = { ...activeBattle, deadlineAt: "2099-01-01T00:01:00.000Z" };
+    const overlayState = Object.fromEntries(
+      Object.entries(activeForOverlay).filter(
+        ([key]) => !["profileId", "profileVersion", "profileSnapshot"].includes(key),
+      ),
+    );
+    mocks.live = {
+      forge,
+      connection: "connected",
+      snapshotAvailable: true,
+      overlayBattle: overlayState,
+      overlayBattleFresh: true,
+      post: vi.fn(),
+      error: "",
+      notice: "",
+      activity: null,
+    };
+    mocks.battle = { state: activeBattle, fresh: true, error: "", activity: null, mutate: vi.fn() };
+    const fresh = renderToStaticMarkup(<OverlayPreview />);
+    expect(fresh).toContain("BATTLE ACTIVE");
+    expect(fresh).toContain("100 / 100");
+    expect(fresh).toContain("!hit water");
+    expect(fresh).toContain("SIMULATED");
+    expect(fresh).not.toContain("Start Battle");
+    expect(fresh).not.toContain("Cancel encounter");
+
+    mocks.live = { ...(mocks.live as object), overlayBattleFresh: false };
+    const stale = renderToStaticMarkup(<OverlayPreview />);
+    expect(stale).toContain("BATTLE STATUS UNKNOWN");
+    expect(stale).not.toContain("100 / 100");
+    expect(stale).not.toContain("!hit water");
   });
 
   it("shows attack syntax only for a fresh active dashboard encounter", () => {

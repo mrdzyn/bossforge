@@ -12,6 +12,8 @@ import { FORGE_DURATIONS, forgeCountdownLabel, type ForgeDuration } from "./live
 import { VoteInstructions } from "./VoteInstructions.js";
 import { LiveVoteSurface } from "./LiveVoteSurface.js";
 import { authoritativeReveal, currentForgePresentation } from "./forge-presentation.js";
+import { OverlayBattleHud } from "./OverlayBattleHud.js";
+import { overlayBattleView } from "./overlay-battle-presentation.js";
 
 const Arena = lazy(() => import("./arena/Arena.js"));
 
@@ -324,6 +326,20 @@ export function Dashboard() {
     forge?.mode === "mock"
       ? Boolean(forge && forge.simulated)
       : Boolean(forge?.connectedToTwitch && twitch?.identity && twitch.connected);
+  const dashboardBattleLabel =
+    !battleLive.fresh || !battleMatchesForge
+      ? "WAITING FOR VERIFIED BATTLE STATE"
+      : battle?.status === "ready"
+        ? "BATTLE READY"
+        : battle?.status === "active"
+          ? "BATTLE ACTIVE"
+          : battle?.status === "victory"
+            ? "COMMUNITY VICTORY! BOSS DEFEATED!"
+            : battle?.status === "expired"
+              ? "BOSS SURVIVED! TRY AGAIN!"
+              : battle?.status === "cancelled"
+                ? "BATTLE CANCELLED"
+                : "WAITING FOR VERIFIED BATTLE STATE";
   const [battleDuration, setBattleDuration] = useState<60 | 90 | 120>(90);
   const [audienceBand, setAudienceBand] = useState<"low" | "medium" | "high">("medium");
   const battleCountdown = battle?.deadlineAt
@@ -393,7 +409,7 @@ export function Dashboard() {
               </h1>
               <p className="subheading">Four timed votes. One boss forged by chat.</p>
               <p className="game-agnostic-copy">
-                Chat creates the boss. Chat fights the boss <b>— coming in M2.</b> You keep playing.
+                Chat creates the boss. Chat fights the boss. You keep playing.
               </p>
               <p className="obs-explainer">
                 Add the read-only OBS Browser Source beside your game. It does not read, control, or
@@ -453,7 +469,7 @@ export function Dashboard() {
           <section className="panel battle-owner-panel" aria-label="Streamer battle controls">
             <div className="panel-heading">
               <h2>Community encounter</h2>
-              <span className="eyebrow">M2-B · SERVER-VALIDATED CHAT ATTACKS</span>
+              <span className="eyebrow">SERVER-AUTHORITATIVE ENCOUNTER</span>
             </div>
             {!battleLive.fresh || !battle ? (
               <p className="muted">
@@ -722,7 +738,9 @@ export function Dashboard() {
                   </h2>
                   {isRevealed && (
                     <span className="reveal-inline-status" role="status">
-                      REVEALED — BATTLE COMING SOON
+                      {battleLive.fresh && battleMatchesForge
+                        ? dashboardBattleLabel
+                        : "WAITING FOR VERIFIED BATTLE STATE"}
                     </span>
                   )}
                 </div>
@@ -773,10 +791,8 @@ export function Dashboard() {
               </div>
               {isRevealed && (
                 <div className="reveal-message">
-                  <strong>REVEALED — BATTLE COMING SOON</strong>
-                  <span>
-                    The reveal is presentation only. Cooperative chat combat is planned for M2.
-                  </span>
+                  <strong>{dashboardBattleLabel}</strong>
+                  <span>Battle state and outcomes are controlled by the local server.</span>
                 </div>
               )}
             </article>
@@ -888,7 +904,13 @@ export function Dashboard() {
 }
 
 export function OverlayPreview() {
-  const { forge: cachedForge, connection, snapshotAvailable } = useLiveEvents("overlay");
+  const {
+    forge: cachedForge,
+    connection,
+    snapshotAvailable,
+    overlayBattle,
+    overlayBattleFresh,
+  } = useLiveEvents("overlay");
   const forge =
     connection === "connected" && snapshotAvailable ? currentForgePresentation(cachedForge) : null;
   const category =
@@ -896,6 +918,13 @@ export function OverlayPreview() {
       ? (forge.categories.find((item) => item.category === forge.activeCategory) ?? null)
       : null;
   const reveal = authoritativeReveal(forge);
+  const battleView = overlayBattleView({
+    connection,
+    forgeFresh: snapshotAvailable,
+    battleFresh: overlayBattleFresh,
+    forge,
+    battle: overlayBattle,
+  });
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
     const update = () => setSeconds(remainingVoteSeconds(category?.closesAt ?? null, Date.now()));
@@ -954,30 +983,14 @@ export function OverlayPreview() {
                 <span>{title(forge?.categories[1]?.winner ?? "ELEMENT TBD")}</span>
               </div>
             )}
-            {reveal && (
-              <div className="overlay-reveal-message" role="status">
-                <strong>REVEALED — BATTLE COMING SOON</strong>
-                <span>Cooperative chat combat is planned for M2.</span>
-              </div>
-            )}
           </div>
         </section>
-      ) : forge?.status === "idle" ? (
-        <section className="overlay-awaiting" aria-label="Awaiting forge">
-          <span className="eyebrow">GENERIC PRESENTATION</span>
-          <strong>AWAITING FORGE</strong>
-          <p>A four-stage audience forge will reveal the boss here.</p>
-        </section>
-      ) : (
-        <section className="overlay-awaiting" role="status">
-          <strong>
-            {connection === "connected"
-              ? "WAITING FOR FRESH SERVER STATE"
-              : "SERVER LINK UNAVAILABLE"}
-          </strong>
-          <p>Current boss details are hidden until the local server state is fresh.</p>
-        </section>
-      )}
+      ) : null}
+      <OverlayBattleHud
+        battle={overlayBattle}
+        view={battleView}
+        simulated={forge?.mode === "mock"}
+      />
       <LiveVoteSurface
         connection={connection}
         snapshotAvailable={snapshotAvailable}

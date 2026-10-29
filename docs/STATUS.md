@@ -2,7 +2,7 @@
 
 ## Current snapshot — 2026-10-29
 
-- **Current `main`:** `15a917e229813df6d6ee344aed766c606ec17749`; M2-A was squash-merged through PR #11 after M1-B PR #10. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
+- **Current `main` baseline for M2-C:** `6fb37e827b7466559970f714ef5f05c04af27157`; M2-B PR #12 was squash-merged after M2-A PR #11. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
 - **M1-B merged:** PR #10 includes the Generic dashboard/read-only OBS presentation, freshness protection and reveal visibility remediation. PR #10 is no longer Draft or pending review.
 - **M1-A merged:** PR #9 was squash-merged into `main` at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. Its historical remediation and review evidence remain in [ACCEPTANCE](ACCEPTANCE.md).
 - **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access later created Draft PR #9, which is now merged; the former blocker is historical only.
@@ -25,10 +25,13 @@
   after sandbox `EPERM`. Hosted CI was not represented as passing. These
   automated results do not establish live Twitch or native OBS acceptance.
 
-### M2-B — secure Twitch chat combat (implementation branch)
+### M2-B — secure Twitch chat combat (merged)
 
 - **Base:** `main` at `15a917e229813df6d6ee344aed766c606ec17749`, containing the
   M2-A PR #11 squash merge.
+- **Merge:** Draft PR #12 was squash-merged into `main` at
+  `6fb37e827b7466559970f714ef5f05c04af27157`; the earlier Draft status below is
+  historical. M2-B remains synthetic-only evidence, not live Twitch acceptance.
 - **Scope:** `feat/m2b-twitch-chat-attacks` adds the strict `!hit` grammar,
   private server attack router, bounded ingress/replay/cooldown/rate controls,
   source/provider/encounter checks, server-session damage transitions,
@@ -65,6 +68,32 @@
   real stream, M2-C polished overlay/animations, challenges and Arena profile
   remain unverified or deferred. Hosted GitHub Actions is not claimed as
   passing.
+
+### M2-C — OBS battle HUD and full integration (implementation)
+
+- **Base:** `main` at `6fb37e827b7466559970f714ef5f05c04af27157`, including the
+  M2-B PR #12 squash merge. The working branch is `feat/m2c-obs-battle-hud`.
+- The OBS overlay now consumes strict `OverlayBattleStateV1` events on its
+  existing single `/events/overlay` connection and bootstraps from the
+  development-only, loopback-protected, no-store `/battle/overlay-state`
+  projection. Battle epochs/revisions/encounters and full forge identity must
+  reconcile on the current socket generation. Missing authority hides combat
+  values and prompts.
+- **Implementation and synthetic Chromium QA are complete on this branch.**
+  The read-only HUD consumes strict overlay projections and requires fresh,
+  generation-bound HTTP/WS authority. At 1920×1080, 1280×720, 1600×900 and
+  390×844, the key battle panel stayed inside the viewport with no horizontal
+  overflow; loss/restart hid stale combat data and recovered only after a new
+  epoch snapshot. Synthetic mock tests cover ready, active, hit, victory,
+  expired and cancellation states. See `docs/visual-qa/m2c/` and M2-C acceptance.
+- **Not verified:** genuine Twitch traffic, native OBS rendering, hosted CI,
+  and release behavior. Chromium captures are not native OBS evidence.
+- **Validation:** Node `v24.21.0`, pnpm `11.25.0`; frozen install, build,
+  typecheck, lint, format check, full suite (233 tests: 41 shared, 147 server,
+  45 web), `pnpm simulate`, and `git diff --check` passed. A sandbox run first
+  hit `EPERM` on loopback socket tests; the authorized local rerun passed.
+  These are manual/local CI-equivalent results; hosted GitHub Actions are not
+  claimed as passing. The existing optional Phaser chunk-size advisory remains.
 
 ### M1-A merged status
 

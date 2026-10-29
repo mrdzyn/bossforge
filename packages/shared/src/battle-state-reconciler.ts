@@ -1,4 +1,9 @@
-import type { CommunityBattleStateV1 } from "./battle.js";
+import type { CommunityBattleStateV1, OverlayBattleStateV1 } from "./battle.js";
+
+type ReconciledBattle = Pick<
+  OverlayBattleStateV1,
+  "serverInstanceId" | "serverStartedAt" | "revision" | "encounterId"
+> & { forgeIdentity: OverlayBattleStateV1["forgeIdentity"] };
 
 export interface BattleMutationContext {
   kind: "start" | "cancel";
@@ -11,9 +16,9 @@ export interface BattleMutationContext {
 }
 
 /** Battle snapshots have their own epoch/encounter rules, separate from ForgeState. */
-export class BattleStateReconciler {
+export class BattleStateReconciler<T extends ReconciledBattle = CommunityBattleStateV1> {
   private generation = 0;
-  private current: CommunityBattleStateV1 | null = null;
+  private current: T | null = null;
   private available = false;
   private readonly retiredEncounters = new Set<string>();
   private snapshotGeneration: number | null = null;
@@ -27,14 +32,14 @@ export class BattleStateReconciler {
   get connectionGeneration(): number {
     return this.generation;
   }
-  get state(): CommunityBattleStateV1 | null {
+  get state(): T | null {
     return this.available ? this.current : null;
   }
   get hasFreshState(): boolean {
     return this.available && this.current !== null;
   }
   captureMutationContext(kind: "start" | "cancel"): BattleMutationContext | null {
-    const state = this.state;
+    const state = this.state as CommunityBattleStateV1 | null;
     if (!state?.encounterId || !state.forgeIdentity) return null;
     if (kind === "start" ? state.status !== "ready" : !["ready", "active"].includes(state.status))
       return null;
@@ -49,7 +54,7 @@ export class BattleStateReconciler {
     };
   }
   isMutationContextCurrent(context: BattleMutationContext): boolean {
-    const state = this.state;
+    const state = this.state as CommunityBattleStateV1 | null;
     return Boolean(
       state &&
       context.generation === this.generation &&
@@ -76,11 +81,7 @@ export class BattleStateReconciler {
     this.snapshotGeneration = null;
   }
 
-  apply(
-    state: CommunityBattleStateV1,
-    generation: number,
-    source: "snapshot" | "mutation" | "websocket",
-  ): boolean {
+  apply(state: T, generation: number, source: "snapshot" | "mutation" | "websocket"): boolean {
     if (generation !== this.generation) return false;
     if (state.encounterId && this.retiredEncounters.has(state.encounterId)) return false;
     if (source !== "snapshot" && this.snapshotGeneration !== generation) return false;
