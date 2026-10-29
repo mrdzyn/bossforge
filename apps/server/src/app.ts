@@ -20,7 +20,7 @@ import {
 import { createRateLimit } from "./security/rate-limit.js";
 import { ForgeSession, type ForgeScheduler } from "./forge/forge-session.js";
 import { BossBattleSession, type BattleScheduler } from "./battle/boss-battle-session.js";
-import { BattleAttackRouter } from "./battle/battle-attack-router.js";
+import { BattleAttackRouter, type BattleAttackScheduler } from "./battle/battle-attack-router.js";
 import { TwitchOAuth } from "./twitch/oauth.js";
 import { LiveEventSub, type LiveEventSubStatus } from "./twitch/live-eventsub.js";
 import type { EventSubScheduler } from "./twitch/eventsub-session.js";
@@ -43,6 +43,7 @@ export interface AppOptions {
   now?: () => Date;
   forgeScheduler?: ForgeScheduler;
   battleScheduler?: BattleScheduler;
+  battleAttackScheduler?: BattleAttackScheduler;
   battleMonotonicNow?: () => number;
   battleIdGenerator?: () => string;
   serverInstanceId?: string;
@@ -214,6 +215,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
   const attackRouter = new BattleAttackRouter({
     battle,
     ...(options.battleMonotonicNow ? { monotonicNow: options.battleMonotonicNow } : {}),
+    ...(options.battleAttackScheduler ? { scheduler: options.battleAttackScheduler } : {}),
     getProvider: () => provider,
     getGeneration: () => providerGeneration,
     getForgeIdentity: () => {

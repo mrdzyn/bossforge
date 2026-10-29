@@ -12,6 +12,7 @@ import {
 export interface BattleScheduler {
   schedule(callback: () => void, delayMs: number): () => void;
 }
+export type BattleDeadlineDrain = (encounterId: string, finalize: () => void) => void;
 const realScheduler: BattleScheduler = {
   schedule(callback, delayMs) {
     const timer = setTimeout(callback, delayMs);
@@ -38,6 +39,9 @@ export class BossBattleSession {
   private readonly seenForgeIdentities = new Set<string>();
   private cancelTimer: (() => void) | undefined;
   private monotonicDeadline: number | null = null;
+  private lastMonotonicDeadline: { encounterId: string; deadline: number } | null = null;
+  private deadlineDrain: BattleDeadlineDrain | undefined;
+  private deadlineResolutionPending = false;
   private readonly idempotency = new Map<string, CacheEntry>();
   private readonly monotonicNow: () => number;
   private readonly wallNow: () => Date;
@@ -58,6 +62,20 @@ export class BossBattleSession {
   getState(): CommunityBattleStateV1 {
     this.resolveDeadline();
     return structuredClone(this.state);
+  }
+
+  setDeadlineDrain(handler: BattleDeadlineDrain): void {
+    this.deadlineDrain = handler;
+  }
+
+  isLateReceipt(encounterId: string, receiptMonotonicMs: number): boolean {
+    return (
+      (this.state.status === "expired" || this.state.status === "active") &&
+      this.state.encounterId === encounterId &&
+      this.lastMonotonicDeadline?.encounterId === encounterId &&
+      Number.isFinite(receiptMonotonicMs) &&
+      receiptMonotonicMs >= this.lastMonotonicDeadline.deadline
+    );
   }
 
   /** Returns the active snapshot for an ingress receipt made before its deadline. */
@@ -172,6 +190,8 @@ export class BossBattleSession {
         maxHp: hp,
       });
       this.monotonicDeadline = monoDeadline;
+      this.lastMonotonicDeadline = { encounterId: next.encounterId!, deadline: monoDeadline };
+      this.deadlineResolutionPending = false;
       this.scheduleExpiry(monoDeadline, next.encounterId!);
       result = { ok: true, state: next };
     }
@@ -206,6 +226,7 @@ export class BossBattleSession {
     this.cancelTimer?.();
     this.cancelTimer = undefined;
     this.monotonicDeadline = null;
+    this.deadlineResolutionPending = false;
     return this.commit({ ...this.state, status: "cancelled", cancelReason: reason });
   }
 
@@ -237,8 +258,6 @@ export class BossBattleSession {
     }
     const damage = Math.min(amount, this.state.currentHp!);
     const hp = this.state.currentHp! - damage;
-    const deadlineReached = this.monotonicNow() >= this.monotonicDeadline;
-    const terminal = hp === 0 || deadlineReached;
     const next = this.commit({
       ...this.state,
       currentHp: hp,
@@ -246,12 +265,13 @@ export class BossBattleSession {
       acceptedHitCount: this.state.acceptedHitCount + 1,
       baseHitCount: this.state.baseHitCount + (weakness ? 0 : 1),
       weaknessHitCount: this.state.weaknessHitCount + (weakness ? 1 : 0),
-      status: hp === 0 ? "victory" : deadlineReached ? "expired" : "active",
+      status: hp === 0 ? "victory" : "active",
     });
-    if (terminal) {
+    if (hp === 0) {
       this.cancelTimer?.();
       this.cancelTimer = undefined;
       this.monotonicDeadline = null;
+      this.deadlineResolutionPending = false;
     }
     return next;
   }
@@ -283,17 +303,30 @@ export class BossBattleSession {
     );
   }
   private expire(encounter: string): void {
-    if (this.state.status === "active" && this.state.encounterId === encounter) {
+    if (
+      this.state.status !== "active" ||
+      this.state.encounterId !== encounter ||
+      this.deadlineResolutionPending
+    )
+      return;
+    this.deadlineResolutionPending = true;
+    const finalize = () => {
+      if (!this.deadlineResolutionPending) return;
+      this.deadlineResolutionPending = false;
+      if (this.state.status !== "active" || this.state.encounterId !== encounter) return;
       this.cancelTimer?.();
       this.cancelTimer = undefined;
       this.monotonicDeadline = null;
       this.commit({ ...this.state, status: "expired" });
-    }
+    };
+    if (this.deadlineDrain) this.deadlineDrain(encounter, finalize);
+    else finalize();
   }
   private toIdle(): void {
     this.cancelTimer?.();
     this.cancelTimer = undefined;
     this.monotonicDeadline = null;
+    this.deadlineResolutionPending = false;
     this.commit(this.buildIdle());
   }
   private buildIdle(): CommunityBattleStateV1 {

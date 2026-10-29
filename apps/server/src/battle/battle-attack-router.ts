@@ -41,9 +41,20 @@ export interface BattleAttackRouterOptions {
   getForgeIdentity(): ForgeAuthorityIdentity | null;
   isTwitchVerified(): boolean;
   monotonicNow?: () => number;
+  scheduler?: BattleAttackScheduler;
   hmacKey?: Buffer;
   onMetrics?: (metrics: BattleAttackMetrics) => void;
 }
+
+export interface BattleAttackScheduler {
+  schedule(callback: () => void, delayMs: number): () => void;
+}
+const realScheduler: BattleAttackScheduler = {
+  schedule(callback, delayMs) {
+    const timer = setTimeout(callback, delayMs);
+    return () => clearTimeout(timer);
+  },
+};
 
 const rejectCodes: readonly AttackRejectCode[] = [
   "invalid",
@@ -65,6 +76,7 @@ type Bucket = { tokens: number; at: number };
 export class BattleAttackRouter {
   private readonly now: () => number;
   private readonly hmacKey: Buffer;
+  private readonly scheduler: BattleAttackScheduler;
   private readonly replay = new Map<string, number>();
   private readonly cooldowns = new Map<string, number>();
   private readonly ingress = new Map<string, Bucket>();
@@ -80,11 +92,25 @@ export class BattleAttackRouter {
   private sequence = 0;
   private metrics: BattleAttackMetrics = this.emptyMetrics();
   private publishTimer: ReturnType<typeof setTimeout> | undefined;
+  private cancelDrain: (() => void) | undefined;
   private encounterId: string | null = null;
+  private intakeClosedEncounter: string | null = null;
 
   constructor(private readonly options: BattleAttackRouterOptions) {
     this.now = options.monotonicNow ?? (() => performance.now());
     this.hmacKey = options.hmacKey ?? randomBytes(32);
+    this.scheduler = options.scheduler ?? realScheduler;
+    options.battle.setDeadlineDrain((encounterId, finalize) => {
+      this.intakeClosedEncounter = encounterId;
+      this.cancelDrain?.();
+      this.cancelDrain = undefined;
+      try {
+        this.drainQueue(encounterId);
+      } finally {
+        finalize();
+        if (this.intakeClosedEncounter === encounterId) this.intakeClosedEncounter = null;
+      }
+    });
   }
 
   snapshot(): BattleAttackMetrics {
@@ -165,6 +191,7 @@ export class BattleAttackRouter {
     if ((this.cooldowns.get(viewerKey) ?? -Infinity) > receipt) return this.reject("cooldown");
     if (this.queue.length >= GENERIC_PROFILE_V1.limits.queueCapacity)
       return this.reject("queue_full");
+    if (this.intakeClosedEncounter === state.encounterId) return this.reject("late");
     const entry = {
       receipt,
       sequence: ++this.sequence,
@@ -174,13 +201,15 @@ export class BattleAttackRouter {
     };
     this.queue.push(entry);
     this.queue.sort((a, b) => a.receipt - b.receipt || a.sequence - b.sequence);
-    this.drain();
+    this.scheduleDrain();
   }
 
   close(): void {
     if (this.publishTimer) clearTimeout(this.publishTimer);
     this.publishTimer = undefined;
     this.queue = [];
+    this.cancelDrain?.();
+    this.cancelDrain = undefined;
     this.cooldowns.clear();
     this.ingress.clear();
   }
@@ -205,16 +234,12 @@ export class BattleAttackRouter {
     if (entry.state.status !== "active") return this.reject("inactive");
     const profile = entry.state.profileSnapshot;
     if (!profile) return this.reject("inactive");
-    const deadlineAt = entry.state.deadlineAt ? Date.parse(entry.state.deadlineAt) : 0;
-    // Session applies receipt-time ordering against its monotonic deadline.
-    if (
-      !this.takeAccepted(
-        now,
-        profile.limits.acceptedHitsPerSecond,
-        profile.limits.acceptedHitsBurst,
-      )
-    )
-      return this.reject("rate_limited");
+    const acceptedBudget = this.previewAccepted(
+      now,
+      profile.limits.acceptedHitsPerSecond,
+      profile.limits.acceptedHitsBurst,
+    );
+    if (!acceptedBudget) return this.reject("rate_limited");
     const weakness = entry.element === entry.state.bossSnapshot?.attributes.weakness;
     const amount = weakness ? profile.encounter.weaknessDamage : profile.encounter.baseDamage;
     const result = this.options.battle.applyAcceptedDamage(
@@ -223,7 +248,13 @@ export class BattleAttackRouter {
       entry.state.encounterId!,
       entry.receipt,
     );
-    if (result === null) return this.reject(now >= deadlineAt ? "late" : "inactive");
+    if (result === null)
+      return this.reject(
+        this.options.battle.isLateReceipt(entry.state.encounterId!, entry.receipt)
+          ? "late"
+          : "inactive",
+      );
+    this.acceptedHits = acceptedBudget;
     if (result.status === "active")
       this.cooldowns.set(entry.viewerKey, now + profile.encounter.perViewerCooldownMs);
     this.metrics.accepted = bounded(this.metrics.accepted);
@@ -234,26 +265,39 @@ export class BattleAttackRouter {
     this.schedulePublish();
   }
 
-  private drain(): void {
+  private scheduleDrain(): void {
+    if (this.cancelDrain) return;
+    let completedSynchronously = false;
+    const cancel = this.scheduler.schedule(() => {
+      completedSynchronously = true;
+      this.cancelDrain = undefined;
+      this.drainQueue();
+    }, 0);
+    if (!completedSynchronously) this.cancelDrain = cancel;
+  }
+
+  private drainQueue(deadlineEncounter?: string): void {
     if (this.draining) return;
     this.draining = true;
     try {
-      while (this.queue.length) this.process(this.queue.shift()!);
+      while (this.queue.length) {
+        const entry = this.queue.shift()!;
+        if (deadlineEncounter && entry.state.encounterId !== deadlineEncounter) {
+          this.reject("inactive");
+          continue;
+        }
+        this.process(entry);
+      }
     } finally {
       this.draining = false;
     }
   }
 
-  private takeAccepted(now: number, rate: number, capacity: number): boolean {
+  private previewAccepted(now: number, rate: number, capacity: number): Bucket | null {
     const elapsed = Math.max(0, now - this.acceptedHits.at);
-    this.acceptedHits.tokens = Math.min(
-      capacity,
-      this.acceptedHits.tokens + (elapsed * rate) / 1000,
-    );
-    this.acceptedHits.at = now;
-    if (this.acceptedHits.tokens < 1) return false;
-    this.acceptedHits.tokens -= 1;
-    return true;
+    const tokens = Math.min(capacity, this.acceptedHits.tokens + (elapsed * rate) / 1000);
+    if (tokens < 1) return null;
+    return { tokens: tokens - 1, at: now };
   }
 
   private take(

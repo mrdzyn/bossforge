@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { BossBattleSession } from "../src/battle/boss-battle-session.js";
 import { BattleAttackRouter } from "../src/battle/battle-attack-router.js";
 import { createBossForgeApp } from "../src/app.js";
@@ -7,6 +7,138 @@ import type { NormalizedChatEvent } from "../src/events/normalized-chat-event.js
 const fixedDate = new Date("2026-10-29T12:00:00.000Z");
 function appHeaders() {
   return { origin: "http://localhost:5173", "sec-fetch-site": "same-origin" };
+}
+
+function completedMockForge(identity: {
+  serverInstanceId: string;
+  serverStartedAt: string;
+  cycleId: string;
+  mode: "mock";
+}) {
+  const categories = ["body", "element", "special", "weakness"] as const;
+  const choices = {
+    body: ["golem", "wraith", "drake", "mimic"],
+    element: ["fire", "ice", "storm", "void"],
+    special: ["ember-burst", "frost-chain", "thunder-dash", "shadow-pulse"],
+    weakness: ["water", "light", "earth", "wind"],
+  } as const;
+  const winners = {
+    body: "golem",
+    element: "fire",
+    special: "ember-burst",
+    weakness: "water",
+  } as const;
+  return {
+    ...identity,
+    revision: 8,
+    status: "revealed" as const,
+    simulated: true,
+    connectedToTwitch: false,
+    durationSeconds: 15,
+    startedAt: fixedDate.toISOString(),
+    activeCategory: null,
+    progress: 4,
+    categories: categories.map((category) => ({
+      category,
+      status: "closed" as const,
+      options: choices[category].map((choice) => ({ choice, count: 0, percentage: 0 })),
+      totalVotes: 0,
+      openedAt: fixedDate.toISOString(),
+      closesAt: fixedDate.toISOString(),
+      winner: winners[category],
+      noVoteFallback: true,
+    })),
+    boss: {
+      id: "boss",
+      name: "Boss",
+      attributes: { ...winners },
+      stats: { health: 100, damage: 1, attackIntervalMs: 1000 },
+    },
+  };
+}
+
+function queuedBattleFixture(audienceBand: "low" | "high" = "low") {
+  let mono = 0;
+  let deadlineTask: (() => void) | undefined;
+  let drainTask: (() => void) | undefined;
+  const identity = {
+    serverInstanceId: "deadline-server",
+    serverStartedAt: fixedDate.toISOString(),
+    cycleId: "forge-1",
+    mode: "mock" as const,
+  };
+  const battle = new BossBattleSession(
+    identity.serverInstanceId,
+    identity.serverStartedAt,
+    {
+      schedule(callback) {
+        deadlineTask = callback;
+        return () => {
+          if (deadlineTask === callback) deadlineTask = undefined;
+        };
+      },
+    },
+    () => mono,
+    () => fixedDate,
+    () => "deadline-encounter",
+  );
+  const router = new BattleAttackRouter({
+    battle,
+    getProvider: () => "mock",
+    getGeneration: () => 1,
+    getForgeIdentity: () => identity,
+    isTwitchVerified: () => false,
+    monotonicNow: () => mono,
+    hmacKey: Buffer.alloc(32, 9),
+    scheduler: {
+      schedule(callback) {
+        drainTask = callback;
+        return () => {
+          if (drainTask === callback) drainTask = undefined;
+        };
+      },
+    },
+  });
+  const ready = battle.onForgeState(completedMockForge(identity));
+  battle.start(
+    {
+      requestId: "00000000-0000-4000-8000-000000000061",
+      expectedRevision: ready.revision,
+      forgeIdentity: identity,
+      forgeCycleId: identity.cycleId,
+      durationSeconds: 60,
+      audienceBand,
+    },
+    true,
+  );
+  const send = (id: string) =>
+    router.handle(
+      {
+        kind: "chat.message",
+        provider: "mock",
+        message: {
+          id,
+          viewer: { id: `viewer-${id}`, displayName: "Synthetic" },
+          text: "!hit water",
+          occurredAt: fixedDate.toISOString(),
+        },
+      },
+      { provider: "mock", generation: 1, verified: true },
+    );
+  return {
+    battle,
+    router,
+    send,
+    setMono(value: number) {
+      mono = value;
+    },
+    fireDeadline() {
+      deadlineTask?.();
+    },
+    fireDrain() {
+      drainTask?.();
+    },
+  };
 }
 
 describe("BattleAttackRouter", () => {
@@ -77,13 +209,15 @@ describe("BattleAttackRouter", () => {
         });
         expect(response.statusCode).toBe(202);
       }
-      const victory = (await app.app.inject({ method: "GET", url: "/battle/state" })).json();
-      expect(victory).toMatchObject({
-        status: "victory",
-        currentHp: 0,
-        acceptedHitCount: 8,
-        weaknessHitCount: 8,
-        damageApplied: 100,
+      await vi.waitFor(async () => {
+        const victory = (await app.app.inject({ method: "GET", url: "/battle/state" })).json();
+        expect(victory).toMatchObject({
+          status: "victory",
+          currentHp: 0,
+          acceptedHitCount: 8,
+          weaknessHitCount: 8,
+          damageApplied: 100,
+        });
       });
       expect(
         (
@@ -183,7 +317,14 @@ describe("BattleAttackRouter", () => {
       isTwitchVerified: () => false,
       monotonicNow: () => mono,
       hmacKey: Buffer.alloc(32, 1),
+      scheduler: {
+        schedule(callback) {
+          callback();
+          return () => undefined;
+        },
+      },
     });
+    router.onBattleState(battle.getState());
     const send = (id: string, viewer: string, text: string) =>
       router.handle(
         {
@@ -316,7 +457,10 @@ describe("BattleAttackRouter", () => {
     const battle = {
       getStateForReceipt: () => activeState,
       applyAcceptedDamage: () => activeState,
+      setDeadlineDrain: () => undefined,
+      isLateReceipt: () => false,
     } as unknown as BossBattleSession;
+    let scheduledDrain: (() => void) | undefined;
     const router = new BattleAttackRouter({
       battle,
       getProvider: () => "mock",
@@ -324,13 +468,19 @@ describe("BattleAttackRouter", () => {
       getForgeIdentity: () => identity,
       isTwitchVerified: () => false,
       monotonicNow: () => mono,
+      scheduler: {
+        schedule(callback) {
+          scheduledDrain = callback;
+          return () => {
+            if (scheduledDrain === callback) scheduledDrain = undefined;
+          };
+        },
+      },
       hmacKey: Buffer.alloc(32, 3),
     });
     const internals = router as unknown as {
-      draining: boolean;
       queue: unknown[];
       replay: Map<string, number>;
-      drain(): void;
     };
     const send = (id: string) =>
       router.handle(
@@ -367,93 +517,102 @@ describe("BattleAttackRouter", () => {
     expect(router.snapshot().reasons.replay_capacity).toBe(1);
 
     internals.replay.clear();
+    internals.queue.length = 0;
+    scheduledDrain?.();
     mono += 10_000;
-    internals.draining = true;
+    const priorQueueFull = router.snapshot().reasons.queue_full;
     for (let index = 0; index < 65; index += 1) send(`queue-${index}`);
     expect(internals.queue).toHaveLength(64);
-    expect(router.snapshot().reasons.queue_full).toBe(1);
+    expect(router.snapshot().reasons.queue_full).toBe(priorQueueFull + 1);
     mono += 501;
-    internals.draining = false;
-    internals.drain();
+    scheduledDrain?.();
     expect(router.snapshot().reasons.queue_expired).toBe(64);
     router.close();
   });
 
-  it("accepts a pre-deadline receipt and excludes an attack exactly at the deadline", async () => {
-    let timer: (() => void) | undefined;
-    let mono = 0;
-    const app = await createBossForgeApp({
-      mode: "development",
-      now: () => fixedDate,
-      battleMonotonicNow: () => mono,
-      forgeScheduler: {
-        schedule(callback) {
-          timer = callback;
-          return () => {
-            if (timer === callback) timer = undefined;
-          };
-        },
-      },
-    });
-    try {
-      const headers = appHeaders();
-      await app.app.inject({
-        method: "POST",
-        url: "/dev/forge/start",
-        headers,
-        payload: { durationSeconds: 5 },
-      });
-      for (let stage = 0; stage < 4; stage += 1) {
-        const closeStage = timer;
-        timer = undefined;
-        closeStage!();
+  it.each(["deadline-first", "drain-first"] as const)(
+    "resolves a queued lethal pre-deadline hit as victory when %s runs first",
+    (order) => {
+      const fixture = queuedBattleFixture();
+      fixture.setMono(59_999);
+      for (let index = 0; index < 8; index += 1) fixture.send(`lethal-${order}-${index}`);
+      fixture.setMono(60_000);
+      if (order === "deadline-first") {
+        fixture.fireDeadline();
+        fixture.fireDrain();
+      } else {
+        fixture.fireDrain();
+        fixture.fireDeadline();
       }
-      const ready = (await app.app.inject({ method: "GET", url: "/battle/state" })).json();
-      await app.app.inject({
-        method: "POST",
-        url: "/dev/battle/start",
-        headers,
-        payload: {
-          requestId: "00000000-0000-4000-8000-000000000053",
-          expectedRevision: ready.revision,
-          forgeIdentity: ready.forgeIdentity,
-          forgeCycleId: ready.forgeCycleId,
-          durationSeconds: 60,
-          audienceBand: "low",
-        },
+      expect(fixture.battle.getState()).toMatchObject({
+        status: "victory",
+        currentHp: 0,
+        acceptedHitCount: 8,
+        damageApplied: 100,
       });
-      const send = (id: string) =>
-        app.app.inject({
-          method: "POST",
-          url: "/dev/simulation/events",
-          headers,
-          payload: {
-            kind: "chat.message",
-            provider: "mock",
-            message: {
-              id,
-              viewer: { id: `viewer-${id}`, displayName: "Synthetic" },
-              text: "!hit water",
-              occurredAt: fixedDate.toISOString(),
-            },
-          },
-        });
-      mono = 59_999;
-      expect((await send("before-deadline")).statusCode).toBe(202);
-      expect((await app.app.inject({ method: "GET", url: "/battle/state" })).json()).toMatchObject({
-        status: "active",
-        currentHp: 86,
-        acceptedHitCount: 1,
-      });
-      mono = 60_000;
-      expect((await send("at-deadline")).statusCode).toBe(202);
-      expect((await app.app.inject({ method: "GET", url: "/battle/state" })).json()).toMatchObject({
-        status: "expired",
-        currentHp: 86,
-        acceptedHitCount: 1,
-      });
-    } finally {
-      await app.close();
-    }
+      expect(fixture.router.snapshot()).toMatchObject({ accepted: 8, reasons: { late: 0 } });
+      fixture.router.close();
+      fixture.battle.close();
+    },
+  );
+
+  it("drains eligible queued damage before expiring when HP remains positive", () => {
+    const fixture = queuedBattleFixture();
+    fixture.setMono(59_999);
+    fixture.send("surviving-hit");
+    fixture.setMono(60_000);
+    fixture.fireDeadline();
+    expect(fixture.battle.getState()).toMatchObject({
+      status: "expired",
+      currentHp: 86,
+      acceptedHitCount: 1,
+      damageApplied: 14,
+    });
+    fixture.router.close();
+    fixture.battle.close();
+  });
+
+  it("rejects exact-deadline and post-deadline receipts with the fixed late reason", () => {
+    const fixture = queuedBattleFixture();
+    fixture.setMono(60_000);
+    fixture.send("exact-deadline");
+    expect(fixture.battle.getState().status).toBe("expired");
+    expect(fixture.router.snapshot()).toMatchObject({
+      accepted: 0,
+      rejected: 1,
+      reasons: { late: 1, inactive: 0 },
+    });
+    fixture.setMono(60_001);
+    fixture.send("after-deadline");
+    expect(fixture.router.snapshot()).toMatchObject({
+      accepted: 0,
+      rejected: 2,
+      reasons: { late: 2, inactive: 0 },
+    });
+    fixture.router.close();
+    fixture.battle.close();
+  });
+
+  it("does not debit accepted-hit capacity when the session rejects a transition", () => {
+    const fixture = queuedBattleFixture("high");
+    const apply = fixture.battle.applyAcceptedDamage.bind(fixture.battle);
+    let rejectOnce = true;
+    fixture.battle.applyAcceptedDamage = (...args) => {
+      if (rejectOnce) {
+        rejectOnce = false;
+        return null;
+      }
+      return apply(...args);
+    };
+    for (let index = 0; index < 18; index += 1) fixture.send(`token-${index}`);
+    fixture.fireDrain();
+    expect(fixture.router.snapshot()).toMatchObject({
+      accepted: 16,
+      rejected: 2,
+      reasons: { inactive: 1, rate_limited: 1 },
+    });
+    expect(fixture.battle.getState()).toMatchObject({ acceptedHitCount: 16, currentHp: 776 });
+    fixture.router.close();
+    fixture.battle.close();
   });
 });
