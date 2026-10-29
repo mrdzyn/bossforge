@@ -972,3 +972,37 @@ subsequently squash-merged into `main` at
   live acceptance from synthetic tests. Next action is independent GPT-6
   review of the exact pushed PR #15 head; owner approval remains necessary
   before any real-service activity.
+
+## M2-D — owner-supplied live acceptance checkpoint (2026-10-29)
+
+- Owner authorization for local OAuth/EventSub and bounded real Twitch QA is
+  recorded in [PR #15](https://github.com/mrdzyn/bossforge/pull/15#issuecomment-6499359393).
+  The owner controlled OAuth consent and chat messages.
+- Sanitized dashboard diagnostics showed a verified welcome, one enabled
+  `channel.chat.message` subscription, six accepted/normalized EventSub
+  notifications and six chat callbacks; four ballots were accepted, with no
+  rejected notifications or ballots. The authenticated broadcaster was
+  privately checked and is not copied into the record.
+- Four genuine vote stages produced Rime Veil (Wraith / Ice / Ember Burst /
+  Water). Owner-supplied results report `!hit water` changed HP 550 → 536 with
+  accepted attack count 1. The matching-weakness hit is consistent with 14
+  damage. Twitch rejected a duplicate identical command within 30 seconds;
+  that does not prove BossForge cooldown handling. The encounter expired and
+  reported BOSS SURVIVED. A second owner-supplied display showed Cinder Granite
+  (Golem / Fire / Thunder Dash / Water) survived.
+- Owner screenshots show BossForge in an OBS stream beside Elevator, Please!
+  This confirms owner-reported OBS presence only. Native Browser Source
+  dimensions/fit, active HP synchronization, base 8 damage, BossForge-side
+  cooldown rejection, Community Victory, and continuous animation remain
+  unverified. Screenshots were not attached to the evidence update and were
+  not independently reproduced.
+- **Stop condition encountered:** after the encounter expired, the local
+  dashboard still displayed the old terminal result while a fresh
+  `GET /battle/state` returned `idle` with zero hit aggregates. This
+  dashboard/API authority mismatch was not investigated or changed during live
+  QA. No further live actions were taken; resolve the stale display before
+  claiming disconnect/reconnect acceptance or continuing another live cycle.
+- Preserve the distinction between owner-supplied genuine results, sanitized
+  local observations, synthetic automated tests, and native OBS evidence.
+  Gate C is partial; Gate D is partial. No code, credential, OAuth, or runtime
+  changes were made for this evidence checkpoint.

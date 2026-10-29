@@ -1427,3 +1427,39 @@ GitHub Actions were not run and are **UNVERIFIED**. These results are
 deterministic/local evidence only; they do not establish genuine Twitch
 acceptance or native OBS rendering. Gates B–D remain NOT AUTHORIZED or NOT
 TESTED as stated in the runbook.
+
+## M2-D — owner-supplied live Twitch and OBS results (2026-10-29)
+
+**Authorization:** The owner confirmed the registered callback and intentional
+local integration setting, then authorized bounded local QA in [PR #15's
+authorization record](https://github.com/mrdzyn/bossforge/pull/15#issuecomment-6499359393).
+OAuth consent and Twitch chat actions remained owner-controlled. The
+observations below combine owner-supplied results and a sanitized local UI
+inspection; they are not an independent reproduction of the owner's entire
+test session.
+
+| Gate | Result | Evidence and limits |
+| --- | --- | --- |
+| B: OAuth/EventSub connection | PASS — observed | Dashboard showed Twitch connected; local diagnostics showed one valid welcome, one enabled `channel.chat.message` subscription, and accepted/normalized notification flow. Authenticated identity was privately compared with the intended broadcaster and is omitted here. |
+| C: four genuine voting stages | PASS — owner-supplied | Four genuine stages completed. One accepted vote per stage produced Rime Veil: Wraith / Ice / Ember Burst / Water. Sanitized diagnostics showed 4 accepted ballots and 0 rejected ballots. |
+| C: weakness hit | PASS — owner-supplied and UI-observed | `!hit water` reduced server HP 550 → 536; accepted attack count was 1. This demonstrates the matching-weakness 14 damage outcome for this run. It does not establish base 8 damage. |
+| C: duplicate/cooldown | NOT VERIFIED — platform rejection | Twitch rejected an identical repeated command within 30 seconds. This was Twitch-side rejection; it does not demonstrate BossForge's 2-second per-viewer cooldown or its rejection telemetry. |
+| C: terminal outcome | PASS — owner-supplied | Rime Veil reached server-authoritative expired/survived. A second display showed Cinder Granite (Golem / Fire / Thunder Dash / Water) survived; no HP, hit-count, or independent encounter trace was supplied for that display. Community Victory was not demonstrated. |
+| D: OBS presence | PARTIAL — owner-supplied | BossForge appeared in an owner-operated OBS stream alongside Elevator, Please! Owner screenshots are the evidence source. They were not independently reproduced and do not prove live HP synchronization or continuous animation performance. |
+| D: native source sizing and active battle synchronization | NOT VERIFIED | No evidence establishes separate 1920×1080 and 1280×720 Browser Source dimensions/fit or that changing active HP was synchronized in native OBS. |
+
+**Privacy and provenance:** No usernames, viewer/channel IDs, raw chat,
+message IDs, OAuth URLs/codes, cookies, credentials, or full EventSub payloads
+are included. The owner supplied the genuine live results and OBS screenshots;
+the screenshots are not committed because no source image artifacts were
+attached to this evidence update. The local observation showed the expired
+Rime Veil encounter in the dashboard and read-only overlay. A later fresh
+`GET /battle/state` returned idle while the already-open dashboard still
+showed the expired encounter. This authority mismatch was not resolved here;
+no further live actions were taken. Therefore the stale UI is not counted as
+current authoritative state, and reconnect/disconnect acceptance remains
+open.
+
+**Explicitly not claimed:** verified base 8 damage, BossForge cooldown
+rejection, Community Victory, active HP synchronization in native OBS,
+independent reproduction of owner screenshots, or full native OBS acceptance.
