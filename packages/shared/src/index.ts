@@ -282,6 +282,33 @@ export const DashboardActivitySchema = z
   })
   .strict();
 export type DashboardActivity = z.infer<typeof DashboardActivitySchema>;
+const BattleAttackRejectReasonSchema = z.enum([
+  "invalid",
+  "duplicate",
+  "inactive",
+  "wrong_provider",
+  "cooldown",
+  "rate_limited",
+  "queue_full",
+  "queue_expired",
+  "replay_capacity",
+  "busy",
+  "late",
+]);
+export const DashboardBattleActivitySchema = z
+  .object({
+    serverInstanceId: z.string().min(1).max(100),
+    encounterId: z.string().min(1).max(100),
+    attempted: z.number().int().min(0).max(10_000),
+    accepted: z.number().int().min(0).max(10_000),
+    rejected: z.number().int().min(0).max(10_000),
+    base: z.number().int().min(0).max(10_000),
+    weakness: z.number().int().min(0).max(10_000),
+    weaknessMismatch: z.number().int().min(0).max(10_000),
+    reasons: z.record(BattleAttackRejectReasonSchema, z.number().int().min(0).max(10_000)),
+  })
+  .strict();
+export type DashboardBattleActivity = z.infer<typeof DashboardBattleActivitySchema>;
 const PublicEnvelopeBase = {
   schemaVersion: z.literal(1),
   id: z.string().uuid(),
@@ -306,6 +333,13 @@ const DashboardActivityEnvelope = z
     ...PublicEnvelopeBase,
     type: z.literal("dashboard.activity"),
     payload: DashboardActivitySchema,
+  })
+  .strict();
+const DashboardBattleActivityEnvelope = z
+  .object({
+    ...PublicEnvelopeBase,
+    type: z.literal("battle.activity"),
+    payload: DashboardBattleActivitySchema,
   })
   .strict();
 const DashboardBattleEnvelope = z
@@ -333,6 +367,7 @@ export const DashboardEventEnvelopeSchema = z.discriminatedUnion("type", [
   DashboardForgeEnvelope,
   DashboardConnectionEnvelope,
   DashboardActivityEnvelope,
+  DashboardBattleActivityEnvelope,
   DashboardBattleEnvelope,
 ]);
 export type DashboardEventEnvelope = z.infer<typeof DashboardEventEnvelopeSchema>;

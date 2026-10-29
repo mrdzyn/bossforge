@@ -77,6 +77,17 @@ const readyBattle = {
   damageApplied: 0,
   cancelReason: null,
 };
+const activeBattle = {
+  ...readyBattle,
+  revision: 2,
+  status: "active",
+  audienceBand: "low",
+  durationSeconds: 60,
+  startedAt: "2026-10-29T00:00:00.000Z",
+  deadlineAt: "2026-10-29T00:01:00.000Z",
+  currentHp: 100,
+  maxHp: 100,
+};
 
 describe("M2-A battle dashboard projection", () => {
   it("shows owner Start Battle only for a fresh ready battle matching the revealed forge", () => {
@@ -93,7 +104,7 @@ describe("M2-A battle dashboard projection", () => {
     const html = renderToStaticMarkup(<Dashboard />);
     expect(html).toContain("BATTLE READY");
     expect(html).toContain("Start Battle");
-    expect(html).toContain("M2-A · CHAT ATTACKS NOT YET ENABLED");
+    expect(html).toContain("M2-B · SERVER-VALIDATED CHAT ATTACKS");
   });
   it("keeps Start Battle controls out of the OBS overlay", () => {
     mocks.live = {
@@ -107,5 +118,32 @@ describe("M2-A battle dashboard projection", () => {
     };
     mocks.battle = { state: readyBattle, fresh: true, error: "", mutate: vi.fn() };
     expect(renderToStaticMarkup(<OverlayPreview />)).not.toContain("Start Battle");
+  });
+
+  it("shows attack syntax only for a fresh active dashboard encounter", () => {
+    mocks.live = {
+      forge,
+      connection: "connected",
+      snapshotAvailable: true,
+      post: vi.fn(),
+      error: "",
+      notice: "",
+      activity: null,
+    };
+    mocks.battle = {
+      state: activeBattle,
+      fresh: true,
+      error: "",
+      activity: null,
+      mutate: vi.fn(),
+    };
+    const dashboard = renderToStaticMarkup(<Dashboard />);
+    expect(dashboard).toContain("Attack in chat:");
+    expect(dashboard).toContain("!hit water");
+    expect(dashboard).toContain("SIMULATED");
+    const overlay = renderToStaticMarkup(<OverlayPreview />);
+    expect(overlay).not.toContain("Attack in chat:");
+    expect(overlay).not.toContain("Start Battle");
+    expect(overlay).not.toContain("Cancel encounter");
   });
 });

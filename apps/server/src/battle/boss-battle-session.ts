@@ -60,6 +60,18 @@ export class BossBattleSession {
     return structuredClone(this.state);
   }
 
+  /** Returns the active snapshot for an ingress receipt made before its deadline. */
+  getStateForReceipt(receiptMonotonicMs: number): CommunityBattleStateV1 {
+    if (
+      this.state.status === "active" &&
+      this.monotonicDeadline !== null &&
+      Number.isFinite(receiptMonotonicMs) &&
+      receiptMonotonicMs < this.monotonicDeadline
+    )
+      return structuredClone(this.state);
+    return this.getState();
+  }
+
   onForgeState(forge: ForgeState): CommunityBattleStateV1 {
     this.resolveDeadline();
     const completedForge = authoritativeCompletedReveal(forge);
@@ -204,13 +216,29 @@ export class BossBattleSession {
     if (!ready) this.cancel(reason);
   }
 
-  /** Internal seam for isolated reducer tests; no route or event handler calls this in M2-A. */
-  applyDamageForTest(amount: number, weakness = false): CommunityBattleStateV1 {
-    this.resolveDeadline();
-    if (this.state.status !== "active" || !Number.isInteger(amount) || amount <= 0)
-      return this.state;
+  /** Private server combat transition. Only BattleAttackRouter calls this in production. */
+  applyAcceptedDamage(
+    amount: number,
+    weakness: boolean,
+    expectedEncounterId: string,
+    receiptMonotonicMs: number,
+  ): CommunityBattleStateV1 | null {
+    if (
+      this.state.status !== "active" ||
+      this.state.encounterId !== expectedEncounterId ||
+      this.monotonicDeadline === null ||
+      !Number.isFinite(receiptMonotonicMs) ||
+      receiptMonotonicMs >= this.monotonicDeadline ||
+      !Number.isInteger(amount) ||
+      amount <= 0
+    ) {
+      this.resolveDeadline();
+      return null;
+    }
     const damage = Math.min(amount, this.state.currentHp!);
     const hp = this.state.currentHp! - damage;
+    const deadlineReached = this.monotonicNow() >= this.monotonicDeadline;
+    const terminal = hp === 0 || deadlineReached;
     const next = this.commit({
       ...this.state,
       currentHp: hp,
@@ -218,9 +246,9 @@ export class BossBattleSession {
       acceptedHitCount: this.state.acceptedHitCount + 1,
       baseHitCount: this.state.baseHitCount + (weakness ? 0 : 1),
       weaknessHitCount: this.state.weaknessHitCount + (weakness ? 1 : 0),
-      status: hp === 0 ? "victory" : "active",
+      status: hp === 0 ? "victory" : deadlineReached ? "expired" : "active",
     });
-    if (hp === 0) {
+    if (terminal) {
       this.cancelTimer?.();
       this.cancelTimer = undefined;
       this.monotonicDeadline = null;

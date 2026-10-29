@@ -316,6 +316,40 @@ describe("BossForge server", () => {
       const twitchStart = await startCurrentBattle(ownerHeaders);
       expect(twitchStart.statusCode).toBe(200);
       const twitchEncounterId = twitchStart.json().encounterId;
+      sockets[0]!.sendFrame({
+        metadata: {
+          message_id: "synthetic-hit-frame",
+          message_type: "notification",
+          message_timestamp: new Date().toISOString(),
+          subscription_type: "channel.chat.message",
+          subscription_version: "1",
+        },
+        payload: {
+          subscription: {
+            type: "channel.chat.message",
+            version: "1",
+            condition: { broadcaster_user_id: "12345", user_id: "12345" },
+          },
+          event: {
+            broadcaster_user_id: "12345",
+            chatter_user_id: "777",
+            chatter_user_login: "synthetic-viewer",
+            chatter_user_name: "Synthetic Viewer",
+            message_id: "synthetic-twitch-hit-1",
+            message: { text: "!hit water" },
+          },
+        },
+      });
+      await vi.waitFor(async () => {
+        expect(
+          (await app.app.inject({ method: "GET", url: "/battle/state" })).json(),
+        ).toMatchObject({
+          status: "active",
+          currentHp: 86,
+          acceptedHitCount: 1,
+          weaknessHitCount: 1,
+        });
+      });
 
       expect(
         (await app.app.inject({ method: "POST", url: "/twitch/mock", headers: ownerHeaders }))

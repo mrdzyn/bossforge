@@ -196,14 +196,18 @@ describe("BossBattleSession", () => {
     const { session } = make();
     session.onForgeState(revealed);
     session.start(start(1), true);
-    expect(session.applyDamageForTest(200, true)).toMatchObject({
+    expect(
+      session.applyAcceptedDamage(200, true, session.getState().encounterId!, 0),
+    ).toMatchObject({
       status: "victory",
       currentHp: 0,
       damageApplied: 100,
       acceptedHitCount: 1,
       weaknessHitCount: 1,
     });
-    expect(session.applyDamageForTest(8).revision).toBe(session.getState().revision);
+    const terminalRevision = session.getState().revision;
+    expect(session.applyAcceptedDamage(8, false, session.getState().encounterId!, 0)).toBeNull();
+    expect(session.getState().revision).toBe(terminalRevision);
   });
   it("cancels on provider loss and does not resume when provider returns", () => {
     const { session } = make();
@@ -258,7 +262,7 @@ describe("BossBattleSession", () => {
     const { session } = make();
     session.onForgeState(revealed);
     session.start(start(1), true);
-    session.applyDamageForTest(100);
+    session.applyAcceptedDamage(100, false, session.getState().encounterId!, 0);
     expect(session.getState().status).toBe("victory");
     session.onOwnerForgeReset();
     expect(session.getState()).toMatchObject({ status: "idle", encounterId: null, revision: 4 });

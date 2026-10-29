@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  BattleEventEnvelopeSchema,
+  DashboardEventEnvelopeSchema,
   BattleStateReconciler,
   CommunityBattleStateV1Schema,
+  type DashboardBattleActivity,
   type CommunityBattleStateV1,
 } from "@bossforge/shared";
 import { sendBattleMutation } from "./battle-mutation.js";
@@ -12,6 +13,7 @@ export function useBattleState() {
   const [state, setState] = useState<CommunityBattleStateV1 | null>(null);
   const [fresh, setFresh] = useState(false);
   const [error, setError] = useState("");
+  const [activity, setActivity] = useState<DashboardBattleActivity | null>(null);
   const pendingRequests = useRef(new Map<string, string>());
   const refresh = useCallback(async (generation: number) => {
     try {
@@ -41,6 +43,7 @@ export function useBattleState() {
       const generation = reconciler.current.beginConnection();
       setFresh(false);
       setState(null);
+      setActivity(null);
       socket = new WebSocket(
         `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/events/dashboard`,
       );
@@ -51,13 +54,21 @@ export function useBattleState() {
       socket.addEventListener("message", (event) => {
         if (!active || generation !== reconciler.current.connectionGeneration) return;
         try {
-          const parsed = BattleEventEnvelopeSchema.safeParse(JSON.parse(String(event.data)));
+          const parsed = DashboardEventEnvelopeSchema.safeParse(JSON.parse(String(event.data)));
+          if (!parsed.success) throw new Error("invalid event");
           if (
-            parsed.success &&
+            parsed.data.type === "battle.state" &&
             reconciler.current.apply(parsed.data.payload.state, generation, "websocket")
           ) {
             setState(reconciler.current.state);
             setFresh(reconciler.current.hasFreshState);
+          } else if (parsed.data.type === "battle.activity") {
+            const current = reconciler.current.state;
+            if (
+              current?.serverInstanceId === parsed.data.payload.serverInstanceId &&
+              current.encounterId === parsed.data.payload.encounterId
+            )
+              setActivity(parsed.data.payload);
           }
         } catch {
           setError("Invalid battle state event was rejected.");
@@ -68,6 +79,7 @@ export function useBattleState() {
           reconciler.current.invalidate();
           setFresh(false);
           setState(null);
+          setActivity(null);
           retry = setTimeout(connect, 1200);
         }
       });
@@ -76,6 +88,7 @@ export function useBattleState() {
           reconciler.current.invalidate();
           setFresh(false);
           setState(null);
+          setActivity(null);
         }
       });
     };
@@ -135,5 +148,5 @@ export function useBattleState() {
     },
     [refresh],
   );
-  return { state: fresh ? state : null, fresh, error, mutate };
+  return { state: fresh ? state : null, fresh, error, activity, mutate };
 }
