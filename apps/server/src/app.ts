@@ -2,9 +2,14 @@ import { randomUUID } from "node:crypto";
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import type WebSocket from "ws";
-import { ForgeStartRequestSchema, type ForgeState } from "@bossforge/shared";
+import {
+  BattleCancelRequestSchema,
+  BattleStartRequestSchema,
+  ForgeStartRequestSchema,
+  type ForgeState,
+} from "@bossforge/shared";
 import { MockChatAdapter } from "./adapters/mock-chat-adapter.js";
-import { EventHub, toPublicForgeState } from "./events/event-hub.js";
+import { EventHub, toPublicBattleState, toPublicForgeState } from "./events/event-hub.js";
 import { NormalizedChatEventSchema } from "./events/normalized-chat-event.js";
 import {
   getAllowedViteOrigins,
@@ -14,6 +19,7 @@ import {
 } from "./security/local-access.js";
 import { createRateLimit } from "./security/rate-limit.js";
 import { ForgeSession, type ForgeScheduler } from "./forge/forge-session.js";
+import { BossBattleSession, type BattleScheduler } from "./battle/boss-battle-session.js";
 import { TwitchOAuth } from "./twitch/oauth.js";
 import { LiveEventSub, type LiveEventSubStatus } from "./twitch/live-eventsub.js";
 import type { EventSubScheduler } from "./twitch/eventsub-session.js";
@@ -35,6 +41,9 @@ export interface AppOptions {
   simulationEnabled?: boolean;
   now?: () => Date;
   forgeScheduler?: ForgeScheduler;
+  battleScheduler?: BattleScheduler;
+  battleMonotonicNow?: () => number;
+  battleIdGenerator?: () => string;
   serverInstanceId?: string;
   serverStartedAt?: string;
   twitchOAuth?: TwitchOAuth;
@@ -161,6 +170,19 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
   let forgeEpoch = Date.parse(options.serverStartedAt ?? new Date().toISOString());
   let forgeStartedAt = new Date(forgeEpoch).toISOString();
   let forgeGeneration = 0;
+  const battle = new BossBattleSession(
+    serverInstanceId,
+    forgeStartedAt,
+    options.battleScheduler,
+    options.battleMonotonicNow,
+    now,
+    options.battleIdGenerator,
+    (state) => {
+      const payload = { kind: "battle.state" as const, state };
+      hub.publishDashboard(payload);
+      hub.publishOverlay(payload);
+    },
+  );
   const createForge = (mode: "mock" | "twitch", connected = false) => {
     resetActivity(null);
     if (forgeGeneration > 0) {
@@ -171,7 +193,10 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
     return new ForgeSession(
       now,
       options.forgeScheduler,
-      (state) => publishForgeState(state, mode),
+      (state) => {
+        battle.onForgeState(state);
+        publishForgeState(state, mode);
+      },
       instanceId,
       forgeStartedAt,
       mode,
@@ -194,7 +219,10 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       onSessionInvalidated: () => {
         liveEventSub?.shutdown();
         liveEventSub = undefined;
-        if (provider === "twitch") forge.setTwitchConnected(false);
+        if (provider === "twitch") {
+          battle.cancel("twitch_session_invalidated");
+          forge.setTwitchConnected(false);
+        }
       },
     });
   const app = Fastify({ logger: false, bodyLimit: bodyLimitBytes });
@@ -262,6 +290,26 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
     }
     if (!oauth.identityFor(cookie(request, "bossforge_twitch_session")))
       reply.code(401).send({ error: "Twitch streamer authorization required" });
+  };
+  const requireBattleOwnerPost = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    if (!requestIsLocal(request)) {
+      reply.code(403).send({ error: "local_access_denied" });
+      return;
+    }
+    if (
+      request.method !== "POST" ||
+      !request.headers.origin ||
+      !isAllowedViteOrigin(request.headers.origin, allowedViteOrigins) ||
+      request.headers["sec-fetch-site"] !== "same-origin"
+    ) {
+      reply.code(403).send({ error: "origin_rejected" });
+      return;
+    }
+    if (provider === "twitch" && !oauth.identityFor(cookie(request, "bossforge_twitch_session")))
+      reply.code(401).send({ error: "owner_auth_required" });
   };
   const requireSameOriginTwitchOwnerPost = async (
     request: FastifyRequest,
@@ -369,6 +417,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         return reply.code(409).send({ error: "Twitch connection is already active" });
       liveEventSub?.shutdown();
       liveEventSub = undefined;
+      battle.cancel("provider_changed");
       provider = "twitch";
       forge.close();
       forge = createForge("twitch", false);
@@ -391,6 +440,13 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         },
         onStatus: (status: LiveEventSubStatus, connected) => {
           if (provider !== "twitch") return;
+          if (!connected)
+            battle.setProviderReady(
+              false,
+              status === "revoked" || status === "stopped"
+                ? "twitch_session_invalidated"
+                : "twitch_disconnected",
+            );
           if (!connected && forge.getState().status === "voting" && eventSubDiagnostics) {
             const reason: ForgeCancellationReason =
               status === "failed"
@@ -428,6 +484,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       liveEventSub?.shutdown();
       liveEventSub = undefined;
       await oauth.logout(sessionCookie);
+      battle.cancel("twitch_session_invalidated");
       if (provider === "twitch") {
         forge.close();
         provider = "mock";
@@ -444,6 +501,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
     app.post("/twitch/mock", { onRequest: requireTwitchOwner }, async () => {
       liveEventSub?.shutdown();
       liveEventSub = undefined;
+      battle.cancel("provider_changed");
       forge.close();
       provider = "mock";
       forge = createForge("mock");
@@ -460,10 +518,12 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       const connection = initialConnection();
       hub.sendDashboard(socket, { kind: "connection.status", ...connection });
       hub.sendDashboard(socket, activityForState(state));
+      hub.sendDashboard(socket, { kind: "battle.state", state: battle.getState() });
     } else {
       hub.addOverlayClient(socket);
       hub.sendOverlay(socket, { kind: "forge.state", source: provider, state: forge.getState() });
       hub.sendOverlay(socket, { kind: "connection.status", ...initialConnection() });
+      hub.sendOverlay(socket, { kind: "battle.state", state: battle.getState() });
     }
   };
   app.get(
@@ -514,6 +574,66 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       windowMs: 60_000,
       now: () => now().getTime(),
     });
+    app.get(
+      "/battle/state",
+      { onRequest: requireLocalDevelopmentRequest },
+      async (_request, reply) => {
+        reply.header("cache-control", "no-store");
+        return toPublicBattleState(battle.getState());
+      },
+    );
+    app.post(
+      "/dev/battle/start",
+      {
+        onRequest: requireBattleOwnerPost,
+        preHandler: simulationRateLimit,
+      },
+      async (request, reply) => {
+        reply.header("cache-control", "no-store");
+        const parsed = BattleStartRequestSchema.safeParse(request.body);
+        if (!parsed.success) return reply.code(400).send({ error: "invalid_request" });
+        const currentForge = forge.getState();
+        const forgeIsBoundReveal =
+          currentForge.status === "revealed" &&
+          currentForge.cycleId === parsed.data.forgeCycleId &&
+          currentForge.serverInstanceId === parsed.data.forgeIdentity.serverInstanceId &&
+          currentForge.serverStartedAt === parsed.data.forgeIdentity.serverStartedAt &&
+          currentForge.mode === parsed.data.forgeIdentity.mode &&
+          battle.getState().forgeIdentity !== null &&
+          JSON.stringify(battle.getState().forgeIdentity) ===
+            JSON.stringify(parsed.data.forgeIdentity);
+        const providerReady =
+          forgeIsBoundReveal &&
+          (provider === "mock"
+            ? simulationEnabled && currentForge.mode === "mock"
+            : liveEventSub?.connected === true && currentForge.connectedToTwitch);
+        const result = battle.start(parsed.data, providerReady);
+        if (result.ok) return result.state;
+        const statuses: Record<string, number> = {
+          battle_not_ready: 409,
+          revision_conflict: 409,
+          encounter_active: 409,
+          provider_unverified: 409,
+          idempotency_conflict: 409,
+        };
+        return reply.code(statuses[result.error] ?? 409).send({ error: result.error });
+      },
+    );
+    app.post(
+      "/dev/battle/cancel",
+      {
+        onRequest: requireBattleOwnerPost,
+        preHandler: simulationRateLimit,
+      },
+      async (request, reply) => {
+        reply.header("cache-control", "no-store");
+        const parsed = BattleCancelRequestSchema.safeParse(request.body);
+        if (!parsed.success) return reply.code(400).send({ error: "invalid_request" });
+        const result = battle.cancelRequest(parsed.data);
+        if (result.ok) return result.state;
+        return reply.code(409).send({ error: result.error });
+      },
+    );
     app.get(
       "/forge/state",
       { onRequest: requireLocalDevelopmentRequest },
@@ -569,6 +689,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
       async (_request, reply) => {
         if (forge.getState().status === "idle")
           return reply.status(409).send({ error: "No active forge cycle" });
+        battle.onOwnerForgeReset();
         return toPublicForgeState(forge.reset());
       },
     );
@@ -606,6 +727,7 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
     close: async () => {
       await mockAdapter.disconnect();
       if (activityTimer) clearTimeout(activityTimer);
+      battle.close();
       forge.close();
       liveEventSub?.shutdown();
       oauth.close();

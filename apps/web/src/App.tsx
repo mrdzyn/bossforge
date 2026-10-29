@@ -7,6 +7,7 @@ import {
   winnerAttribution,
 } from "@bossforge/shared";
 import { useLiveEvents } from "./hooks/useLiveEvents.js";
+import { useBattleState } from "./hooks/useBattleState.js";
 import { FORGE_DURATIONS, forgeCountdownLabel, type ForgeDuration } from "./live-forge-ui.js";
 import { VoteInstructions } from "./VoteInstructions.js";
 import { LiveVoteSurface } from "./LiveVoteSurface.js";
@@ -215,6 +216,7 @@ function CategoryResults({ state }: { state: ForgeState }) {
 }
 
 export function Dashboard() {
+  const battleLive = useBattleState();
   const {
     forge: cachedForge,
     connection,
@@ -309,6 +311,43 @@ export function Dashboard() {
   }, [forge]);
   const activeCategory = forge?.categories.find((item) => item.category === forge.activeCategory);
   const isRevealed = forge?.status === "revealed";
+  const battle = battleLive.state;
+  const battleMatchesForge = Boolean(
+    battle &&
+    forge?.status === "revealed" &&
+    battle.forgeCycleId === forge.cycleId &&
+    battle.forgeIdentity?.serverInstanceId === forge.serverInstanceId &&
+    battle.forgeIdentity.serverStartedAt === forge.serverStartedAt &&
+    battle.forgeIdentity.mode === forge.mode,
+  );
+  const battleProviderReady =
+    forge?.mode === "mock"
+      ? Boolean(forge && forge.simulated)
+      : Boolean(forge?.connectedToTwitch && twitch?.identity && twitch.connected);
+  const [battleDuration, setBattleDuration] = useState<60 | 90 | 120>(90);
+  const [audienceBand, setAudienceBand] = useState<"low" | "medium" | "high">("medium");
+  const battleCountdown = battle?.deadlineAt
+    ? Math.max(0, Math.ceil((Date.parse(battle.deadlineAt) - Date.now()) / 1000))
+    : null;
+  const startBattle = () => {
+    if (!battle?.forgeIdentity) return;
+    void battleLive.mutate("start", {
+      requestId: crypto.randomUUID(),
+      expectedRevision: battle.revision,
+      forgeIdentity: battle.forgeIdentity,
+      forgeCycleId: battle.forgeCycleId,
+      durationSeconds: battleDuration,
+      audienceBand,
+    });
+  };
+  const cancelBattle = () => {
+    if (!battle?.encounterId) return;
+    void battleLive.mutate("cancel", {
+      requestId: crypto.randomUUID(),
+      expectedRevision: battle.revision,
+      encounterId: battle.encounterId,
+    });
+  };
   return (
     <div className="app-shell">
       <Sidebar mode={forge?.mode ?? null} />
@@ -410,6 +449,106 @@ export function Dashboard() {
                 </div>
               )}
             </div>
+          </section>
+          <section className="panel battle-owner-panel" aria-label="Streamer battle controls">
+            <div className="panel-heading">
+              <h2>Community encounter</h2>
+              <span className="eyebrow">M2-A · CHAT ATTACKS NOT YET ENABLED</span>
+            </div>
+            {!battleLive.fresh || !battle ? (
+              <p className="muted">
+                Battle state unavailable until a fresh server snapshot is received.
+              </p>
+            ) : !battleMatchesForge &&
+              battle.status !== "active" &&
+              !["victory", "expired", "cancelled"].includes(battle.status) ? (
+              <p className="muted">Complete all four forge stages to prepare a battle.</p>
+            ) : (
+              <>
+                <p className="eyebrow">
+                  {forge?.mode === "mock"
+                    ? "SIMULATED · LOCAL DEVELOPMENT"
+                    : forge?.connectedToTwitch
+                      ? "LIVE TWITCH · VERIFIED CONNECTION"
+                      : "TWITCH DISCONNECTED"}
+                </p>
+                <strong>
+                  {battle.status === "ready"
+                    ? "BATTLE READY"
+                    : battle.status === "active"
+                      ? "BATTLE ACTIVE"
+                      : battle.status.toUpperCase()}
+                </strong>
+                {battle.bossSnapshot && (
+                  <p>
+                    {battle.bossSnapshot.name} · Weakness: {battle.bossSnapshot.attributes.weakness}
+                  </p>
+                )}
+                {battle.status === "ready" && (
+                  <div className="dashboard-actions">
+                    <label>
+                      <span>Duration</span>
+                      <select
+                        aria-label="Battle duration"
+                        value={battleDuration}
+                        onChange={(event) =>
+                          setBattleDuration(Number(event.target.value) as 60 | 90 | 120)
+                        }
+                      >
+                        <option value={60}>60 seconds</option>
+                        <option value={90}>90 seconds</option>
+                        <option value={120}>120 seconds</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>Expected audience</span>
+                      <select
+                        aria-label="Expected audience band"
+                        value={audienceBand}
+                        onChange={(event) =>
+                          setAudienceBand(event.target.value as "low" | "medium" | "high")
+                        }
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                    </label>
+                    <button
+                      className="primary-button"
+                      disabled={!battleProviderReady || !battleMatchesForge}
+                      onClick={startBattle}
+                    >
+                      Start Battle
+                    </button>
+                  </div>
+                )}
+                {battle.status === "active" && (
+                  <p aria-live="polite">
+                    Boss HP {battle.currentHp}/{battle.maxHp} · {battleCountdown}s remaining ·{" "}
+                    {battle.acceptedHitCount} accepted attacks
+                  </p>
+                )}
+                {battle.status === "active" || battle.status === "ready" ? (
+                  <button
+                    className="secondary-button"
+                    disabled={!battleProviderReady}
+                    onClick={cancelBattle}
+                  >
+                    Cancel encounter
+                  </button>
+                ) : null}
+                {battle.status === "cancelled" && (
+                  <p>
+                    Encounter cancelled ({battle.cancelReason}). Start a new forge cycle to try
+                    again.
+                  </p>
+                )}
+                {battle.status === "expired" && <p>Boss survived this encounter.</p>}
+                {battle.status === "victory" && <p>Community victory.</p>}
+              </>
+            )}
+            {battleLive.error && <p role="alert">Battle request: {battleLive.error}</p>}
           </section>
           <section className="panel twitch-controls" aria-label="Twitch connection controls">
             <div>

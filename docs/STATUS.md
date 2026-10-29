@@ -2,12 +2,21 @@
 
 ## Current snapshot — 2026-10-29
 
-- **Current `main`:** `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`; M1-A was squash-merged through PR #9. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
+- **Current `main`:** `21953184fbd8f7034b680134b9b2efccbe40ab4e`; M1-B was squash-merged through PR #10. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
+- **M1-B merged:** PR #10 includes the Generic dashboard/read-only OBS presentation, freshness protection and reveal visibility remediation. PR #10 is no longer Draft or pending review.
 - **M1-A merged:** PR #9 was squash-merged into `main` at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. Its historical remediation and review evidence remain in [ACCEPTANCE](ACCEPTANCE.md).
 - **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access later created Draft PR #9, which is now merged; the former blocker is historical only.
 - **Historical M1-A audited-head validation:** 151 tests (26 shared / 19 web / 106 server), frozen install, build, typecheck, lint, format, simulation, and browser screenshots are recorded in [ACCEPTANCE](ACCEPTANCE.md). These are historical implementation-agent reports, distinct from the later M1-A remediation and hosted GitHub Actions.
 - **Historical live/OBS evidence:** Genuine Twitch activity and native OBS evidence remain owner-supplied at their original checkpoints. Chromium captures are separate browser evidence and do not establish live Twitch or native OBS acceptance. See the historical P3-B and P4A sections and [acceptance](ACCEPTANCE.md).
 - **M1-B:** Original Generic dashboard/OBS implementation commit is `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`; the MINOR-2 reveal-visibility remediation commit is `c4e20c5a571ec188232fa2379d580d067dedb87d`. Connected GitHub access created the existing Draft PR [#10](https://github.com/mrdzyn/bossforge/pull/10). Its pre-remediation reviewed HEAD was `4e2ee256ccb09347e143f76242dc9a106c5b8c1d`; the final exact review HEAD is the pushed branch tip identified in the final review request. The earlier invalid GitHub CLI token incident is historical evidence only. This work is presentation-only and does not start M2.
+
+### M2-A — server-authoritative battle engine (implementation branch)
+
+- **Base:** `main` at `21953184fbd8f7034b680134b9b2efccbe40ab4e`, including the M1-B PR #10 squash merge.
+- **Scope:** `feat/m2a-authoritative-battle-engine` adds strict Generic v1 and `CommunityBattleStateV1` contracts, an isolated `BossBattleSession`, reveal-to-ready binding, explicit owner Start Battle/cancel routes, authoritative HP/deadline and terminal state, privacy-safe battle events, a separate `BattleStateReconciler`, and minimal dashboard-only owner controls. The audited findings are remediated with full forge epoch/cycle identity, dispatch-time mutation generation/context fencing, and shared validation of completed reveals.
+- **Not included:** Twitch chat `!hit` intake, cooldown/queue enforcement, attack presentation, battle overlay UI, Arena profile, challenges, or live Twitch verification. The owner panel labels the encounter as M2-A and says chat attacks are not enabled.
+- **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build, typecheck, lint, repository format check, 196 tests (39 shared / 121 server / 36 web), four-category synthetic simulation, and diff check passed. All 182 pre-remediation tests remain passing. Socket/IPC checks required the authorized local environment after sandbox `EPERM`. Hosted CI is not represented as passing. Automated mock/fake-clock evidence is not live Twitch or OBS evidence.
+- **Delivery:** M2-A implementation commit `0e2cf394910629cc39467d1023647ec9032a77ee`; audit-remediation implementation commit `e787b8167ae98c613f66d3b96e656ae94b10d4df`. Both are on `feat/m2a-authoritative-battle-engine`; Draft PR [#11](https://github.com/mrdzyn/bossforge/pull/11) remains open and unmerged against the verified main baseline. The final exact review HEAD is the documentation follow-up pushed after these commits and is reported in the latest PR review request. M2-B remains a separate authorization gate.
 
 ### M1-A merged status
 

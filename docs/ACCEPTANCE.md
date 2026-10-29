@@ -674,7 +674,7 @@ Screenshots: [dashboard 1280×720](visual-qa/p4a-c1/dashboard-1280x720.jpg),
 [overlay 1280×720](visual-qa/p4a-c1/overlay-1280x720.jpg), and
 [overlay 390×844](visual-qa/p4a-c1/overlay-390x844.jpg). These are browser
 renders, not OBS application capture. See the exact owner OBS steps in
-[the readiness checklist](P4A-STREAMER-OBS-READINESS.md#owner-obs-browser-source-checklist).
+[the readiness checklist](P4A-STREAMER-OBS-READINESS.md#owner-controlled-browser-and-obs-acceptance).
 
 **Proposed bounded UI fix:** constrain dashboard actions and overlay voting
 content to the mobile available width and allow their controls/options to wrap.
@@ -1025,19 +1025,112 @@ identity/text UI, credential exposure, or new authority. Stale visuals are
 withheld whenever the live feed/current authoritative snapshot is unavailable;
 invalid reveal-shaped state is not rendered as current.
 
-**Delivery/review:** Branch `feat/m1b-generic-obs-states`, based on merged main
-SHA `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`, is pushed to existing Draft
-[PR #10](https://github.com/mrdzyn/bossforge/pull/10). Original M1-B
+**Delivery/review (historical):** Branch `feat/m1b-generic-obs-states`, based on merged main
+SHA `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`, was delivered through
+[PR #10](https://github.com/mrdzyn/bossforge/pull/10), now squash-merged into
+main at `21953184fbd8f7034b680134b9b2efccbe40ab4e`. Original M1-B
 implementation commit: `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`. MINOR-2
 reveal-visibility implementation commit: `c4e20c5a571ec188232fa2379d580d067dedb87d`.
 The initial independent review covered pre-remediation HEAD
 `4e2ee256ccb09347e143f76242dc9a106c5b8c1d`.
 The earlier `gh pr create --draft --base main` failure (`Forbidden`, with an
 invalid configured `GH_TOKEN`) is preserved as historical environment evidence;
-connected GitHub access subsequently created PR #10, so PR creation is not
-pending. This remediation will be pushed to that same Draft PR. The exact new
-review HEAD is the pushed branch tip and is reported in the final handoff and
-review request. Request independent GPT-6 exact-head review there for MINOR-1/
-MINOR-2, presentation scope, freshness/restart behavior, M1-A privacy/schema
-invariants, compatibility, and screenshots. Codex validation is not independent
-approval. M2, deployment and publication remain out of scope.
+connected GitHub access subsequently created PR #10 and the PR was merged; the
+former PR-creation blocker is historical. The original independent review
+covered the pre-remediation M1-B head; the merged PR contains the completed
+remediation. Codex validation is not independent approval.
+
+## M2-A — server-authoritative battle engine
+
+**Base:** `main` at `21953184fbd8f7034b680134b9b2efccbe40ab4e`, including the
+M1-B squash merge through PR #10.
+
+**Scope:** Strict `CommunityBattleStateV1` and Generic v1 profile contracts;
+server-owned `BossBattleSession`; authoritative reveal-to-ready, owner-start,
+cancel, HP, deadline, and terminal transitions; local development routes;
+strict battle event projections; separate battle reconciliation; and minimal
+streamer-only dashboard controls. The optional Phaser arena remains separate.
+
+**M2-A boundary:** No Twitch `!hit` ingestion, viewer cooldown enforcement,
+chat command routing, battle overlay presentation, or real Twitch API activity
+is included. Chat attacks are explicitly labeled unavailable in the dashboard.
+M1-A raw-chat segregation and M1-B freshness protections remain required.
+
+**Contract defaults:** Generic v1 locks the audience HP matrix to low/medium/high
+values of 100/400/1000 at 60 seconds, 150/550/1500 at 90 seconds, and
+200/750/2000 at 120 seconds. Attack config is snapshotted as 8 base damage,
+14 weakness damage, and a 2-second viewer cooldown; M0's bounded ingress,
+queue and dedup values are data only in M2-A. No `!hit` parser, damage route,
+cooldown implementation or queue is active.
+
+**State and route acceptance:** `idle → ready` requires a strict complete
+four-stage reveal; reveal starts no timer and initializes no HP. Only a
+loopback owner POST with matching revision/cycle, exact allowed Origin and
+same-origin Fetch Metadata starts `active`; Twitch additionally requires the
+streamer owner session and verified EventSub connection. Owner cancellation,
+verified provider/session loss, forge invalidation, deadline, and the isolated
+internal damage test seam produce fixed terminal outcomes. Terminal state does
+not resume; explicit owner forge reset retires a terminal state. Routes are
+development/simulation-only and no public damage route exists.
+
+**Validation:** Node `v24.21.0`; pnpm `11.25.0`. Frozen install, build,
+typecheck, lint, repository-wide Prettier check, full tests, four-category
+synthetic simulation and `git diff --check` passed. The suite reports 182 tests
+(33 shared, 118 server, 31 web), preserving the 161-test pre-M2-A baseline.
+Socket-binding tests initially failed in the restricted sandbox with `EPERM`;
+the full suite passed in the authorized local environment. Simulation ran on a
+disposable loopback-only server with a clean environment and Twitch disabled.
+Build emitted the existing optional Phaser large-chunk advisory; build passed.
+No GitHub checks or statuses were returned for the opened PR head; hosted CI is
+not claimed as passing. No real Twitch API, OAuth, credentials, live votes or OBS
+application test was used. Automated fake-clock/mock results are not live
+acceptance evidence.
+
+**Delivery:** Implementation commit `0e2cf394910629cc39467d1023647ec9032a77ee`
+is published in Draft [PR #11](https://github.com/mrdzyn/bossforge/pull/11)
+against the exact main base above. The final pushed review head is recorded in
+HANDOFFS. The PR remains Draft and unmerged.
+
+### M2-A exact-head audit remediation
+
+At audited HEAD `e6370a950b260987f8afafd3968248969bb6e69b`, the supplied GPT-6
+review found two major and one minor issue. The bounded correction binds each
+battle to the full forge identity (forge server instance, forge start epoch,
+provider mode, and cycle ID); Start requests and dashboard matching carry that
+identity. Provider transitions cancel the prior encounter, while a new
+completed forge with a reused `forge-1` ID receives a distinct ready encounter.
+Deterministic app integration covers mock→Twitch and Twitch→mock and authorized
+starts using synthetic OAuth/EventSub transports only.
+
+Mutation dispatch now captures the WebSocket connection generation, battle
+server epoch, encounter and forge identity before fetch. Delayed Start/Cancel
+responses are discarded after reconnect, process restart, or encounter change;
+the client requests a fresh state through the current generation and retains
+the idempotency key for safe retry. Deferred-fetch and fake-WebSocket tests
+cover same-process and new-process G2 snapshots.
+
+The shared `authoritativeCompletedReveal` predicate now requires the four
+ordered closed categories, exact configured option sets, an option-backed
+winner, valid winner/fallback vote counts, and boss attributes matching all
+four winners. Server battle creation and M1-B presentation use the same
+predicate. Tests reject invalid winners and mismatched attributes and accept
+valid no-vote defaults.
+
+**Remediation validation:** Node `v24.21.0`, pnpm `11.25.0`; frozen install,
+build, typecheck, lint, format check, full test suite (196 passing: 39 shared,
+121 server, 36 web), isolated four-category mock simulation, and
+`git diff --check` passed. This preserves the 182-test pre-remediation baseline.
+The restricted sandbox produced `EPERM` for loopback/tsx IPC tests and the
+first simulation attempt; full tests passed with authorized local access, and
+simulation passed on an isolated clean-environment loopback server with no
+Twitch configuration. Build retains the pre-existing optional Phaser large
+chunk advisory. GitHub returned no hosted checks/statuses for the final head;
+hosted Actions are not claimed as passing. No real Twitch/OAuth, credentials,
+live votes, deployment or OBS testing was used.
+
+The audit-remediation implementation commit is
+`e787b8167ae98c613f66d3b96e656ae94b10d4df`; M2-A's original implementation
+commit remains `0e2cf394910629cc39467d1023647ec9032a77ee`. The final pushed
+review HEAD is the documentation follow-up after these commits and is named in
+the exact-head PR review request. PR #11 remains Draft and unmerged pending
+independent exact-head re-audit. M2-B remains out of scope.

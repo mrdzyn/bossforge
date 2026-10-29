@@ -1,4 +1,5 @@
 import { once } from "node:events";
+import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
@@ -43,6 +44,306 @@ describe("BossForge server", () => {
     });
   });
 
+  it("publishes one ready battle after forge reveal and starts only by authenticated same-origin local action", async () => {
+    let transition: (() => void) | undefined;
+    const app = await createBossForgeApp({
+      mode: "development",
+      serverInstanceId: "battle-server",
+      serverStartedAt: "2026-10-26T12:00:00.000Z",
+      now: () => new Date("2026-10-26T12:00:00.000Z"),
+      forgeScheduler: {
+        schedule(callback) {
+          transition = callback;
+          return () => undefined;
+        },
+      },
+    });
+    const headers = { origin: "http://localhost:5173", "sec-fetch-site": "same-origin" };
+    const initial = await app.app.inject({ method: "GET", url: "/battle/state" });
+    expect(initial.statusCode).toBe(200);
+    expect(initial.headers["cache-control"]).toBe("no-store");
+    expect(initial.json().status).toBe("idle");
+    expect(
+      (
+        await app.app.inject({
+          method: "POST",
+          url: "/dev/battle/damage",
+          headers,
+          payload: { damage: 1 },
+        })
+      ).statusCode,
+    ).toBe(404);
+    await app.app.inject({
+      method: "POST",
+      url: "/dev/forge/start",
+      payload: { durationSeconds: 15 },
+    });
+    for (let i = 0; i < 4; i += 1) transition?.();
+    const ready = await app.app.inject({ method: "GET", url: "/battle/state" });
+    expect(ready.json()).toMatchObject({
+      status: "ready",
+      forgeCycleId: "forge-1",
+      currentHp: null,
+      durationSeconds: null,
+    });
+    const started = await app.app.inject({
+      method: "POST",
+      url: "/dev/battle/start",
+      headers,
+      payload: {
+        requestId: "00000000-0000-4000-8000-000000000001",
+        expectedRevision: ready.json().revision,
+        forgeIdentity: ready.json().forgeIdentity,
+        forgeCycleId: "forge-1",
+        durationSeconds: 90,
+        audienceBand: "medium",
+      },
+    });
+    expect(started.statusCode).toBe(200);
+    expect(started.json()).toMatchObject({ status: "active", maxHp: 550, currentHp: 550 });
+    const repeated = await app.app.inject({
+      method: "POST",
+      url: "/dev/battle/start",
+      headers,
+      payload: {
+        requestId: "00000000-0000-4000-8000-000000000001",
+        expectedRevision: ready.json().revision,
+        forgeIdentity: ready.json().forgeIdentity,
+        forgeCycleId: "forge-1",
+        durationSeconds: 90,
+        audienceBand: "medium",
+      },
+    });
+    expect(repeated.statusCode).toBe(200);
+    expect(repeated.json().encounterId).toBe(started.json().encounterId);
+    const cancelBody = {
+      requestId: "00000000-0000-4000-8000-000000000003",
+      expectedRevision: started.json().revision,
+      encounterId: started.json().encounterId,
+    };
+    const cancelled = await app.app.inject({
+      method: "POST",
+      url: "/dev/battle/cancel",
+      headers,
+      payload: cancelBody,
+    });
+    expect(cancelled.statusCode).toBe(200);
+    expect(cancelled.json()).toMatchObject({
+      status: "cancelled",
+      cancelReason: "owner_cancelled",
+      currentHp: 550,
+    });
+    const cancelRetry = await app.app.inject({
+      method: "POST",
+      url: "/dev/battle/cancel",
+      headers,
+      payload: cancelBody,
+    });
+    expect(cancelRetry.statusCode).toBe(200);
+    expect(cancelRetry.json().revision).toBe(cancelled.json().revision);
+    expect(
+      (
+        await app.app.inject({
+          method: "POST",
+          url: "/dev/battle/cancel",
+          headers: { "sec-fetch-site": "same-origin" },
+          payload: cancelBody,
+        })
+      ).json(),
+    ).toEqual({ error: "origin_rejected" });
+    expect(
+      (
+        await app.app.inject({
+          method: "POST",
+          url: "/dev/battle/start",
+          payload: { requestId: "00000000-0000-4000-8000-000000000002" },
+        })
+      ).statusCode,
+    ).toBe(403);
+    await app.close();
+  });
+
+  it("does not register battle mutation routes in production mode", async () => {
+    const production = await createBossForgeApp({ mode: "production" });
+    expect(
+      (await production.app.inject({ method: "POST", url: "/dev/battle/start" })).statusCode,
+    ).toBe(404);
+    await production.close();
+  });
+
+  it("creates and starts a new forge-1 encounter across mock→Twitch→mock transitions", async () => {
+    const forgeTimers: { callback: () => void; cancelled: boolean }[] = [];
+    const sockets: FakeTwitchSocket[] = [];
+    const oauth = {
+      configured: true,
+      identityFor: (cookie: string | undefined) =>
+        cookie === "synthetic-owner-session"
+          ? { id: "12345", login: "synthetic-owner", displayName: "Synthetic Owner" }
+          : undefined,
+      accessToken: async () => "synthetic-access-token",
+      refreshAccessToken: async () => "synthetic-access-token",
+      logout: async () => undefined,
+      close: () => undefined,
+    } as unknown as TwitchOAuth;
+    const mockFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/eventsub/subscriptions")) {
+        const body = JSON.parse(String(init?.body)) as { transport: { session_id: string } };
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                type: "channel.chat.message",
+                version: "1",
+                status: "enabled",
+                condition: { broadcaster_user_id: "12345", user_id: "12345" },
+                transport: { session_id: body.transport.session_id },
+              },
+            ],
+          }),
+          { status: 202 },
+        );
+      }
+      return new Response(null, { status: 204 });
+    }) as typeof fetch;
+    const app = await createBossForgeApp({
+      mode: "development",
+      serverInstanceId: "application-epoch",
+      serverStartedAt: "2026-10-29T00:00:00.000Z",
+      now: () => new Date("2026-10-29T00:00:00.000Z"),
+      twitchOAuth: oauth,
+      twitchFetch: mockFetch,
+      forgeScheduler: {
+        schedule(callback) {
+          const timer = { callback, cancelled: false };
+          forgeTimers.push(timer);
+          return () => {
+            timer.cancelled = true;
+          };
+        },
+      },
+      battleScheduler: { schedule: () => () => undefined },
+      twitchEventSubScheduler: { schedule: () => () => undefined },
+      twitchCreateSocket: () => {
+        const socket = new FakeTwitchSocket();
+        sockets.push(socket);
+        return socket as unknown as WebSocket;
+      },
+    });
+    const ownerHeaders = {
+      origin: `http://127.0.0.1:${process.env.VITE_PORT ?? "5173"}`,
+      "sec-fetch-site": "same-origin",
+      cookie: "bossforge_twitch_session=synthetic-owner-session",
+    };
+    const localHeaders = {
+      origin: ownerHeaders.origin,
+      "sec-fetch-site": "same-origin",
+    };
+    const finishForge = async (headers: typeof localHeaders = localHeaders) => {
+      expect(
+        (
+          await app.app.inject({
+            method: "POST",
+            url: "/dev/forge/start",
+            headers,
+            payload: { durationSeconds: 5 },
+          })
+        ).statusCode,
+      ).toBe(200);
+      for (let index = 0; index < 4; index += 1) {
+        const timer = forgeTimers.shift();
+        expect(timer?.cancelled).toBe(false);
+        timer?.callback();
+      }
+      return (await app.app.inject({ method: "GET", url: "/forge/state" })).json();
+    };
+    const startCurrentBattle = async (headers: typeof localHeaders) => {
+      const current = (await app.app.inject({ method: "GET", url: "/battle/state" })).json();
+      return app.app.inject({
+        method: "POST",
+        url: "/dev/battle/start",
+        headers,
+        payload: {
+          requestId: randomUUID(),
+          expectedRevision: current.revision,
+          forgeIdentity: current.forgeIdentity,
+          forgeCycleId: current.forgeCycleId,
+          durationSeconds: 60,
+          audienceBand: "low",
+        },
+      });
+    };
+
+    try {
+      const mockForge = await finishForge();
+      expect(mockForge).toMatchObject({ mode: "mock", status: "revealed", cycleId: "forge-1" });
+      const mockReady = (await app.app.inject({ method: "GET", url: "/battle/state" })).json();
+      const firstStart = await startCurrentBattle(localHeaders);
+      expect(firstStart.statusCode).toBe(200);
+      const firstEncounterId = firstStart.json().encounterId;
+
+      expect(
+        (await app.app.inject({ method: "POST", url: "/twitch/connect", headers: ownerHeaders }))
+          .statusCode,
+      ).toBe(202);
+      expect((await app.app.inject({ method: "GET", url: "/battle/state" })).json()).toMatchObject({
+        status: "cancelled",
+        cancelReason: "provider_changed",
+      });
+      sockets[0]!.sendFrame({
+        metadata: {
+          message_id: "synthetic-welcome",
+          message_type: "session_welcome",
+          message_timestamp: "2026-10-29T00:00:00.000Z",
+        },
+        payload: { session: { id: "synthetic-session", keepalive_timeout_seconds: 30 } },
+      });
+      await vi.waitFor(async () => {
+        expect(
+          (await app.app.inject({ method: "GET", url: "/twitch/status" })).json().connected,
+        ).toBe(true);
+      });
+      const twitchForge = await finishForge(ownerHeaders);
+      expect(twitchForge).toMatchObject({ mode: "twitch", status: "revealed", cycleId: "forge-1" });
+      const twitchReady = (await app.app.inject({ method: "GET", url: "/battle/state" })).json();
+      expect(twitchReady.status).toBe("ready");
+      expect(twitchReady.encounterId).not.toBe(firstEncounterId);
+      expect(twitchReady.forgeIdentity).toMatchObject({
+        serverInstanceId: twitchForge.serverInstanceId,
+        serverStartedAt: twitchForge.serverStartedAt,
+        mode: "twitch",
+      });
+      const twitchStart = await startCurrentBattle(ownerHeaders);
+      expect(twitchStart.statusCode).toBe(200);
+      const twitchEncounterId = twitchStart.json().encounterId;
+
+      expect(
+        (await app.app.inject({ method: "POST", url: "/twitch/mock", headers: ownerHeaders }))
+          .statusCode,
+      ).toBe(200);
+      const cancelledTwitch = (
+        await app.app.inject({ method: "GET", url: "/battle/state" })
+      ).json();
+      expect(cancelledTwitch.status).toBe("cancelled");
+      expect(cancelledTwitch.cancelReason).toMatch(
+        /^(provider_changed|twitch_session_invalidated)$/u,
+      );
+      expect(cancelledTwitch.encounterId).toBe(twitchEncounterId);
+
+      const nextMockForge = await finishForge();
+      expect(nextMockForge).toMatchObject({ mode: "mock", status: "revealed", cycleId: "forge-1" });
+      const nextMockReady = (await app.app.inject({ method: "GET", url: "/battle/state" })).json();
+      expect(nextMockReady.status).toBe("ready");
+      expect(nextMockReady.encounterId).not.toBe(twitchEncounterId);
+      expect(nextMockReady.encounterId).not.toBe(mockReady.encounterId);
+      const nextMockStart = await startCurrentBattle(localHeaders);
+      expect(nextMockStart.statusCode).toBe(200);
+      expect(nextMockStart.json().status).toBe("active");
+    } finally {
+      await app.close();
+    }
+  });
+
   it("returns an idle revision-zero snapshot after a backend process restart", async () => {
     let scheduled: (() => void) | undefined;
     const oldProcess = await createBossForgeApp({
@@ -85,6 +386,13 @@ describe("BossForge server", () => {
       status: "idle",
       revision: 0,
       boss: null,
+    });
+    const battleIdle = await restarted.app.inject({ method: "GET", url: "/battle/state" });
+    expect(battleIdle.json()).toMatchObject({
+      status: "idle",
+      revision: 0,
+      encounterId: null,
+      serverInstanceId: "new-process",
     });
     const freshCycle = await restarted.app.inject({
       method: "POST",
@@ -305,6 +613,40 @@ describe("BossForge server", () => {
       remoteAddress: "127.0.0.1",
     });
     expect(connected.statusCode).toBe(202);
+    const initialTwitchForge = (
+      await live.app.inject({ method: "GET", url: "/forge/state" })
+    ).json();
+    const twitchBattleRequest = {
+      requestId: "00000000-0000-4000-8000-000000000201",
+      expectedRevision: 0,
+      forgeIdentity: {
+        serverInstanceId: initialTwitchForge.serverInstanceId,
+        serverStartedAt: initialTwitchForge.serverStartedAt,
+        cycleId: "forge-1",
+        mode: "twitch" as const,
+      },
+      forgeCycleId: "forge-1",
+      durationSeconds: 90,
+      audienceBand: "medium",
+    };
+    const battleWithoutOwner = await live.app.inject({
+      method: "POST",
+      url: "/dev/battle/start",
+      headers: { origin, "sec-fetch-site": "same-origin" },
+      remoteAddress: "127.0.0.1",
+      payload: twitchBattleRequest,
+    });
+    expect(battleWithoutOwner.statusCode).toBe(401);
+    expect(battleWithoutOwner.json()).toEqual({ error: "owner_auth_required" });
+    const battleBeforeVerifiedWelcome = await live.app.inject({
+      method: "POST",
+      url: "/dev/battle/start",
+      headers: { origin, "sec-fetch-site": "same-origin", cookie: sessionCookie },
+      remoteAddress: "127.0.0.1",
+      payload: { ...twitchBattleRequest, requestId: "00000000-0000-4000-8000-000000000202" },
+    });
+    expect(battleBeforeVerifiedWelcome.statusCode).toBe(409);
+    expect(battleBeforeVerifiedWelcome.json()).toEqual({ error: "provider_unverified" });
     const diagnosticsWithoutOwner = await live.app.inject({
       method: "POST",
       url: "/dev/twitch/diagnostics",
@@ -996,9 +1338,11 @@ describe("BossForge server", () => {
     dashboard.on("message", (frame) => dashboardFrames.push(frame.toString()));
     await once(dashboard, "open");
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(overlayFrames).toHaveLength(2);
-    expect(dashboardFrames).toHaveLength(3);
+    expect(overlayFrames).toHaveLength(3);
+    expect(dashboardFrames).toHaveLength(4);
     expect(dashboardFrames.some((frame) => frame.includes("dashboard.activity"))).toBe(true);
+    expect(overlayFrames.some((frame) => frame.includes("battle.state"))).toBe(true);
+    expect(dashboardFrames.some((frame) => frame.includes("battle.state"))).toBe(true);
     const overlayClose = once(overlay, "close");
     const dashboardClose = once(dashboard, "close");
     overlay.close();
@@ -1320,6 +1664,12 @@ describe("BossForge server", () => {
     expect(forgeSnapshot.statusCode).toBe(404);
     expect(oauthStart.statusCode).toBe(404);
     expect(twitchStatus.statusCode).toBe(404);
+    expect(
+      (await production.app.inject({ method: "POST", url: "/dev/battle/start" })).statusCode,
+    ).toBe(404);
+    expect(
+      (await production.app.inject({ method: "POST", url: "/dev/battle/damage" })).statusCode,
+    ).toBe(404);
     await production.close();
   });
 });

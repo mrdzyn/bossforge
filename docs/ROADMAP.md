@@ -72,17 +72,19 @@ gameplay expansion.
 PDCP-001 is approved for planning and merged through PR #7 at
 `5b30d7b3139c9f1ab74f3be46d0f4fb5d9665865`; its prior exact-head audit passed
 at [`adfaa6f`](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234).
-M1-A privacy-safe outbound events were squash-merged through PR #9 at
-`bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`; raw normalized chat remains
+M1-A privacy-safe outbound events were squash-merged through PR #9; M1-B was
+squash-merged through PR #10 into main at
+`21953184fbd8f7034b680134b9b2efccbe40ab4e`. Raw normalized chat remains
 server-internal, with strict recipient-specific dashboard/OBS projections and
-sentinel regression tests. M1-B is separately authorized as presentation-only. `!hit` combat, authoritative battle HP,
-and Generic/Arena profile loading remain unimplemented. The bounded
-[M0 contract lock](M0-ANY-GAME-CONTRACT-LOCK.md) specifies proposed state,
-privacy, duration-by-band balance, authorization, and delivery contracts. M1-B
-is a presentation-only revealed-boss / “BATTLE COMING SOON” preview from fresh
-ForgeState; it has no battle state or Start Battle. M2-A introduces authoritative
-`CommunityBattleStateV1`, BATTLE READY and owner Start Battle; M2-B adds chat hit
-routing. The contract defines later M1/M2 boundaries; current M1-B authorization does not authorize M2. The PDCP-001 schedule and November 3, 2026 06:00
+sentinel regression tests. The bounded
+[M0 contract lock](M0-ANY-GAME-CONTRACT-LOCK.md) specifies battle state,
+privacy, duration-by-band balance, authorization, and delivery contracts.
+M1-B was a presentation-only revealed-boss / “BATTLE COMING SOON” preview from
+fresh ForgeState. The current M2-A implementation branch adds authoritative
+`CommunityBattleStateV1`, BATTLE READY and owner Start Battle; Twitch chat hit
+routing remains reserved for M2-B. Generic/Arena profile loading beyond the
+locked Generic v1 snapshot is deferred. M2-A is a separate unmerged branch.
+The PDCP-001 schedule and November 3, 2026 06:00
 Asia/Manila deadline remain; prioritize Generic OBS and a genuine server-
 authoritative Twitch attack over optional challenges, Arena profile polish,
 extra themes, and effects. Every implementation scope needs separate owner

@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import type { DashboardActivity, ForgeState } from "@bossforge/shared";
+import { FORGE_VOTE_CHOICES, type DashboardActivity, type ForgeState } from "@bossforge/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockedHook = vi.hoisted(() => ({ value: null as unknown }));
@@ -10,12 +10,7 @@ vi.mock("./hooks/useLiveEvents.js", () => ({
 import { Dashboard, OverlayPreview } from "./App.js";
 
 const makeState = (mode: "mock" | "twitch" = "twitch", connectedToTwitch = true): ForgeState => {
-  const choices = {
-    body: ["golem", "drake"],
-    element: ["fire", "ice"],
-    special: ["ember-burst", "thunder-dash"],
-    weakness: ["water", "earth"],
-  } as const;
+  const choices = FORGE_VOTE_CHOICES;
   return {
     serverInstanceId: "test-server",
     serverStartedAt: "2026-10-27T00:00:00.000Z",
@@ -35,7 +30,7 @@ const makeState = (mode: "mock" | "twitch" = "twitch", connectedToTwitch = true)
       options: choices[category].map((choice, index) => ({
         choice,
         count: index === 0 ? 3 : 1,
-        percentage: index === 0 ? 75 : 25,
+        percentage: index === 0 ? 75 : index === 1 ? 25 : 0,
       })),
       totalVotes: 4,
       openedAt: category === "body" ? "2026-10-27T00:00:00.000Z" : null,
@@ -56,16 +51,18 @@ const makeReveal = (mode: "mock" | "twitch" = "mock", connectedToTwitch = false)
     progress: 4,
     categories: state.categories.map((category) => {
       const usedDefault = category.category === "special";
+      const winner =
+        category.category === "weakness" ? "earth" : (category.options[0]?.choice ?? null);
       return {
         ...category,
         status: "closed",
         options: category.options.map((option) => ({
           ...option,
-          count: usedDefault ? 0 : option.count,
-          percentage: usedDefault ? 0 : option.percentage,
+          count: usedDefault ? 0 : option.choice === winner ? 3 : option.count ? 1 : 0,
+          percentage: usedDefault ? 0 : option.choice === winner ? 75 : option.count ? 25 : 0,
         })),
         totalVotes: usedDefault ? 0 : category.totalVotes,
-        winner: category.options[category.category === "weakness" ? 1 : 0]?.choice ?? null,
+        winner,
         noVoteFallback: usedDefault,
       };
     }),

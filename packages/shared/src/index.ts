@@ -1,5 +1,9 @@
 import { z } from "zod";
+import { CommunityBattleStateV1Schema, OverlayBattleStateV1Schema } from "./battle.js";
 export { ForgeStateReconciler } from "./forge-state-reconciler.js";
+export { BattleStateReconciler } from "./battle-state-reconciler.js";
+export type { BattleMutationContext } from "./battle-state-reconciler.js";
+export * from "./battle.js";
 export * from "./combat.js";
 export * from "./voting-presentation.js";
 
@@ -124,6 +128,43 @@ export const RevealedForgeStateSchema = ForgeStateBaseSchema.extend({
   boss: BossSchema,
 }).superRefine(refineForgeMode);
 export type RevealedForgeState = z.infer<typeof RevealedForgeStateSchema>;
+
+const forgeCategories = ["body", "element", "special", "weakness"] as const;
+
+/** Validate a completed server reveal, including the relationships omitted by its wire shape. */
+export function authoritativeCompletedReveal(input: unknown): RevealedForgeState | null {
+  const parsed = RevealedForgeStateSchema.safeParse(input);
+  if (!parsed.success) return null;
+  const reveal = parsed.data;
+  const valid = reveal.categories.every((category, index) => {
+    const key = forgeCategories[index];
+    if (!key) return false;
+    const configuredOptions: readonly string[] = FORGE_VOTE_CHOICES[key];
+    if (
+      category.category !== key ||
+      category.status !== "closed" ||
+      category.winner === null ||
+      !category.options.some((option) => option.choice === category.winner) ||
+      !configuredOptions.includes(category.winner) ||
+      reveal.boss.attributes[key] !== category.winner
+    )
+      return false;
+    if (
+      category.options.length !== configuredOptions.length ||
+      !configuredOptions.every(
+        (choice, optionIndex) => category.options[optionIndex]?.choice === choice,
+      )
+    )
+      return false;
+    const highestCount = Math.max(...category.options.map((option) => option.count));
+    if (category.noVoteFallback) return category.totalVotes === 0 && highestCount === 0;
+    return (
+      category.totalVotes > 0 &&
+      category.options.find((option) => option.choice === category.winner)?.count === highestCount
+    );
+  });
+  return valid ? reveal : null;
+}
 
 export const BattlePlayerSchema = z.object({
   id: z.string().min(1).max(100),
@@ -267,14 +308,37 @@ const DashboardActivityEnvelope = z
     payload: DashboardActivitySchema,
   })
   .strict();
+const DashboardBattleEnvelope = z
+  .object({
+    ...PublicEnvelopeBase,
+    type: z.literal("battle.state"),
+    payload: z
+      .object({
+        kind: z.literal("battle.state"),
+        state: z.lazy(() => CommunityBattleStateV1Schema),
+      })
+      .strict(),
+  })
+  .strict();
+const OverlayBattleEnvelope = z
+  .object({
+    ...PublicEnvelopeBase,
+    type: z.literal("battle.state"),
+    payload: z
+      .object({ kind: z.literal("battle.state"), state: z.lazy(() => OverlayBattleStateV1Schema) })
+      .strict(),
+  })
+  .strict();
 export const DashboardEventEnvelopeSchema = z.discriminatedUnion("type", [
   DashboardForgeEnvelope,
   DashboardConnectionEnvelope,
   DashboardActivityEnvelope,
+  DashboardBattleEnvelope,
 ]);
 export type DashboardEventEnvelope = z.infer<typeof DashboardEventEnvelopeSchema>;
 export const OverlayEventEnvelopeSchema = z.discriminatedUnion("type", [
   DashboardForgeEnvelope,
   DashboardConnectionEnvelope,
+  OverlayBattleEnvelope,
 ]);
 export type OverlayEventEnvelope = z.infer<typeof OverlayEventEnvelopeSchema>;

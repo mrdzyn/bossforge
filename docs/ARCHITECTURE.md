@@ -149,8 +149,9 @@ introduced. SQLite may be considered only if a later milestone needs persistence
 - OAuth/Helix requests use injected fetch in tests; WebSocket tests use fake
   sockets. No test contacts Twitch. Tokens are not in React, OBS, EventHub
   payloads, API responses, logs, screenshots, or persistent storage.
-- Real OAuth consent, EventSub connectivity and channel voting remain untested
-  until the owner applies private configuration and initiates local consent.
+- Historical owner-supplied C5-R2 evidence records OAuth/EventSub and three
+  accepted genuine ballots; this was not independently reproduced. See
+  `docs/ACCEPTANCE.md` for its scope and limitations.
 
 ## M1-A outbound privacy boundary
 
@@ -186,3 +187,37 @@ state, HP, damage, battle timer, outcome, Start Battle control, or `!hit`
 command. OBS remains read-only, credential-free, and game-independent. The
 Browser Source can sit alongside a game; it does not inspect, control, or
 integrate with that game.
+
+## M2-A server-authoritative battle foundation
+
+`BossBattleSession` is separate from `ForgeSession` and Phaser combat. It only
+binds a battle-ready encounter after a validated, complete four-category
+`RevealedForgeState`; reveal leaves HP and timers uninitialized. The Generic v1
+profile and boss presentation snapshot are copied into strict
+`CommunityBattleStateV1`. Only an authorized local owner Start Battle request
+selects a 60/90/120-second duration and low/medium/high audience band, chooses
+the fixed profile HP, and starts the timer. The server's injected monotonic
+clock governs expiry; wall-clock timestamps are descriptive immutable fields.
+Cancellation, expiry, victory, and damage transitions serialize synchronously
+in the session, and terminal outcomes cannot resume. M2-A has no network damage
+or `!hit` route; its bounded M0 command limits are profile data for M2-B.
+
+`GET /battle/state`, `POST /dev/battle/start`, and
+`POST /dev/battle/cancel` exist only in the development simulation-enabled
+server, require a loopback peer, and return strict no-store state. Mutation
+routes require exact local Vite Origin and `Sec-Fetch-Site: same-origin`; Twitch
+mode also requires the existing streamer owner session and a verified EventSub
+connection for Start Battle. Mock mode remains explicit, credential-free,
+loopback-only development. No mock fallback occurs from Twitch mode.
+
+Battle events use the M1-A EventHub recipient-specific projections and strict
+versioned schemas. The dashboard receives the validated battle contract,
+including the Generic profile snapshot. The OBS projection is narrower: it
+contains renderable encounter, boss, timing, HP, aggregate and fixed-cancel
+fields, but omits profile identity and processing/tuning configuration. Neither
+projection contains chat, viewer identity, pseudonym, message ID, token, cookie,
+URL, or free-form error. OBS remains read-only and has no battle admin controls.
+`BattleStateReconciler` separately handles battle revisions and
+encounter identity; a new server epoch is adopted only from a current-generation
+HTTP snapshot, and feed loss hides cached battle state until fresh authority is
+re-established.
