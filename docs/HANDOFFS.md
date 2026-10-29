@@ -878,8 +878,10 @@ subsequently squash-merged into `main` at
   and hosted CI remain unverified.
 - **Delivery:** Draft [PR #13](https://github.com/mrdzyn/bossforge/pull/13) was
   created against `main` at `6fb37e827b7466559970f714ef5f05c04af27157`.
-  Implementation commit: `b646f140354b9c3e7aad1f378d59139d057968dc`; a
-  documentation follow-up records delivery and audit status.
+  Original implementation commit: `b646f140354b9c3e7aad1f378d59139d057968dc`;
+  audited-finding remediation commit:
+  `c175f104189b378e16bebe21e89fc43ab2cadade`; the pushed docs follow-up records
+  the final review HEAD and audit request.
 - **Review request:** Independently review the final pushed HEAD of Draft PR
   #13 against the M2-B main baseline. The PR remains Draft and unmerged. Do not
   deploy, publish, or start M2-D.

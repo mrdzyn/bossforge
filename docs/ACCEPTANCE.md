@@ -1292,3 +1292,6 @@ sandbox suite run failed eight socket-binding checks with `EPERM`; the
 authorized local rerun passed. The existing optional Phaser chunk-size
 warning remains. Hosted GitHub Actions, real Twitch operations, and native OBS
 remain unverified.
+
+Implementation/remediation commit: `c175f104189b378e16bebe21e89fc43ab2cadade`.
+The final documentation follow-up is also on existing Draft PR #13.

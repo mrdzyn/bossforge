@@ -115,8 +115,10 @@
   (41 shared / 147 server / 58 web), four-category mock simulation, and diff check passed. The
   sandbox run had eight existing socket-binding `EPERM` failures; the full
   suite passed in the authorized local environment. Hosted Actions, real
-  Twitch, and native OBS remain unverified. Exact implementation/final review
-  HEAD and independent re-audit are recorded after push.
+  Twitch, and native OBS remain unverified. Original M2-C implementation is
+  `b646f140354b9c3e7aad1f378d59139d057968dc`; audit-remediation commit is
+  `c175f104189b378e16bebe21e89fc43ab2cadade`. PR #13 remains Draft and
+  unmerged; an independent exact-head re-audit is requested after push.
 
 ### M1-A merged status
 
