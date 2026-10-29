@@ -885,3 +885,23 @@ subsequently squash-merged into `main` at
 - **Review request:** Independently review the final pushed HEAD of Draft PR
   #13 against the M2-B main baseline. The PR remains Draft and unmerged. Do not
   deploy, publish, or start M2-D.
+- **Latest re-audit delta:** Starting at `f470c5424f4beb0967db0570e30eb0795ced4d8c`,
+  the overlay snapshot request cap is now generation-scoped. Retiring a
+  WebSocket generation aborts its requests and releases only its logical slots;
+  stale completions, including `finally`, are fenced to their retired
+  generation. Two unresolved G1 requests no longer block immediate G2 snapshot
+  adoption. The HUD clears a prior weakness accent on the next ordinary hit,
+  preserves the ordinary impact pulse, restarts the accent on repeated weakness
+  hits, and clears prior timers on encounter replacement. Added one mounted
+  deferred-fetch test and two mounted fake-timer tests; all 249 tests pass
+  (41 shared / 147 server / 61 web). Node 24.21.0 / pnpm 11.25.0 frozen
+  install, build, typecheck, lint, format, full authorized-local test rerun,
+  isolated four-category mock simulation and diff check passed. The sandbox
+  full suite reported eight existing socket `EPERM` failures before the
+  authorized rerun. No new Chromium capture was taken; existing synthetic
+  captures remain qualified as browser evidence only. Hosted Actions, live
+  Twitch and native OBS remain unverified. Keep PR #13 Draft and unmerged, and
+  request independent exact-head re-audit. The next approved development
+  priority is the already-generated VecSynIQ animated SVG boss assets and
+  BossForge logo; do not begin M2-D. Implementation commit:
+  `7b27bc0e7d479ee98df69bec5e89f4332663ecb3`.

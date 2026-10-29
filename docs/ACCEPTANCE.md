@@ -1295,3 +1295,36 @@ remain unverified.
 
 Implementation/remediation commit: `c175f104189b378e16bebe21e89fc43ab2cadade`.
 The final documentation follow-up is also on existing Draft PR #13.
+
+### M2-C follow-up re-audit remediation — generation retirement and hit feedback
+
+Starting from re-audited HEAD
+`f470c5424f4beb0967db0570e30eb0795ced4d8c`, overlay snapshot requests now
+carry an `AbortController` and a unique token under their WebSocket generation.
+Closing/erroring a transport, beginning its replacement, or unmounting aborts
+the retired generation and immediately releases its logical request slots.
+Each completion and `finally` handler can remove only its own token from its
+own generation; a late G1 completion cannot change G2 counts, freshness or
+rendered battle authority. The two-request cap remains per active generation.
+A mounted deferred-fetch test leaves both G1 requests unresolved, reconnects
+to G2, adopts a fresh G2 battle snapshot while both old promises are still
+pending, then settles the old promises and verifies G2 state and later polling
+remain intact.
+
+For hit feedback, an accepted ordinary hit now clears any current weakness
+accent immediately while retaining the ordinary impact pulse. A subsequent
+weakness hit restarts its bounded 520 ms accent timer. Mounted fake-timer tests
+cover weakness-to-ordinary timing, repeated weakness hits, timer completion and
+encounter replacement; existing epoch, terminal, reconnect and reduced-motion
+regressions remain green.
+
+Validation on Node `v24.21.0` / pnpm `11.25.0`: frozen install, build,
+typecheck, lint, format check and all **249 tests** passed (41 shared, 147
+server, 61 web). The sandbox full-suite run had the existing eight local socket
+binding `EPERM` failures; the authorized local rerun passed. Four-category
+`pnpm simulate` passed on an isolated loopback mock-only server at port 33304
+with Twitch disabled. `git diff --check` passed. No new Chromium screenshot was
+captured for this bounded follow-up; the earlier synthetic component captures
+remain the visual evidence, and are not genuine Twitch or native OBS results.
+Hosted GitHub Actions, real Twitch and native OBS remain unverified.
+Implementation commit: `7b27bc0e7d479ee98df69bec5e89f4332663ecb3`.

@@ -119,6 +119,28 @@
   `b646f140354b9c3e7aad1f378d59139d057968dc`; audit-remediation commit is
   `c175f104189b378e16bebe21e89fc43ab2cadade`. PR #13 remains Draft and
   unmerged; an independent exact-head re-audit is requested after push.
+- **Follow-up exact-head re-audit fixes:** Overlay HTTP snapshot slots and
+  abort controllers are now scoped to the WebSocket generation. Disconnect,
+  reconnect and unmount abort old requests and immediately release only that
+  generation's logical slots; late response and `finally` handlers cannot
+  alter replacement-generation accounting or authority. The active generation
+  remains capped at two requests. A mounted deferred-fetch regression keeps
+  both G1 requests pending through disconnect, adopts a valid G2 snapshot, and
+  then settles the retired requests without stale restoration. A subsequent G2
+  poll remains available. The HUD clears the 520 ms weakness accent as soon as
+  a normal accepted hit arrives while retaining its ordinary impact pulse;
+  repeated weakness hits restart the accent timer and replacement encounters
+  retire prior timers. Three new mounted regressions bring the full suite to
+  **249 tests** (41 shared / 147 server / 61 web). Node `v24.21.0` / pnpm
+  `11.25.0`, frozen install, build, typecheck, lint, format, tests, four-stage
+  mock simulation and diff check passed. Sandbox socket/IPC restrictions were
+  recorded; the authorized local test rerun passed. No new Chromium capture was
+  taken for these request-accounting and animation-lifecycle changes; existing
+  synthetic Chromium evidence remains as previously qualified. Hosted Actions,
+  genuine Twitch and native OBS remain unverified. VecSynIQ animated SVG boss
+  assets and the BossForge logo are the next approved development priority;
+  M2-D was not started. Implementation commit:
+  `7b27bc0e7d479ee98df69bec5e89f4332663ecb3`.
 
 ### M1-A merged status
 
