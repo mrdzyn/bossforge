@@ -79,3 +79,91 @@ For each owner test, record: Asia/Manila date/time, branch and exact HEAD, sourc
 - Final Devpost submission, video publishing, deployment and repo merge require explicit owner approval. See [Hackathon checklist](HACKATHON.md) and [M0 contract](M0-ANY-GAME-CONTRACT-LOCK.md).
 
 **Exit criterion:** Gates A–D have explicit, scoped PASS evidence, independent final exact-head assessment, and owner confirmation. A successful synthetic test alone is insufficient for a real Twitch/OBS PASS.
+
+## Issue #16 — bounded keepalive jitter remediation (2026-10-30)
+
+Base: `2893ba8b8d26de0fe032689c5ab69497f03a1486`. Work was performed in
+an independent clone under `/private/tmp`, without reading private configuration,
+editing the owner's application directory, binding 3001/5173 or touching OBS.
+
+Owner-supplied incident: two keepalive losses at 30,250–30,251 ms against a
+30,000 ms welcome timeout, two cancelled forges, zero socket closes/errors or
+revocations. This is interrupted live evidence, not uninterrupted acceptance.
+[Issue #16](https://github.com/mrdzyn/bossforge/issues/16) preserves the sanitized
+counters. Existing owner voting/damage/OBS observations remain historical.
+
+**Confidence:** high that the 250 ms watchdog threshold caused the recorded
+cancellations: the unchanged baseline's 19 lifecycle tests reproduce expiry at
+30,250 ms. The counters do not prove whether network delay, a suspended local
+scheduler, or delayed frame processing caused the silence. No live latency
+trace or real Twitch reproduction was performed. This correction is a bounded
+operational tolerance, not proof that the upstream cause is eliminated.
+
+The allowance is now 2,500 ms, fixed rather than proportional or accumulating.
+For the observed 30-second welcome this means expiry at 32,500 ms (8.33%
+extra silence); genuine-loss detection is delayed by at most 2,250 ms relative
+to the former policy when callbacks run on time. A stalled event loop can delay
+any callback, so this is not a hard real-time guarantee. Fake-clock tests cover
+250, 251, 2,000 and 2,499 ms jitter, genuine silence at 2,500, 2,501 and
+10,000 ms overdue, and a smaller 10-second welcome. This tests the safety cost
+of a 2–3 second tolerance; 2.5 seconds is an operational choice requiring the
+owner's controlled retest, not measured optimal Twitch tuning.
+
+The welcome timeout remains authoritative. The watchdog rechecks monotonic
+elapsed time and the latest validated frame, and stale/cancelled callbacks
+remain fenced. Connection handshakes receive no grace. Socket close/error,
+revocation and logout still fail closed immediately. Only validated keepalive
+or verified, normalized notifications refresh liveness. Ballot rejection happens
+after normalization and does not prevent refresh; malformed, duplicate,
+wrong-session, unverified and Ping/Pong traffic cannot refresh it. No change to
+notification validation was needed. Handoff URLs and subscription verification
+are unchanged. Reconnection never resumes cancelled voting or battle.
+
+The policy intentionally tolerates silence beyond Twitch's documented timeout.
+[Twitch's official guide](https://dev.twitch.tv/docs/eventsub/handling-websocket-events/)
+says notifications/keepalives reset liveness, Ping/Pong does not, unexpected
+loss requires resubscription, and lost messages cannot be replayed. No missing
+votes or attacks are fabricated.
+
+### Manual CI evidence
+
+Node 24.21.0 / pnpm 11.25.0. Frozen install, build, typecheck, lint,
+`format:check`, asset reproducibility and diff check passed. The focused
+session/adapter/normalizer/server group passed 84 tests. All package suites
+passed separately: 41 shared + 155 server + 74 web = **270 tests**, preserving
+the 262-test baseline and adding eight deterministic lifecycle cases.
+
+The initial focused run had two outdated timer-delay assertions (250 ms);
+those assertions were updated to 2,500 ms and the entire focused group passed.
+The root `pnpm test` run passed shared/server but failed the existing SVG
+checksum test's five-second timeout during parallel work. A separate web run
+with `--testTimeout=15000` passed 74/74. Root parallel execution is not claimed
+PASS. All socket tests ran in the authorized local environment; no sandbox
+EPERM failure was observed in this run. Hosted Actions were not executed.
+Four-category `pnpm simulate` passed with two synthetic votes/category on an
+owned mock-only server at `127.0.0.1:33316`, empty environment allowlist,
+Twitch explicitly disabled; that process was stopped afterward.
+
+### Owner-operated retest — only after independent review and activation approval
+
+1. End or pause the broadcast at the owner's chosen time. Verify no active
+   forge/battle; separately approve synchronizing the reviewed SHA and restarting
+   only the identified BossForge runtime. This PR does not authorize activation.
+2. Owner privately configures the ignored environment and personally authorizes
+   Twitch at `http://localhost:3001/auth/twitch/callback`, then Connect Twitch.
+   Confirm a validated welcome, enabled Helix subscription and LIVE TWITCH.
+3. Read local sanitized diagnostics before testing. Record only advertised
+   timeout, keepalive/notification counts, disconnect reason totals and elapsed
+   timings. Do not record identities, raw chat, tokens, IDs or URLs.
+4. Keep the connection open for at least ten minutes (20 advertised 30-second
+   periods), including one quiet interval and normal OBS/game load. Run a
+   four-stage 60-second/category forge with genuine owner-coordinated votes.
+   Require no watchdog cancellation and fresh matching dashboard/overlay state.
+5. If a timeout occurs, stop the acceptance run and record only elapsed time,
+   advertised timeout and fixed reason counts. Do not treat the run as stable.
+6. During a separate active encounter, owner deliberately disconnects Twitch.
+   Require immediate cancellation/disconnected presentation; reconnect must
+   obtain fresh verification and must not resume the cancelled encounter.
+   Begin a new forge explicitly if further QA is desired.
+
+Genuine Twitch stability and native OBS acceptance remain pending this retest.

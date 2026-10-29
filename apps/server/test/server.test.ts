@@ -1071,10 +1071,10 @@ describe("BossForge server", () => {
       status: "voting",
     });
     const graceTimer = eventSubTimers.findLast(
-      (timer) => timer.delayMs === 250 && !timer.cancelled,
+      (timer) => timer.delayMs === 2_500 && !timer.cancelled,
     )!;
     expect(graceTimer).toBeDefined();
-    eventSubMonotonicMs = 30_250;
+    eventSubMonotonicMs = 32_500;
     graceTimer.cancelled = true;
     graceTimer.callback();
     const timedOutTwitchState = (
