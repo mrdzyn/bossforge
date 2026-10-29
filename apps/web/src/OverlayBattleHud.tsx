@@ -119,7 +119,7 @@ export function OverlayBattleHud({
     );
   if (view === "disconnected")
     return <section className="m2c-status m2c-disconnected">TWITCH DISCONNECTED</section>;
-  if (view === "voting") return null;
+  if (view === "voting" || view === "forge-failed") return null;
   if (!battle) return null;
   if (view === "ready")
     return (

@@ -311,7 +311,9 @@ export function Dashboard() {
     battle.forgeCycleId === forge.cycleId &&
     battle.forgeIdentity?.serverInstanceId === forge.serverInstanceId &&
     battle.forgeIdentity.serverStartedAt === forge.serverStartedAt &&
-    battle.forgeIdentity.mode === forge.mode,
+    battle.forgeIdentity.mode === forge.mode &&
+    battle.bossSnapshot?.id === forge.boss?.id &&
+    battle.bossSnapshot?.attributes.weakness === forge.boss?.attributes.weakness,
   );
   const battleProviderReady =
     forge?.mode === "mock"
@@ -433,7 +435,11 @@ export function Dashboard() {
                   (forge?.mode === "twitch" && !forge.connectedToTwitch)
                 }
                 onClick={async () => {
-                  if (isRevealed && !(await post("/api/dev/forge/reset"))) return;
+                  if (
+                    (isRevealed || forge?.status === "failed") &&
+                    !(await post("/api/dev/forge/reset"))
+                  )
+                    return;
                   await post("/api/dev/forge/start", { durationSeconds });
                 }}
               >
@@ -466,9 +472,11 @@ export function Dashboard() {
               <p className="muted">
                 Battle state unavailable until a fresh server snapshot is received.
               </p>
-            ) : !battleMatchesForge &&
-              battle.status !== "active" &&
-              !["victory", "expired", "cancelled"].includes(battle.status) ? (
+            ) : (!battleMatchesForge &&
+                (battle.status === "active" ||
+                  forge?.status === "failed" ||
+                  !["victory", "expired", "cancelled"].includes(battle.status))) ||
+              (battle.status === "active" && !battleProviderReady) ? (
               <p className="muted">Complete all four forge stages to prepare a battle.</p>
             ) : (
               <>
@@ -653,6 +661,17 @@ export function Dashboard() {
               {notice}
             </div>
           )}
+          {forge?.status === "failed" && (
+            <div className="forge-notice" role="status">
+              No valid weakness votes arrived after two voting windows. The forge ended without a
+              boss. Start a new forge to try again.
+            </div>
+          )}
+          {forge?.status === "voting" && forge.weaknessRetry && (
+            <div className="forge-notice" role="status">
+              No weakness votes arrived. One final voting window is open.
+            </div>
+          )}
           <section className="stat-strip">
             <div className="stat-card">
               <span className="stat-icon cyan">◎</span>
@@ -683,7 +702,9 @@ export function Dashboard() {
                       ? `Voting · ${title(forge.activeCategory ?? "")}`
                       : isRevealed
                         ? "Boss revealed"
-                        : "Ready to forge"}
+                        : forge.status === "failed"
+                          ? "Forge ended: no weakness votes"
+                          : "Ready to forge"}
                 </strong>
               </div>
               <span className="stat-value">{forge ? `${forge.progress} / 4` : "— / 4"}</span>
@@ -930,7 +951,9 @@ export function OverlayPreview() {
     overlayBattle.forgeCycleId === forge?.cycleId &&
     overlayBattle.forgeIdentity?.serverInstanceId === forge?.serverInstanceId &&
     overlayBattle.forgeIdentity.serverStartedAt === forge?.serverStartedAt &&
-    overlayBattle.forgeIdentity.mode === forge?.mode,
+    overlayBattle.forgeIdentity.mode === forge?.mode &&
+    overlayBattle.bossSnapshot?.id === reveal.boss.id &&
+    overlayBattle.bossSnapshot.attributes.weakness === reveal.boss.attributes.weakness,
   );
   const battleView = overlayBattleView({
     connection,
@@ -998,6 +1021,16 @@ export function OverlayPreview() {
           </div>
         </section>
       ) : null}
+      {forge?.status === "failed" && (
+        <section className="m2c-status" role="status">
+          FORGE ENDED · NO WEAKNESS VOTES AFTER TWO WINDOWS
+        </section>
+      )}
+      {forge?.status === "voting" && forge.weaknessRetry && (
+        <section className="m2c-status" role="status">
+          NO WEAKNESS VOTES · FINAL VOTING WINDOW
+        </section>
+      )}
       <OverlayBattleHud
         battle={overlayBattle}
         view={battleView}
@@ -1011,7 +1044,11 @@ export function OverlayPreview() {
         <section className="overlay-vote-card">
           <div className="overlay-vote-heading">
             <span className="eyebrow">
-              {forge?.status === "revealed" ? "FORGE COMPLETE" : "THE FORGE IS LISTENING"}
+              {forge?.status === "revealed"
+                ? "FORGE COMPLETE"
+                : forge?.status === "failed"
+                  ? "FORGE ENDED"
+                  : "THE FORGE IS LISTENING"}
             </span>
             <span className="vote-open">
               <i />
@@ -1019,17 +1056,21 @@ export function OverlayPreview() {
                 ? `VOTE: ${title(category.category)} · ${seconds}s`
                 : forge?.status === "revealed"
                   ? "BOSS REVEALED"
-                  : forge?.status === "idle"
-                    ? "AWAITING FORGE"
-                    : "WAITING TO BEGIN"}
+                  : forge?.status === "failed"
+                    ? "NO WEAKNESS VOTES"
+                    : forge?.status === "idle"
+                      ? "AWAITING FORGE"
+                      : "WAITING TO BEGIN"}
             </span>
           </div>
           <h2>
             {category
               ? `Choose the boss ${category.category === "weakness" ? "weakness" : category.category}`
-              : forge?.status === "idle"
-                ? "The forge is ready when you are."
-                : "A boss built by the whole chat"}
+              : forge?.status === "failed"
+                ? "No boss was revealed."
+                : forge?.status === "idle"
+                  ? "The forge is ready when you are."
+                  : "A boss built by the whole chat"}
           </h2>
           <VoteInstructions
             category={category}
@@ -1079,6 +1120,8 @@ export function OverlayPreview() {
                 </span>
               ))}
             </div>
+          ) : forge?.status === "failed" ? (
+            <p>No valid weakness votes arrived in either voting window.</p>
           ) : forge?.status === "idle" ? (
             <p className="overlay-awaiting-copy">Awaiting the first forge cycle.</p>
           ) : (

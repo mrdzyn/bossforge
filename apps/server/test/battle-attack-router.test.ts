@@ -9,12 +9,15 @@ function appHeaders() {
   return { origin: "http://localhost:5173", "sec-fetch-site": "same-origin" };
 }
 
-function completedMockForge(identity: {
-  serverInstanceId: string;
-  serverStartedAt: string;
-  cycleId: string;
-  mode: "mock";
-}) {
+function completedMockForge(
+  identity: {
+    serverInstanceId: string;
+    serverStartedAt: string;
+    cycleId: string;
+    mode: "mock";
+  },
+  weakness: "water" | "light" | "earth" | "wind" = "water",
+) {
   const categories = ["body", "element", "special", "weakness"] as const;
   const choices = {
     body: ["golem", "wraith", "drake", "mimic"],
@@ -26,7 +29,7 @@ function completedMockForge(identity: {
     body: "golem",
     element: "fire",
     special: "ember-burst",
-    weakness: "water",
+    weakness,
   } as const;
   return {
     ...identity,
@@ -41,12 +44,16 @@ function completedMockForge(identity: {
     categories: categories.map((category) => ({
       category,
       status: "closed" as const,
-      options: choices[category].map((choice) => ({ choice, count: 0, percentage: 0 })),
-      totalVotes: 0,
+      options: choices[category].map((choice) => ({
+        choice,
+        count: category === "weakness" && choice === winners[category] ? 1 : 0,
+        percentage: category === "weakness" && choice === winners[category] ? 100 : 0,
+      })),
+      totalVotes: category === "weakness" ? 1 : 0,
       openedAt: fixedDate.toISOString(),
       closesAt: fixedDate.toISOString(),
       winner: winners[category],
-      noVoteFallback: true,
+      noVoteFallback: category !== "weakness",
     })),
     boss: {
       id: "boss",
@@ -57,7 +64,10 @@ function completedMockForge(identity: {
   };
 }
 
-function queuedBattleFixture(audienceBand: "low" | "high" = "low") {
+function queuedBattleFixture(
+  audienceBand: "low" | "high" = "low",
+  weakness: "water" | "light" | "earth" | "wind" = "water",
+) {
   let mono = 0;
   let deadlineTask: (() => void) | undefined;
   let drainTask: (() => void) | undefined;
@@ -99,7 +109,7 @@ function queuedBattleFixture(audienceBand: "low" | "high" = "low") {
       },
     },
   });
-  const ready = battle.onForgeState(completedMockForge(identity));
+  const ready = battle.onForgeState(completedMockForge(identity, weakness));
   battle.start(
     {
       requestId: "00000000-0000-4000-8000-000000000061",
@@ -111,7 +121,7 @@ function queuedBattleFixture(audienceBand: "low" | "high" = "low") {
     },
     true,
   );
-  const send = (id: string) =>
+  const send = (id: string, text = "!hit water") =>
     router.handle(
       {
         kind: "chat.message",
@@ -119,7 +129,7 @@ function queuedBattleFixture(audienceBand: "low" | "high" = "low") {
         message: {
           id,
           viewer: { id: `viewer-${id}`, displayName: "Synthetic" },
-          text: "!hit water",
+          text,
           occurredAt: fixedDate.toISOString(),
         },
       },
@@ -142,6 +152,29 @@ function queuedBattleFixture(audienceBand: "low" | "high" = "low") {
 }
 
 describe("BattleAttackRouter", () => {
+  it.each(["water", "light", "earth", "wind"] as const)(
+    "applies base, matching and nonmatching damage for %s",
+    (weakness) => {
+      const f = queuedBattleFixture("low", weakness);
+      const other = weakness === "water" ? "wind" : "water";
+      f.send("base", "!hit");
+      f.fireDrain();
+      expect(f.battle.getState().currentHp).toBe(92);
+      f.send("matching", `!hit ${weakness}`);
+      f.fireDrain();
+      expect(f.battle.getState().currentHp).toBe(78);
+      f.send("other", `!hit ${other}`);
+      f.fireDrain();
+      expect(f.battle.getState()).toMatchObject({
+        currentHp: 70,
+        acceptedHitCount: 3,
+        weaknessHitCount: 1,
+        baseHitCount: 2,
+      });
+      f.router.close();
+    },
+  );
+
   it("runs a complete mock forge through actual simulation routes to community victory", async () => {
     let timer: (() => void) | undefined;
     const mono = 0;
@@ -168,6 +201,24 @@ describe("BattleAttackRouter", () => {
       });
       expect(startForge.statusCode).toBe(200);
       for (let stage = 0; stage < 4; stage += 1) {
+        if (stage === 3) {
+          const vote = await app.app.inject({
+            method: "POST",
+            url: "/dev/simulation/events",
+            headers,
+            payload: {
+              kind: "chat.message",
+              provider: "mock",
+              message: {
+                id: "synthetic-weakness-vote",
+                viewer: { id: "viewer-vote", displayName: "Viewer" },
+                text: "!vote weakness water",
+                occurredAt: fixedDate.toISOString(),
+              },
+            },
+          });
+          expect(vote.statusCode).toBe(202);
+        }
         const closeStage = timer;
         expect(closeStage).toBeTypeOf("function");
         timer = undefined;
@@ -275,12 +326,16 @@ describe("BattleAttackRouter", () => {
         return {
           category,
           status: "closed" as const,
-          options: choices.map((choice) => ({ choice, count: 0, percentage: 0 })),
-          totalVotes: 0,
+          options: choices.map((choice) => ({
+            choice,
+            count: category === "weakness" && choice === winner ? 1 : 0,
+            percentage: category === "weakness" && choice === winner ? 100 : 0,
+          })),
+          totalVotes: category === "weakness" ? 1 : 0,
           openedAt: fixedDate.toISOString(),
           closesAt: fixedDate.toISOString(),
           winner,
-          noVoteFallback: true,
+          noVoteFallback: category !== "weakness",
         };
       }),
       boss: {

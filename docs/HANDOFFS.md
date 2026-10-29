@@ -1082,3 +1082,30 @@ passed across those runs. The root command is not claimed as a pass. Hosted CI
 and new native OBS or live Twitch verification remain unverified. The mock
 simulation used a disposable loopback-only server on port 33317 with Twitch
 disabled; the owner's runtime and credentials were not touched.
+
+## Weakness voting correction — proposed Draft PR
+
+Based on `main@d649ec06614dcee52fdb3e6bca8ca5ff832fe561`. An accepted audience
+ballot now determines the weakness winner, using the existing configured-order
+tie breaker. A first empty weakness window opens one additional window of the
+same duration; if it is also empty the authoritative forge becomes `failed`,
+with no boss and no battle ready state. The dashboard explains the outcome
+and permits an explicit reset/new cycle. The overlay is read-only and shows
+the failure or retry without stale battle commands. Body, element and special
+retain their existing no-vote defaults. Validated completed reveals reject
+weakness defaults. Stale timer callbacks are fenced across windows and reset.
+
+The dashboard and overlay require the current forge and battle identity, boss
+ID and weakness to match before showing attack instructions; `!hit` still does
+8 damage, the actual selected weakness 14, and a different known element 8.
+No Twitch, security, damage authority or provider boundary is changed.
+
+Node 24.21.0 / pnpm 11.25.0: offline frozen install, build, typecheck, lint,
+format, asset reproducibility, 63 focused server tests, 19 focused UI tests,
+and a four-category mock simulation passed. All 293 tests passed across
+separate successful suite runs (42 shared / 170 server / 81 web). The root
+parallel `pnpm test` passed shared and server but the web SVG checksum test
+exceeded its default five-second timeout; the separate web suite passed with
+`--testTimeout=15000`. Root parallel execution is not claimed green. Hosted CI,
+new live Twitch and native OBS validation remain unverified. The owner runtime
+and private configuration were not touched.

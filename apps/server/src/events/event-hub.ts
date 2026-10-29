@@ -163,6 +163,7 @@ export function toPublicForgeState(state: ForgeState) {
     durationSeconds: state.durationSeconds,
     startedAt: state.startedAt,
     activeCategory: state.activeCategory,
+    weaknessRetry: state.weaknessRetry,
     progress: state.progress,
     categories: state.categories.map((category) => ({
       category: category.category,

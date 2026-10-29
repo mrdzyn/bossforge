@@ -13,6 +13,24 @@ import { createBossForgeApp, type BossForgeApp } from "../src/app.js";
 import { getAllowedViteOrigins } from "../src/security/local-access.js";
 import { TwitchOAuth } from "../src/twitch/oauth.js";
 
+async function sendMockWeakness(app: BossForgeApp, occurredAt: string) {
+  const response = await app.app.inject({
+    method: "POST",
+    url: "/dev/simulation/events",
+    payload: {
+      kind: "chat.message",
+      provider: "mock",
+      message: {
+        id: randomUUID(),
+        viewer: { id: "mock-voter", displayName: "Mock" },
+        text: "!vote weakness water",
+        occurredAt,
+      },
+    },
+  });
+  expect(response.statusCode).toBe(202);
+}
+
 class FakeTwitchSocket extends EventEmitter {
   sendFrame(value: unknown): void {
     this.emit("message", Buffer.from(JSON.stringify(value)));
@@ -54,6 +72,59 @@ describe("BossForge server", () => {
     expect(response.json()).not.toHaveProperty("profileId");
   });
 
+  it("publishes an exhausted weakness vote without a boss or ready battle", async () => {
+    let transition: (() => void) | undefined;
+    const app = await createBossForgeApp({
+      mode: "development",
+      now: () => new Date("2026-10-26T12:00:00.000Z"),
+      forgeScheduler: {
+        schedule(callback) {
+          transition = callback;
+          return () => undefined;
+        },
+      },
+    });
+    try {
+      const started = await app.app.inject({
+        method: "POST",
+        url: "/dev/forge/start",
+        payload: { durationSeconds: 5 },
+      });
+      expect(started.statusCode).toBe(200);
+      for (let i = 0; i < 4; i++) transition?.();
+      expect((await app.app.inject({ method: "GET", url: "/forge/state" })).json()).toMatchObject({
+        status: "voting",
+        activeCategory: "weakness",
+        weaknessRetry: true,
+        boss: null,
+      });
+      expect((await app.app.inject({ method: "GET", url: "/battle/state" })).json().status).toBe(
+        "idle",
+      );
+      transition?.();
+      const failed = (await app.app.inject({ method: "GET", url: "/forge/state" })).json();
+      expect(failed).toMatchObject({
+        status: "failed",
+        activeCategory: null,
+        boss: null,
+        progress: 3,
+      });
+      expect(failed.categories[3]).toMatchObject({
+        winner: null,
+        noVoteFallback: false,
+        totalVotes: 0,
+      });
+      expect((await app.app.inject({ method: "GET", url: "/battle/state" })).json().status).toBe(
+        "idle",
+      );
+      expect(
+        (await app.app.inject({ method: "POST", url: "/dev/forge/reset", payload: {} })).statusCode,
+      ).toBe(200);
+    } finally {
+      await app.close();
+    }
+  });
+
   it("publishes one ready battle after forge reveal and starts only by authenticated same-origin local action", async () => {
     let transition: (() => void) | undefined;
     const app = await createBossForgeApp({
@@ -88,7 +159,9 @@ describe("BossForge server", () => {
       url: "/dev/forge/start",
       payload: { durationSeconds: 15 },
     });
-    for (let i = 0; i < 4; i += 1) transition?.();
+    for (let i = 0; i < 3; i += 1) transition?.();
+    await sendMockWeakness(app, "2026-10-26T12:00:00.000Z");
+    transition?.();
     const ready = await app.app.inject({ method: "GET", url: "/battle/state" });
     expect(ready.json()).toMatchObject({
       status: "ready",
@@ -182,6 +255,7 @@ describe("BossForge server", () => {
   });
 
   it("creates and starts a new forge-1 encounter across mock→Twitch→mock transitions", async () => {
+    const forgeNow = new Date();
     const forgeTimers: { callback: () => void; cancelled: boolean }[] = [];
     const sockets: FakeTwitchSocket[] = [];
     const oauth = {
@@ -220,7 +294,7 @@ describe("BossForge server", () => {
       mode: "development",
       serverInstanceId: "application-epoch",
       serverStartedAt: "2026-10-29T00:00:00.000Z",
-      now: () => new Date("2026-10-29T00:00:00.000Z"),
+      now: () => forgeNow,
       twitchOAuth: oauth,
       twitchFetch: mockFetch,
       forgeScheduler: {
@@ -261,6 +335,34 @@ describe("BossForge server", () => {
         ).statusCode,
       ).toBe(200);
       for (let index = 0; index < 4; index += 1) {
+        if (index === 3) {
+          if (headers === ownerHeaders) {
+            sockets[0]!.sendFrame({
+              metadata: {
+                message_id: randomUUID(),
+                message_type: "notification",
+                message_timestamp: forgeNow.toISOString(),
+                subscription_type: "channel.chat.message",
+                subscription_version: "1",
+              },
+              payload: {
+                subscription: {
+                  type: "channel.chat.message",
+                  version: "1",
+                  condition: { broadcaster_user_id: "12345", user_id: "12345" },
+                },
+                event: {
+                  broadcaster_user_id: "12345",
+                  chatter_user_id: "888",
+                  chatter_user_login: "synthetic",
+                  chatter_user_name: "Synthetic",
+                  message_id: randomUUID(),
+                  message: { text: "!vote weakness water" },
+                },
+              },
+            });
+          } else await sendMockWeakness(app, forgeNow.toISOString());
+        }
         const timer = forgeTimers.shift();
         expect(timer?.cancelled).toBe(false);
         timer?.callback();
@@ -408,12 +510,14 @@ describe("BossForge server", () => {
       payload: { durationSeconds: 15 },
     });
     expect(started.statusCode).toBe(200);
-    for (let category = 0; category < 4; category += 1) scheduled?.();
+    for (let category = 0; category < 3; category += 1) scheduled?.();
+    await sendMockWeakness(oldProcess, "2026-10-26T12:00:00.000Z");
+    scheduled?.();
     const revealed = await oldProcess.app.inject({ method: "GET", url: "/forge/state" });
     expect(revealed.json()).toMatchObject({
       serverInstanceId: "old-process",
       status: "revealed",
-      revision: 5,
+      revision: 6,
       boss: { name: expect.any(String) },
     });
     await oldProcess.close();

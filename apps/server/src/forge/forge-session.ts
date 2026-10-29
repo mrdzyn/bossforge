@@ -45,6 +45,8 @@ export class ForgeSession {
   private seenMessageIds = new Set<string>();
   private cancelTimer: (() => void) | undefined;
   private boss: ForgeState["boss"] = null;
+  private weaknessRetry = false;
+  private timerGeneration = 0;
 
   constructor(
     private readonly now: () => Date = () => new Date(),
@@ -73,6 +75,7 @@ export class ForgeSession {
     this.stageTimes = {};
     this.ballots = this.newBallots();
     this.boss = null;
+    this.weaknessRetry = false;
     this.openCategory();
     return this.changed();
   }
@@ -80,6 +83,8 @@ export class ForgeSession {
   reset(): ForgeState {
     this.cancelTimer?.();
     this.cancelTimer = undefined;
+    this.timerGeneration += 1;
+    this.weaknessRetry = false;
     this.status = "idle";
     this.cycleId = null;
     this.startedAt = null;
@@ -159,7 +164,7 @@ export class ForgeSession {
         status:
           this.status === "idle" || index > this.activeIndex
             ? "pending"
-            : index < this.activeIndex || this.status === "revealed"
+            : index < this.activeIndex || this.status === "revealed" || this.status === "failed"
               ? "closed"
               : "open",
         options: choices.map((choice) => ({
@@ -186,14 +191,22 @@ export class ForgeSession {
       durationSeconds: this.durationSeconds,
       startedAt: this.startedAt?.toISOString() ?? null,
       activeCategory: this.status === "voting" ? categories[this.activeIndex] : null,
+      weaknessRetry: this.weaknessRetry,
       progress:
-        this.status === "revealed" ? 4 : this.status === "voting" ? this.activeIndex + 1 : 0,
+        this.status === "revealed"
+          ? 4
+          : this.status === "failed"
+            ? 3
+            : this.status === "voting"
+              ? this.activeIndex + 1
+              : 0,
       categories: categoryStates,
       boss: this.boss,
     });
   }
 
   close(): void {
+    this.timerGeneration += 1;
     this.cancelTimer?.();
     this.cancelTimer = undefined;
   }
@@ -218,10 +231,10 @@ export class ForgeSession {
         closesAt: this.closesAt.toISOString(),
       };
     }
-    this.cancelTimer = this.scheduler.schedule(
-      () => this.closeCategory(),
-      this.durationSeconds * 1000,
-    );
+    const generation = ++this.timerGeneration;
+    this.cancelTimer = this.scheduler.schedule(() => {
+      if (generation === this.timerGeneration) this.closeCategory();
+    }, this.durationSeconds * 1000);
   }
 
   private closeCategory(): void {
@@ -234,12 +247,28 @@ export class ForgeSession {
       counts.set(ballot.choice, (counts.get(ballot.choice) ?? 0) + 1);
     const max = Math.max(...counts.values());
     const fallback = max === 0;
+    if (category === "weakness" && fallback) {
+      this.cancelTimer?.();
+      this.cancelTimer = undefined;
+      this.timerGeneration += 1;
+      if (!this.weaknessRetry) {
+        this.weaknessRetry = true;
+        this.openCategory();
+      } else {
+        this.status = "failed";
+        this.openedAt = null;
+        this.closesAt = null;
+      }
+      this.changed();
+      return;
+    }
     const choice = fallback
       ? choices[0]!
       : choices.find((candidate) => counts.get(candidate) === max)!;
     this.winners[category] = { choice, fallback };
     this.cancelTimer?.();
     this.cancelTimer = undefined;
+    this.timerGeneration += 1;
     if (this.activeIndex === categories.length - 1) {
       this.status = "revealed";
       const attributes = Object.fromEntries(

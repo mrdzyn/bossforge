@@ -181,6 +181,106 @@ describe("M2-A battle dashboard projection", () => {
     expect(overlay).not.toContain("Cancel encounter");
   });
 
+  it.each(["water", "light", "earth", "wind"])(
+    "uses the fresh %s winner for dashboard and overlay commands",
+    (weakness) => {
+      const freshForge = JSON.parse(JSON.stringify(forge));
+      freshForge.boss.attributes.weakness = weakness;
+      freshForge.categories[3].winner = weakness;
+      for (const option of freshForge.categories[3].options) {
+        option.count = option.choice === weakness ? 1 : 0;
+        option.percentage = option.choice === weakness ? 100 : 0;
+      }
+      const battle = {
+        ...activeBattle,
+        deadlineAt: "2099-01-01T00:01:00.000Z",
+        bossSnapshot: {
+          ...activeBattle.bossSnapshot,
+          attributes: { ...activeBattle.bossSnapshot.attributes, weakness },
+        },
+      };
+      const overlayBattle = Object.fromEntries(
+        Object.entries(battle).filter(
+          ([key]) => !["profileId", "profileVersion", "profileSnapshot"].includes(key),
+        ),
+      );
+      mocks.live = {
+        forge: freshForge,
+        connection: "connected",
+        snapshotAvailable: true,
+        overlayBattle,
+        overlayBattleFresh: true,
+        post: vi.fn(),
+        error: "",
+        notice: "",
+        activity: null,
+      };
+      mocks.battle = { state: battle, fresh: true, error: "", activity: null, mutate: vi.fn() };
+      for (const html of [
+        renderToStaticMarkup(<Dashboard />),
+        renderToStaticMarkup(<OverlayPreview />),
+      ]) {
+        expect(html).toContain(`!hit ${weakness}`);
+        for (const other of ["water", "light", "earth", "wind"].filter((x) => x !== weakness))
+          expect(html).not.toContain(`!hit ${other}`);
+      }
+      const wrongWeakness = {
+        ...battle,
+        bossSnapshot: {
+          ...battle.bossSnapshot,
+          attributes: {
+            ...battle.bossSnapshot.attributes,
+            weakness: weakness === "water" ? "wind" : "water",
+          },
+        },
+      };
+      mocks.battle = {
+        state: wrongWeakness,
+        fresh: true,
+        error: "",
+        activity: null,
+        mutate: vi.fn(),
+      };
+      mocks.live = { ...(mocks.live as object), overlayBattle: wrongWeakness };
+      expect(renderToStaticMarkup(<Dashboard />)).not.toContain(`!hit ${weakness}`);
+      expect(renderToStaticMarkup(<OverlayPreview />)).not.toContain(`!hit ${weakness}`);
+      mocks.battle = { state: battle, fresh: true, error: "", activity: null, mutate: vi.fn() };
+      mocks.live = { ...(mocks.live as object), overlayBattle };
+      const staleForge = { ...freshForge, cycleId: "forge-other" };
+      mocks.live = { ...(mocks.live as object), forge: staleForge };
+      expect(renderToStaticMarkup(<Dashboard />)).not.toContain(`!hit ${weakness}`);
+      expect(renderToStaticMarkup(<OverlayPreview />)).not.toContain(`!hit ${weakness}`);
+    },
+  );
+
+  it("explains an exhausted weakness vote without showing stale battle instructions", () => {
+    const failed = {
+      ...(forge as unknown as object),
+      status: "failed",
+      activeCategory: null,
+      boss: null,
+      weaknessRetry: true,
+    };
+    mocks.live = {
+      forge: failed,
+      connection: "connected",
+      snapshotAvailable: true,
+      overlayBattle: activeBattle,
+      overlayBattleFresh: true,
+      post: vi.fn(),
+      error: "",
+      notice: "",
+      activity: null,
+    };
+    mocks.battle = { state: activeBattle, fresh: true, error: "", activity: null, mutate: vi.fn() };
+    const dashboard = renderToStaticMarkup(<Dashboard />);
+    const overlay = renderToStaticMarkup(<OverlayPreview />);
+    expect(dashboard).toContain("No valid weakness votes arrived after two voting windows");
+    expect(overlay).toContain("FORGE ENDED · NO WEAKNESS VOTES AFTER TWO WINDOWS");
+    expect(dashboard).not.toContain("!hit water");
+    expect(overlay).not.toContain("!hit water");
+  });
+
   it("shows a fresh matching Twitch cancellation beside its disconnected source label only", () => {
     const twitchForge = {
       ...(forge as unknown as Record<string, unknown>),

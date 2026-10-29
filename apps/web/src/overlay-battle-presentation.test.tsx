@@ -18,6 +18,10 @@ const forge = {
   mode: "mock",
   simulated: true,
   connectedToTwitch: false,
+  boss: {
+    id: "b1",
+    attributes: { body: "golem", element: "fire", special: "ember-burst", weakness: "water" },
+  },
 } as unknown as ForgeState;
 const battle = {
   schemaVersion: 1,
