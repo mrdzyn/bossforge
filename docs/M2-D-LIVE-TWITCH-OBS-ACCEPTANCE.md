@@ -60,14 +60,14 @@ If the test encounters an authorization, source-isolation, privacy or authority 
 
 ## M2-D pass/fail record template
 
-| Gate | Result | Evidence / limitation |
-| --- | --- | --- |
-| A: deterministic security and full suite | NOT RUN ON M2-D BASELINE | Record exact HEAD, commands, counts and any manual-CI exceptions |
-| B: owner permission, OAuth and verified EventSub | NOT AUTHORIZED | Owner-only consent; sanitized subscription verification |
-| C: genuine votes and 8/14 damage | NOT TESTED | Genuine viewer source; HP before/after; aggregate only |
-| C: cooldown and source/disconnect safety | NOT TESTED | One low-volume rejection; safe cancellation and new encounter |
-| D: OBS 1920×1080 and 1280×720 | NOT TESTED | Native screenshots, fit, transparency, timing |
-| E: evidence hygiene and independent audit | PENDING | No private data; full explicit gate report |
+| Gate                                             | Result         | Evidence / limitation                                                                                                                                                                   |
+| ------------------------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A: deterministic security and full suite         | PARTIAL        | All 262 package tests pass separately; root parallel `pnpm test` has a recorded SVG test timeout. See [M2-D Gate A evidence](ACCEPTANCE.md#m2-d-gate-a--deterministic-local-preflight). |
+| B: owner permission, OAuth and verified EventSub | NOT AUTHORIZED | Owner-only consent; sanitized subscription verification                                                                                                                                 |
+| C: genuine votes and 8/14 damage                 | NOT TESTED     | Genuine viewer source; HP before/after; aggregate only                                                                                                                                  |
+| C: cooldown and source/disconnect safety         | NOT TESTED     | One low-volume rejection; safe cancellation and new encounter                                                                                                                           |
+| D: OBS 1920×1080 and 1280×720                    | NOT TESTED     | Native screenshots, fit, transparency, timing                                                                                                                                           |
+| E: evidence hygiene and independent audit        | PENDING        | No private data; full explicit gate report                                                                                                                                              |
 
 For each owner test, record: Asia/Manila date/time, branch and exact HEAD, source environment (mock/Twitch), exact server-authoritative before/after HP, accepted/rejected aggregates, UI/OBS outcome, screenshot paths, reason for failure, retry status, and whether evidence is owner-supplied or independently observed.
 
