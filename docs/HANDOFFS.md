@@ -936,3 +936,39 @@ subsequently squash-merged into `main` at
 - Keep the new PR Draft and unmerged; request independent GPT-6 review at the
   exact pushed HEAD. Do not modify backend gameplay or Phaser. The next
   remaining work before visual acceptance is browser-enabled screenshot QA.
+
+## M2-D — local deterministic preflight, Gate A
+
+- **Baseline:** M2-C SVG polish PR #14 is merged; main is
+  `50d4523873873328847f3d4c830220a869788b96`. Existing Draft PR #15 branch
+  `docs/m2d-live-twitch-obs-acceptance` started clean at
+  `63901d273029ad60ac429848b6731e934a65eb62`.
+- **Environment:** Node `v24.21.0`, pnpm `11.25.0`; frozen install and
+  reproducible SVG asset check pass. Build, typecheck and lint pass. Tracked
+  Prettier check passes after normalizing the runbook and STATUS. Ignored
+  `.kilo/agent-manager.json` was not read or modified.
+- **Automated evidence:** shared 41/41, server 147/147 and web 74/74 passed
+  package-by-package (262 total). The focused OAuth/EventSub/battle/security
+  group passed 107/107. Sandbox localhost listeners failed with `EPERM`; the
+  authorized local server suite passed. The aggregate root `pnpm test` also
+  encountered a default 5-second timeout in the SVG checksum/optimizer web
+  test under parallel load; the isolated web suite passed using a 15-second
+  timeout. This concurrency exception is explicit and the root command is not
+  represented as green.
+- **Mock acceptance:** `pnpm simulate` passed with a temporary server bound
+  only to `127.0.0.1:33307`; the process received an empty environment
+  allowlist and Twitch was explicitly disabled. It completed all four stages
+  with two synthetic votes per category and revealed Drake / Storm / Thunder
+  Dash / Light. Ports 3001/5173 were confirmed unoccupied before and after;
+  the temporary process was stopped. No credentials or Twitch operations were
+  used.
+- **Security assertions:** deterministic tests exercise base/weakness damage
+  (8/14), cooldown, replay and capacity, authoritative deadline ordering,
+  provider/session isolation, strict recipient serialization and verified
+  EventSub loss/retry cancellation. No production defect surfaced in these
+  checks. Hosted Actions remain unverified.
+- **Still gated:** Gate B OAuth/EventSub, Gate C genuine Twitch votes and
+  attacks, and Gate D native OBS are NOT AUTHORIZED/NOT TESTED. Do not infer
+  live acceptance from synthetic tests. Next action is independent GPT-6
+  review of the exact pushed PR #15 head; owner approval remains necessary
+  before any real-service activity.

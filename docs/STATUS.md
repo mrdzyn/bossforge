@@ -2,13 +2,50 @@
 
 ## Current snapshot — 2026-10-29
 
-- **Current `main` baseline:** `9c850eda69492a65f9cdf5ac3c9907c628055a98`; M2-C PR #13 was squash-merged after M2-B PR #12. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
+- **Current `main` baseline:** `50d4523873873328847f3d4c830220a869788b96`; M2-C SVG polish PR #14 was squash-merged after the M2-C OBS HUD PR #13. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
 - **M1-B merged:** PR #10 includes the Generic dashboard/read-only OBS presentation, freshness protection and reveal visibility remediation. PR #10 is no longer Draft or pending review.
 - **M1-A merged:** PR #9 was squash-merged into `main` at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. Its historical remediation and review evidence remain in [ACCEPTANCE](ACCEPTANCE.md).
 - **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access later created Draft PR #9, which is now merged; the former blocker is historical only.
 - **Historical M1-A audited-head validation:** 151 tests (26 shared / 19 web / 106 server), frozen install, build, typecheck, lint, format, simulation, and browser screenshots are recorded in [ACCEPTANCE](ACCEPTANCE.md). These are historical implementation-agent reports, distinct from the later M1-A remediation and hosted GitHub Actions.
 - **Historical live/OBS evidence:** Genuine Twitch activity and native OBS evidence remain owner-supplied at their original checkpoints. Chromium captures are separate browser evidence and do not establish live Twitch or native OBS acceptance. See the historical P3-B and P4A sections and [acceptance](ACCEPTANCE.md).
 - **M1-B:** Original Generic dashboard/OBS implementation commit is `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`; the MINOR-2 reveal-visibility remediation commit is `c4e20c5a571ec188232fa2379d580d067dedb87d`. Connected GitHub access created the existing Draft PR [#10](https://github.com/mrdzyn/bossforge/pull/10). Its pre-remediation reviewed HEAD was `4e2ee256ccb09347e143f76242dc9a106c5b8c1d`; the final exact review HEAD is the pushed branch tip identified in the final review request. The earlier invalid GitHub CLI token incident is historical evidence only. This work is presentation-only and does not start M2.
+
+### M2-D — genuine Twitch combat and native OBS owner QA (preparation started)
+
+- **Kickoff baseline:** verified `main@50d4523873873328847f3d4c830220a869788b96`. PR #14 closed/merged at this SHA after independent exact-head source/security PASS and 80 measured synthetic Chrome dashboard/overlay captures. The prior SVG branch report is retained as historical evidence below; its initial NOT TESTED Chromium note is superseded by the committed and audited `docs/visual-qa/m2c-svg/qa-2026-10-29/` results.
+- **Preparation scope:** [M2-D runbook](M2-D-LIVE-TWITCH-OBS-ACCEPTANCE.md) sets independent gates for safe local deterministic regression, explicit owner consent for genuine Twitch EventSub, real `!vote` / `!hit` 8/14 server-owned damage, fail-closed source/cooldown/disconnect, and native OBS 1920×1080 and 1280×720. This is a docs-only bounded kickoff, not a live test.
+- **Historical preflight before this branch:** agent reported 262 tests passing when workspace suites ran separately (41 shared, 147 server, 74 web), 107 focused OAuth/EventSub/combat/security tests, frozen install/build/typecheck/lint and mock simulation. The initial concurrent SVG checksum timeout was resolved in a separate 15-second web-suite rerun; sandbox socket EPERM required authorized local reruns; `pnpm format:check` still flagged an ignored local `.kilo/agent-manager.json` file. These are agent-reported results on the earlier audited PR #14 branch, not rerun here.
+- **Gate A deterministic preflight:** executed on PR #15 starting HEAD
+  `63901d273029ad60ac429848b6731e934a65eb62`, based on main
+  `50d4523873873328847f3d4c830220a869788b96`. Branch was clean at start.
+  Node `v24.21.0`, pnpm `11.25.0`; frozen install, asset reproducibility,
+  build, typecheck, lint, tracked-file Prettier, focused security tests and
+  isolated mock simulation passed. All 262 package tests passed separately:
+  41 shared, 147 server and 74 web. Focused OAuth/EventSub/battle/local-access
+  regressions passed 107/107. See [ACCEPTANCE](ACCEPTANCE.md) for command-level
+  outcomes and retry details.
+- **Runner limitations:** sandbox full tests first hit eight localhost bind
+  `EPERM` failures; the authorized local rerun passed all 147 server tests.
+  The root `pnpm test` command still hit the web SVG checksum test's default
+  5-second timeout while suites ran concurrently; the web suite passed 74/74
+  when rerun alone with a 15-second timeout. Therefore the combined root
+  command is not recorded as a single-command PASS. The asset check initially
+  hit pnpm's noninteractive modules-directory guard, then passed with
+  `CI=true`. Tracked-file formatting passed after Prettier normalized the
+  runbook and this status file; ignored `.kilo/agent-manager.json` was not
+  read or changed. The optional Phaser chunk-size warning remains.
+- **Synthetic run:** the existing four-category simulation passed against a
+  temporary Fastify server on `127.0.0.1:33307`, started with an empty
+  environment allowlist and `TWITCH_INTEGRATION_ENABLED=false`. Two synthetic
+  votes were accepted per category and Drake / Storm / Thunder Dash / Light
+  was revealed. Ports 3001/5173 were not listening before or after and were
+  untouched. This is mock evidence only.
+- **Current gates:** deterministic M2-D Gate A evidence is recorded; hosted
+  GitHub Actions are **UNVERIFIED**. Live Twitch OAuth/EventSub/chat combat
+  remain **NOT AUTHORIZED/NOT TESTED** and native OBS battle integration
+  remains **NOT TESTED**. No production-code defect was identified by the
+  executed checks. Owner-controlled Gates B–D remain separate and require
+  authorization; no merge/deployment/publication is authorized by this entry.
 
 ### M2-A — server-authoritative battle engine (merged)
 
