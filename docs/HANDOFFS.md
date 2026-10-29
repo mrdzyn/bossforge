@@ -814,9 +814,9 @@ subsequently squash-merged into `main` at
   genuine chat hit, native OBS testing, hosted CI success, merge or deployment
   is claimed. Replay and cooldown identity remain process-local and bounded;
   diagnostics expose no viewer identity, chat text, IDs, tokens or secrets.
-- **Delivery/review:** Implementation and final documentation commit SHAs will
-  be recorded after commit. The implementation commit is
-  `7f548d1f1c53a85da203115cac601fcc1028bfc2`. Push the final documentation
-  follow-up to this branch and request independent GPT-6 exact-head review on
-  its resulting PR head. Keep the single new Draft PR against `main` unmerged;
-  M2-C remains deferred.
+- **Delivery/review:** Implementation commit
+  `7f548d1f1c53a85da203115cac601fcc1028bfc2` is part of Draft PR
+  [#12](https://github.com/mrdzyn/bossforge/pull/12), targeting `main` at the
+  exact base above. The PR description and review comment identify the exact
+  pushed review head. Independent GPT-6 exact-head review is requested. Keep
+  this single new PR Draft and unmerged; M2-C remains deferred.

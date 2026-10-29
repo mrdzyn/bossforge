@@ -1174,5 +1174,6 @@ successful hosted workflows. No real Twitch credentials, API calls, live hits,
 native OBS testing, merge or deployment were used.
 
 **M2-B implementation commit:** `7f548d1f1c53a85da203115cac601fcc1028bfc2`.
-The final review HEAD is the pushed tip of `feat/m2b-twitch-chat-attacks` and
-will be identified in its new Draft PR against `main`.
+The work is published in Draft [PR #12](https://github.com/mrdzyn/bossforge/pull/12)
+against `main` at the exact base above. Its description and independent review
+request identify the final pushed review HEAD.

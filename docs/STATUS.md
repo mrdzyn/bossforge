@@ -48,6 +48,9 @@
   binding required the authorized local rerun after sandbox `EPERM`. The build
   retains the optional Phaser large-chunk advisory; hosted CI is not claimed.
 - **Implementation commit:** `7f548d1f1c53a85da203115cac601fcc1028bfc2`.
+- **Delivery:** Draft PR [#12](https://github.com/mrdzyn/bossforge/pull/12)
+  targets `main` at the exact base above. It remains open, Draft and unmerged;
+  independent exact-head review is requested.
 - **Not claimed:** no real Twitch API/EventSub or owner credentials were used;
   live `!hit` acceptance, native OBS battle presentation, chat-driven HP over a
   real stream, M2-C polished overlay/animations, challenges and Arena profile
