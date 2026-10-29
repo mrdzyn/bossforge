@@ -1,0 +1,15 @@
+{
+  "provenance": "Actual local Chrome, isolated loopback-only server/Vite, empty environment with Twitch integration disabled; all vote/hit traffic was synthetic mock input.",
+  "bossBody": "mimic",
+  "weakness": "wind",
+  "initialHp": 100,
+  "baseHitHp": 92,
+  "weaknessHitHp": 78,
+  "lowHp": 22,
+  "acceptedHits": 9,
+  "weaknessHits": 1,
+  "feedLoss": "SERVER LINK UNAVAILABLE / BATTLE STATUS UNKNOWN displayed; active combat claims hidden.",
+  "recovery": "fresh same-epoch active snapshot restored; HP and accepted-hit count matched authority.",
+  "reducedMotionAnimationName": "none",
+  "ownerCancellation": "cancelled"
+}

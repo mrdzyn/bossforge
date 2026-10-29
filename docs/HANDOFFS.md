@@ -973,6 +973,36 @@ subsequently squash-merged into `main` at
   review of the exact pushed PR #15 head; owner approval remains necessary
   before any real-service activity.
 
+## Boss Motion V1 — CSS character motion
+
+- **Original base:** `main@2893ba8b8d26de0fe032689c5ab69497f03a1486`.
+  Reconciled with `main@fc95b1366deea38ceb67ee4c11db2883a053a272`, which
+  includes merged M2-D live evidence PR #17 and Issue #16 remediation PR #19.
+- **Implementation branch:** `feat/boss-motion-v1`. The patch strengthens
+  per-character idle motion and authoritative hit/weakness recoil, increases
+  original SVG visibility within its existing presentation stage, and keeps
+  reduced-motion and terminal/disconnect behavior. No server or combat code
+  changed.
+- **Validation:** Node 24.21.0 / pnpm 11.25.0. Frozen install, build,
+  typecheck, lint, assets reproducibility, and package tests passed: 41 shared,
+  147 server, 76 web (264 total). The web tests used a 15-second timeout for
+  the SVG checksum test. The root parallel run encountered sandbox socket
+  `EPERM` and the known concurrency-sensitive SVG checksum timeout; package
+  tests passed separately in the authorized local environment. Four-category
+  mock simulation passed against isolated loopback ports with Twitch disabled.
+  Final integrated Chromium evidence is in
+  `docs/visual-qa/boss-motion-v1/`; no native OBS or genuine Twitch QA was run.
+- **Runtime limitation:** During dependency recovery, an install/format tool
+  unexpectedly attempted to recreate `node_modules` and registry DNS failed.
+  The owner's ports 3001/5173 were not intentionally stopped or restarted but
+  were later found not listening. No attempt was made to restore them. Details
+  are recorded in the visual QA README.
+- **Review:** Independent GPT-6 exact-head review is requested on the current
+  pushed tip of Draft PR #18. Implementation commit:
+  `d0d12c5fc84e097a240cbf589d0627f766a5a2d7`. Keep it unmerged; do not change
+  battle authority, initiate live Twitch activity, deploy, publish, or begin
+  M2-D implementation.
+
 ## M2-D — owner-supplied live acceptance checkpoint (2026-10-29)
 
 - Owner authorization for local OAuth/EventSub and bounded real Twitch QA is
@@ -1034,3 +1064,21 @@ The remediation was subsequently independently reviewed and squash-merged via PR
 PR #19 was squash-merged into `main` at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed for the scoped watchdog remediation. The running-process SHA during the owner retest and exact before/after diagnostic counter deltas were not independently verified. No numeric snapshot or timestamped event log was supplied. The original cause of silence remains unknown; ten minutes of stability does not guarantee future availability.
 
 M2-D end-to-end acceptance remains open: base-hit damage, BossForge two-second cooldown rejection, Community Victory, native OBS active-HP synchronization, native source sizing/fit and long-duration motion performance remain unverified. The previously observed dashboard/API terminal-state mismatch also remains unresolved. Owner-supplied OBS screenshots were not independently reproduced. The earlier deterministic tests and root parallel-test limitation remain historical evidence; hosted CI is unverified.
+
+## Boss Motion V1 — reconciliation validation (2026-10-30)
+
+PR #18 was reconciled with main `fc95b1366deea38ceb67ee4c11db2883a053a272`,
+including merged PR #17 and Issue #16 history. The previously audited motion CSS,
+web tests and visual QA files are unchanged from PR #18 head
+`1b6bebe8da5853f6a23e0403489620d3cb8712e6`.
+
+Manual CI in an isolated checkout used Node 24.21.0 and pnpm 11.25.0: offline
+frozen install, build, typecheck, lint, format check, asset reproducibility,
+19 focused motion/lifecycle tests and four-category mock simulation passed.
+The root parallel test command passed 41 shared and 155 server tests but its web
+SVG checksum test exceeded the default five-second timeout (75/76 passed). A
+separate web rerun with `--testTimeout=15000` passed 76/76: all **272 tests**
+passed across those runs. The root command is not claimed as a pass. Hosted CI
+and new native OBS or live Twitch verification remain unverified. The mock
+simulation used a disposable loopback-only server on port 33317 with Twitch
+disabled; the owner's runtime and credentials were not touched.

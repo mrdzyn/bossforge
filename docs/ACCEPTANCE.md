@@ -1428,6 +1428,31 @@ deterministic/local evidence only; they do not establish genuine Twitch
 acceptance or native OBS rendering. Gates B–D remain NOT AUTHORIZED or NOT
 TESTED as stated in the runbook.
 
+## Boss Motion V1 — integrated synthetic Chromium QA
+
+On 2026-10-30, a separate CSS-only implementation branch based on
+`2893ba8b8d26de0fe032689c5ab69497f03a1486` was exercised against the actual
+integrated dashboard and `/overlay` using an isolated loopback mock app. The
+server had Twitch disabled and an empty environment allowlist. No live
+credentials, Twitch messages, or owner runtime were used for the browser run.
+
+The final capture set covers all four original characters in both dashboard
+and read-only overlay at 1920×1080 and 1280×720. Automated bounds checks found
+no horizontal overflow, clipped/off-stage boss image, or broken character
+asset. The overlay root remains transparent. The active synthetic encounter
+showed mock HP transitions 100→92→78, then 22 HP after nine accepted mock
+hits; the UI did not invent damage. Feed loss hid current battle authority and
+fresh recovery restored it. Mock cancellation showed the cancelled scene, and
+reduced-motion mode disabled character animation. Evidence and measurements
+are in [`visual-qa/boss-motion-v1/README.md`](visual-qa/boss-motion-v1/README.md)
+and its JSON/screenshot artifacts.
+
+This does not establish native OBS rendering, actual Twitch behavior, or
+continuous animation performance. The exact Chromium build was not retained.
+The local owner's ports 3001/5173 were initially listening and not
+intentionally stopped; after an unexpected dependency-restoration incident,
+read-only checks found them no longer listening. They were not restarted.
+
 ## M2-D — owner-supplied live Twitch and OBS results (2026-10-29)
 
 **Authorization:** The owner confirmed the registered callback and intentional
@@ -1490,3 +1515,21 @@ The remediation was subsequently independently reviewed and squash-merged via PR
 PR #19 was squash-merged into `main` at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed for the scoped watchdog remediation. The running-process SHA during the owner retest and exact before/after diagnostic counter deltas were not independently verified. No numeric snapshot or timestamped event log was supplied. The original cause of silence remains unknown; ten minutes of stability does not guarantee future availability.
 
 M2-D end-to-end acceptance remains open: base-hit damage, BossForge two-second cooldown rejection, Community Victory, native OBS active-HP synchronization, native source sizing/fit and long-duration motion performance remain unverified. The previously observed dashboard/API terminal-state mismatch also remains unresolved. Owner-supplied OBS screenshots were not independently reproduced. The earlier deterministic tests and root parallel-test limitation remain historical evidence; hosted CI is unverified.
+
+## Boss Motion V1 — reconciliation validation (2026-10-30)
+
+PR #18 was reconciled with main `fc95b1366deea38ceb67ee4c11db2883a053a272`,
+including merged PR #17 and Issue #16 history. The previously audited motion CSS,
+web tests and visual QA files are unchanged from PR #18 head
+`1b6bebe8da5853f6a23e0403489620d3cb8712e6`.
+
+Manual CI in an isolated checkout used Node 24.21.0 and pnpm 11.25.0: offline
+frozen install, build, typecheck, lint, format check, asset reproducibility,
+19 focused motion/lifecycle tests and four-category mock simulation passed.
+The root parallel test command passed 41 shared and 155 server tests but its web
+SVG checksum test exceeded the default five-second timeout (75/76 passed). A
+separate web rerun with `--testTimeout=15000` passed 76/76: all **272 tests**
+passed across those runs. The root command is not claimed as a pass. Hosted CI
+and new native OBS or live Twitch verification remain unverified. The mock
+simulation used a disposable loopback-only server on port 33317 with Twitch
+disabled; the owner's runtime and credentials were not touched.

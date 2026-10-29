@@ -1594,7 +1594,7 @@ p {
 }
 .animated-boss-stage {
   position: absolute;
-  inset: 5% 8%;
+  inset: 3% 5%;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -1626,24 +1626,38 @@ p {
   position: relative;
   z-index: 1;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 92%;
+  height: 78%;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
   object-position: center;
   filter: drop-shadow(0 12px 22px #05040dcc)
     drop-shadow(0 0 18px color-mix(in srgb, var(--boss-accent) 20%, transparent));
   transform-origin: 50% 78%;
-  animation: boss-hover 4.2s ease-in-out infinite;
+  animation: none;
+}
+.animated-boss.phase-ready .animated-boss-image,
+.animated-boss.phase-active:not(.is-hit):not(.is-weakness-impact) .animated-boss-image {
   will-change: transform;
 }
-.body-wraith .animated-boss-image {
-  animation-duration: 5.2s;
+.animated-boss.phase-ready.body-wraith .animated-boss-image,
+.animated-boss.phase-active:not(.is-hit):not(.is-weakness-impact).body-wraith .animated-boss-image {
+  animation: boss-wraith-drift 4.6s ease-in-out infinite;
 }
-.body-drake .animated-boss-image {
-  animation-duration: 3.4s;
+.animated-boss.phase-ready.body-golem .animated-boss-image,
+.animated-boss.phase-active:not(.is-hit):not(.is-weakness-impact).body-golem .animated-boss-image {
+  animation: boss-golem-breathe 3.7s ease-in-out infinite;
 }
-.body-mimic .animated-boss-image {
-  animation-duration: 4.7s;
+.animated-boss.phase-ready.body-drake .animated-boss-image,
+.animated-boss.phase-active:not(.is-hit):not(.is-weakness-impact).body-drake .animated-boss-image {
+  animation: boss-drake-flight 2.8s ease-in-out infinite;
+}
+.animated-boss.phase-ready.body-mimic .animated-boss-image,
+.animated-boss.phase-active:not(.is-hit):not(.is-weakness-impact).body-mimic .animated-boss-image {
+  animation: boss-mimic-twitch 3.2s ease-in-out infinite;
 }
 .animated-boss-forging-mark {
   position: relative;
@@ -1681,6 +1695,9 @@ p {
 }
 .animated-boss.is-hit .animated-boss-image {
   animation: boss-impact 420ms ease-out both;
+}
+.animated-boss.is-weakness-impact .animated-boss-image {
+  animation: boss-weakness-impact 520ms ease-out both;
 }
 .animated-boss.is-weakness-impact .animated-boss-elemental-effect {
   border-width: 2px;
@@ -1788,13 +1805,45 @@ p {
   border: 0;
 }
 
-@keyframes boss-hover {
+@keyframes boss-wraith-drift {
   0%,
   100% {
-    transform: translateY(0) rotate(-0.25deg);
+    transform: translate3d(0, 7px, 0) rotate(-1deg) scale(1);
   }
   50% {
-    transform: translateY(-5px) rotate(0.25deg);
+    transform: translate3d(0, -13px, 0) rotate(1deg) scale(1.015);
+  }
+}
+@keyframes boss-golem-breathe {
+  0%,
+  100% {
+    transform: translate3d(0, 2px, 0) rotate(-1.1deg) scale(1, 1);
+  }
+  50% {
+    transform: translate3d(0, -3px, 0) rotate(1.1deg) scale(1.012, 0.99);
+  }
+}
+@keyframes boss-drake-flight {
+  0%,
+  100% {
+    transform: translate3d(0, 8px, 0) rotate(-2.4deg) scale(0.99);
+  }
+  50% {
+    transform: translate3d(0, -12px, 0) rotate(2.4deg) scale(1.025);
+  }
+}
+@keyframes boss-mimic-twitch {
+  0%,
+  42%,
+  48%,
+  100% {
+    transform: translate3d(0, 2px, 0) rotate(0) scale(1, 1);
+  }
+  44% {
+    transform: translate3d(-2px, -3px, 0) rotate(-1.8deg) scale(1.015, 0.98);
+  }
+  46% {
+    transform: translate3d(2px, 0, 0) rotate(1.4deg) scale(0.99, 1.012);
   }
 }
 @keyframes boss-aura-pulse {
@@ -1839,6 +1888,23 @@ p {
   }
   100% {
     transform: translateX(0) scale(1);
+  }
+}
+@keyframes boss-weakness-impact {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
+    filter: brightness(1.35) drop-shadow(0 0 26px var(--boss-accent));
+  }
+  22% {
+    transform: translate3d(-7px, 1px, 0) rotate(-2deg) scale(0.98, 1.015);
+  }
+  48% {
+    transform: translate3d(5px, -3px, 0) rotate(1.5deg) scale(1.025);
+    filter: brightness(1.9) drop-shadow(0 0 38px var(--boss-accent));
+  }
+  72% {
+    transform: translate3d(-2px, 0, 0) rotate(-0.6deg) scale(1.01);
   }
 }
 @keyframes hit-flash {
@@ -2291,6 +2357,13 @@ p {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  .animated-boss *,
+  .animated-boss::before,
+  .animated-boss::after {
+    animation: none !important;
+    transition: none !important;
+    will-change: auto !important;
   }
 }
 

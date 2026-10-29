@@ -2,7 +2,7 @@
 
 ## Current snapshot — 2026-10-30
 
-- **Current `main` baseline:** `953c52f720bed59dc3ab2514054e6a954b4777ff`; PR #19 was squash-merged after M2-C SVG polish PR #14 and M2-D preparation PR #15. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
+- **Current `main` baseline:** `fc95b1366deea38ceb67ee4c11db2883a053a272`; PR #17 owner evidence and PR #19 keepalive remediation are merged. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
 - **M1-B merged:** PR #10 includes the Generic dashboard/read-only OBS presentation, freshness protection and reveal visibility remediation. PR #10 is no longer Draft or pending review.
 - **M1-A merged:** PR #9 was squash-merged into `main` at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. Its historical remediation and review evidence remain in [ACCEPTANCE](ACCEPTANCE.md).
 - **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access later created Draft PR #9, which is now merged; the former blocker is historical only.
@@ -60,6 +60,27 @@
   established by the supplied results. The screenshots are owner-supplied,
   not independent OBS reproduction. Hosted GitHub Actions remain
   **UNVERIFIED**. Gate A retains its documented aggregate-runner exception.
+
+### Boss Motion V1 — CSS-only character presentation (Draft PR #18)
+
+- **Original baseline:** `main@2893ba8b8d26de0fe032689c5ab69497f03a1486`.
+  Branch `feat/boss-motion-v1` is reconciled with main at
+  `fc95b1366deea38ceb67ee4c11db2883a053a272`, including merged PR #17.
+- **Scope:** strengthen bounded idle and authoritative hit/weakness reactions
+  for the four existing SVG characters, and fit the original art within the
+  existing stage. CSS transforms, opacity, and a bounded weakness filter effect; no animation framework, server
+  combat change, or change to Twitch/EventSub authority. Synthetic Chromium
+  screenshots and observations are in `docs/visual-qa/boss-motion-v1/`.
+- **Review target:** branch `feat/boss-motion-v1`; Draft PR
+  [#18](https://github.com/mrdzyn/bossforge/pull/18), open and unmerged.
+  Implementation commit: `d0d12c5fc84e097a240cbf589d0627f766a5a2d7`.
+- **Validation status:** package tests, build, typecheck, lint, assets and
+  isolated mock simulation passed on the implementation branch. The root
+  parallel test runner had sandbox socket `EPERM` and a pre-existing web asset
+  checksum timeout under parallel load; separate authorized package suites
+  passed 264 tests. The ignored `.kilo/agent-manager.json` was not changed.
+  Native OBS and genuine Twitch were not retested. See the QA README for the
+  full command provenance and local runtime incident.
 
 ### M2-A — server-authoritative battle engine (merged)
 
@@ -448,3 +469,21 @@ The remediation was subsequently independently reviewed and squash-merged via PR
 PR #19 was squash-merged into `main` at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed for the scoped watchdog remediation. The running-process SHA during the owner retest and exact before/after diagnostic counter deltas were not independently verified. No numeric snapshot or timestamped event log was supplied. The original cause of silence remains unknown; ten minutes of stability does not guarantee future availability.
 
 M2-D end-to-end acceptance remains open: base-hit damage, BossForge two-second cooldown rejection, Community Victory, native OBS active-HP synchronization, native source sizing/fit and long-duration motion performance remain unverified. The previously observed dashboard/API terminal-state mismatch also remains unresolved. Owner-supplied OBS screenshots were not independently reproduced. The earlier deterministic tests and root parallel-test limitation remain historical evidence; hosted CI is unverified.
+
+## Boss Motion V1 — reconciliation validation (2026-10-30)
+
+PR #18 was reconciled with main `fc95b1366deea38ceb67ee4c11db2883a053a272`,
+including merged PR #17 and Issue #16 history. The previously audited motion CSS,
+web tests and visual QA files are unchanged from PR #18 head
+`1b6bebe8da5853f6a23e0403489620d3cb8712e6`.
+
+Manual CI in an isolated checkout used Node 24.21.0 and pnpm 11.25.0: offline
+frozen install, build, typecheck, lint, format check, asset reproducibility,
+19 focused motion/lifecycle tests and four-category mock simulation passed.
+The root parallel test command passed 41 shared and 155 server tests but its web
+SVG checksum test exceeded the default five-second timeout (75/76 passed). A
+separate web rerun with `--testTimeout=15000` passed 76/76: all **272 tests**
+passed across those runs. The root command is not claimed as a pass. Hosted CI
+and new native OBS or live Twitch verification remain unverified. The mock
+simulation used a disposable loopback-only server on port 33317 with Twitch
+disabled; the owner's runtime and credentials were not touched.

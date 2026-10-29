@@ -1,0 +1,816 @@
+{
+  "provenance": "Actual local Chromium 141, isolated loopback mock server/Vite, synthetic votes and hits only; no Twitch credentials or network.",
+  "base": "http://127.0.0.1:5201",
+  "startingHp": 100,
+  "finalLowHp": 22,
+  "weaknessHitCount": 1,
+  "acceptedHitCount": 9,
+  "reducedMotionAnimationName": "none",
+  "captures": [
+    {
+      "body": "drake",
+      "stateName": "ready",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/ready-drake-overlay-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "document": {
+        "clientWidth": 1920,
+        "scrollWidth": 1920,
+        "scrollHeight": 1080
+      },
+      "figure": {
+        "x": 372,
+        "y": 189,
+        "width": 278,
+        "height": 188,
+        "right": 650,
+        "bottom": 377
+      },
+      "image": {
+        "x": 381,
+        "y": 197,
+        "width": 256,
+        "height": 256,
+        "right": 637,
+        "bottom": 453
+      },
+      "imageLoaded": true,
+      "animationName": "boss-drake-flight",
+      "animationDuration": "2.8s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "drake",
+      "stateName": "ready",
+      "route": "/",
+      "file": "visual-qa/boss-motion-v1/ready-drake-dashboard-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "document": {
+        "clientWidth": 1920,
+        "scrollWidth": 1920,
+        "scrollHeight": 1771
+      },
+      "figure": {
+        "x": 389,
+        "y": 863,
+        "width": 648,
+        "height": 172,
+        "right": 1037,
+        "bottom": 1035
+      },
+      "image": {
+        "x": 410,
+        "y": 867,
+        "width": 597,
+        "height": 597,
+        "right": 1007,
+        "bottom": 1464
+      },
+      "imageLoaded": true,
+      "animationName": "boss-drake-flight",
+      "animationDuration": "2.8s",
+      "overlayBackground": null
+    },
+    {
+      "body": "drake",
+      "stateName": "ready",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/ready-drake-overlay-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 720
+      },
+      "figure": {
+        "x": 75,
+        "y": 90,
+        "width": 188,
+        "height": 146,
+        "right": 263,
+        "bottom": 236
+      },
+      "image": {
+        "x": 81,
+        "y": 97,
+        "width": 173,
+        "height": 173,
+        "right": 254,
+        "bottom": 270
+      },
+      "imageLoaded": true,
+      "animationName": "boss-drake-flight",
+      "animationDuration": "2.8s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "drake",
+      "stateName": "ready",
+      "route": "/",
+      "file": "visual-qa/boss-motion-v1/ready-drake-dashboard-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 1771
+      },
+      "figure": {
+        "x": 301,
+        "y": 863,
+        "width": 423,
+        "height": 172,
+        "right": 724,
+        "bottom": 1035
+      },
+      "image": {
+        "x": 315,
+        "y": 869,
+        "width": 389,
+        "height": 389,
+        "right": 704,
+        "bottom": 1258
+      },
+      "imageLoaded": true,
+      "animationName": "boss-drake-flight",
+      "animationDuration": "2.8s",
+      "overlayBackground": null
+    },
+    {
+      "body": "wraith",
+      "stateName": "ready",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/ready-wraith-overlay-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "document": {
+        "clientWidth": 1920,
+        "scrollWidth": 1920,
+        "scrollHeight": 1080
+      },
+      "figure": {
+        "x": 372,
+        "y": 189,
+        "width": 278,
+        "height": 188,
+        "right": 650,
+        "bottom": 377
+      },
+      "image": {
+        "x": 383,
+        "y": 199,
+        "width": 254,
+        "height": 254,
+        "right": 637,
+        "bottom": 453
+      },
+      "imageLoaded": true,
+      "animationName": "boss-wraith-drift",
+      "animationDuration": "4.6s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "wraith",
+      "stateName": "ready",
+      "route": "/",
+      "file": "visual-qa/boss-motion-v1/ready-wraith-dashboard-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "document": {
+        "clientWidth": 1920,
+        "scrollWidth": 1920,
+        "scrollHeight": 1771
+      },
+      "figure": {
+        "x": 389,
+        "y": 863,
+        "width": 648,
+        "height": 172,
+        "right": 1037,
+        "bottom": 1035
+      },
+      "image": {
+        "x": 414,
+        "y": 869,
+        "width": 593,
+        "height": 593,
+        "right": 1007,
+        "bottom": 1462
+      },
+      "imageLoaded": true,
+      "animationName": "boss-wraith-drift",
+      "animationDuration": "4.6s",
+      "overlayBackground": null
+    },
+    {
+      "body": "wraith",
+      "stateName": "ready",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/ready-wraith-overlay-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 720
+      },
+      "figure": {
+        "x": 75,
+        "y": 90,
+        "width": 188,
+        "height": 146,
+        "right": 263,
+        "bottom": 236
+      },
+      "image": {
+        "x": 82,
+        "y": 99,
+        "width": 172,
+        "height": 172,
+        "right": 254,
+        "bottom": 271
+      },
+      "imageLoaded": true,
+      "animationName": "boss-wraith-drift",
+      "animationDuration": "4.6s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "wraith",
+      "stateName": "ready",
+      "route": "/",
+      "file": "visual-qa/boss-motion-v1/ready-wraith-dashboard-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 1771
+      },
+      "figure": {
+        "x": 301,
+        "y": 863,
+        "width": 423,
+        "height": 172,
+        "right": 724,
+        "bottom": 1035
+      },
+      "image": {
+        "x": 317,
+        "y": 871,
+        "width": 387,
+        "height": 387,
+        "right": 704,
+        "bottom": 1257
+      },
+      "imageLoaded": true,
+      "animationName": "boss-wraith-drift",
+      "animationDuration": "4.6s",
+      "overlayBackground": null
+    },
+    {
+      "body": "golem",
+      "stateName": "ready",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/ready-golem-overlay-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "document": {
+        "clientWidth": 1920,
+        "scrollWidth": 1920,
+        "scrollHeight": 1080
+      },
+      "figure": {
+        "x": 372,
+        "y": 189,
+        "width": 278,
+        "height": 188,
+        "right": 650,
+        "bottom": 377
+      },
+      "image": {
+        "x": 383,
+        "y": 195,
+        "width": 254,
+        "height": 254,
+        "right": 637,
+        "bottom": 449
+      },
+      "imageLoaded": true,
+      "animationName": "boss-golem-breathe",
+      "animationDuration": "3.7s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "golem",
+      "stateName": "ready",
+      "route": "/",
+      "file": "visual-qa/boss-motion-v1/ready-golem-dashboard-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "document": {
+        "clientWidth": 1920,
+        "scrollWidth": 1920,
+        "scrollHeight": 1771
+      },
+      "figure": {
+        "x": 389,
+        "y": 863,
+        "width": 648,
+        "height": 172,
+        "right": 1037,
+        "bottom": 1035
+      },
+      "image": {
+        "x": 414,
+        "y": 866,
+        "width": 593,
+        "height": 592,
+        "right": 1007,
+        "bottom": 1457
+      },
+      "imageLoaded": true,
+      "animationName": "boss-golem-breathe",
+      "animationDuration": "3.7s",
+      "overlayBackground": null
+    },
+    {
+      "body": "golem",
+      "stateName": "ready",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/ready-golem-overlay-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 720
+      },
+      "figure": {
+        "x": 75,
+        "y": 90,
+        "width": 188,
+        "height": 146,
+        "right": 263,
+        "bottom": 236
+      },
+      "image": {
+        "x": 82,
+        "y": 95,
+        "width": 172,
+        "height": 172,
+        "right": 254,
+        "bottom": 266
+      },
+      "imageLoaded": true,
+      "animationName": "boss-golem-breathe",
+      "animationDuration": "3.7s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "golem",
+      "stateName": "ready",
+      "route": "/",
+      "file": "visual-qa/boss-motion-v1/ready-golem-dashboard-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 1771
+      },
+      "figure": {
+        "x": 301,
+        "y": 863,
+        "width": 423,
+        "height": 172,
+        "right": 724,
+        "bottom": 1035
+      },
+      "image": {
+        "x": 317,
+        "y": 867,
+        "width": 387,
+        "height": 386,
+        "right": 704,
+        "bottom": 1253
+      },
+      "imageLoaded": true,
+      "animationName": "boss-golem-breathe",
+      "animationDuration": "3.7s",
+      "overlayBackground": null
+    },
+    {
+      "body": "mimic",
+      "stateName": "ready",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/ready-mimic-overlay-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "document": {
+        "clientWidth": 1920,
+        "scrollWidth": 1920,
+        "scrollHeight": 1080
+      },
+      "figure": {
+        "x": 372,
+        "y": 189,
+        "width": 278,
+        "height": 188,
+        "right": 650,
+        "bottom": 377
+      },
+      "image": {
+        "x": 386,
+        "y": 197,
+        "width": 250,
+        "height": 250,
+        "right": 636,
+        "bottom": 447
+      },
+      "imageLoaded": true,
+      "animationName": "boss-mimic-twitch",
+      "animationDuration": "3.2s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "mimic",
+      "stateName": "ready",
+      "route": "/",
+      "file": "visual-qa/boss-motion-v1/ready-mimic-dashboard-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "document": {
+        "clientWidth": 1920,
+        "scrollWidth": 1920,
+        "scrollHeight": 1771
+      },
+      "figure": {
+        "x": 389,
+        "y": 863,
+        "width": 648,
+        "height": 172,
+        "right": 1037,
+        "bottom": 1035
+      },
+      "image": {
+        "x": 421,
+        "y": 870,
+        "width": 583,
+        "height": 583,
+        "right": 1005,
+        "bottom": 1453
+      },
+      "imageLoaded": true,
+      "animationName": "boss-mimic-twitch",
+      "animationDuration": "3.2s",
+      "overlayBackground": null
+    },
+    {
+      "body": "mimic",
+      "stateName": "ready",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/ready-mimic-overlay-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 720
+      },
+      "figure": {
+        "x": 75,
+        "y": 90,
+        "width": 188,
+        "height": 146,
+        "right": 263,
+        "bottom": 236
+      },
+      "image": {
+        "x": 85,
+        "y": 96,
+        "width": 169,
+        "height": 169,
+        "right": 254,
+        "bottom": 266
+      },
+      "imageLoaded": true,
+      "animationName": "boss-mimic-twitch",
+      "animationDuration": "3.2s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "mimic",
+      "stateName": "ready",
+      "route": "/",
+      "file": "visual-qa/boss-motion-v1/ready-mimic-dashboard-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 1771
+      },
+      "figure": {
+        "x": 301,
+        "y": 863,
+        "width": 423,
+        "height": 172,
+        "right": 724,
+        "bottom": 1035
+      },
+      "image": {
+        "x": 322,
+        "y": 870,
+        "width": 381,
+        "height": 381,
+        "right": 703,
+        "bottom": 1251
+      },
+      "imageLoaded": true,
+      "animationName": "boss-mimic-twitch",
+      "animationDuration": "3.2s",
+      "overlayBackground": null
+    },
+    {
+      "body": "mimic",
+      "stateName": "active",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/active-mimic-overlay-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "document": {
+        "clientWidth": 1920,
+        "scrollWidth": 1920,
+        "scrollHeight": 1138
+      },
+      "figure": {
+        "x": 372,
+        "y": 189,
+        "width": 278,
+        "height": 188,
+        "right": 650,
+        "bottom": 377
+      },
+      "image": {
+        "x": 386,
+        "y": 197,
+        "width": 250,
+        "height": 250,
+        "right": 636,
+        "bottom": 447
+      },
+      "imageLoaded": true,
+      "animationName": "boss-mimic-twitch",
+      "animationDuration": "3.2s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "mimic",
+      "stateName": "active",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/active-mimic-overlay-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 846
+      },
+      "figure": {
+        "x": 75,
+        "y": 90,
+        "width": 188,
+        "height": 146,
+        "right": 263,
+        "bottom": 236
+      },
+      "image": {
+        "x": 85,
+        "y": 96,
+        "width": 169,
+        "height": 169,
+        "right": 254,
+        "bottom": 266
+      },
+      "imageLoaded": true,
+      "animationName": "boss-mimic-twitch",
+      "animationDuration": "3.2s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "mimic",
+      "stateName": "active",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/active-mimic-overlay-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "document": {
+        "clientWidth": 1920,
+        "scrollWidth": 1920,
+        "scrollHeight": 1138
+      },
+      "figure": {
+        "x": 372,
+        "y": 189,
+        "width": 278,
+        "height": 188,
+        "right": 650,
+        "bottom": 377
+      },
+      "image": {
+        "x": 386,
+        "y": 197,
+        "width": 250,
+        "height": 250,
+        "right": 636,
+        "bottom": 447
+      },
+      "imageLoaded": true,
+      "animationName": "boss-mimic-twitch",
+      "animationDuration": "3.2s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "mimic",
+      "stateName": "active",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/active-mimic-overlay-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 846
+      },
+      "figure": {
+        "x": 75,
+        "y": 90,
+        "width": 188,
+        "height": 146,
+        "right": 263,
+        "bottom": 236
+      },
+      "image": {
+        "x": 85,
+        "y": 96,
+        "width": 169,
+        "height": 169,
+        "right": 254,
+        "bottom": 266
+      },
+      "imageLoaded": true,
+      "animationName": "boss-mimic-twitch",
+      "animationDuration": "3.2s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "mimic",
+      "stateName": "active",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/active-mimic-overlay-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "document": {
+        "clientWidth": 1920,
+        "scrollWidth": 1920,
+        "scrollHeight": 1138
+      },
+      "figure": {
+        "x": 372,
+        "y": 189,
+        "width": 278,
+        "height": 188,
+        "right": 650,
+        "bottom": 377
+      },
+      "image": {
+        "x": 386,
+        "y": 197,
+        "width": 250,
+        "height": 250,
+        "right": 636,
+        "bottom": 447
+      },
+      "imageLoaded": true,
+      "animationName": "boss-mimic-twitch",
+      "animationDuration": "3.2s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "mimic",
+      "stateName": "active",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/active-mimic-overlay-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 846
+      },
+      "figure": {
+        "x": 75,
+        "y": 90,
+        "width": 188,
+        "height": 146,
+        "right": 263,
+        "bottom": 236
+      },
+      "image": {
+        "x": 85,
+        "y": 96,
+        "width": 169,
+        "height": 169,
+        "right": 254,
+        "bottom": 266
+      },
+      "imageLoaded": true,
+      "animationName": "boss-mimic-twitch",
+      "animationDuration": "3.2s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "body": "mimic",
+      "stateName": "cancelled",
+      "route": "/overlay",
+      "file": "visual-qa/boss-motion-v1/cancelled-mimic-overlay-1280x720.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "document": {
+        "clientWidth": 1280,
+        "scrollWidth": 1280,
+        "scrollHeight": 720
+      },
+      "figure": {
+        "x": 75,
+        "y": 90,
+        "width": 188,
+        "height": 146,
+        "right": 263,
+        "bottom": 236
+      },
+      "image": {
+        "x": 85,
+        "y": 94,
+        "width": 169,
+        "height": 169,
+        "right": 254,
+        "bottom": 264
+      },
+      "imageLoaded": true,
+      "animationName": "none",
+      "animationDuration": "0s",
+      "overlayBackground": "rgba(0, 0, 0, 0)"
+    }
+  ]
+}
