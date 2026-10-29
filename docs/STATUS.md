@@ -16,7 +16,7 @@
 - **Scope:** `feat/m2a-authoritative-battle-engine` adds strict Generic v1 and `CommunityBattleStateV1` contracts, an isolated `BossBattleSession`, reveal-to-ready binding, explicit owner Start Battle/cancel routes, authoritative HP/deadline and terminal state, privacy-safe battle events, a separate `BattleStateReconciler`, and minimal dashboard-only owner controls.
 - **Not included:** Twitch chat `!hit` intake, cooldown/queue enforcement, attack presentation, battle overlay UI, Arena profile, challenges, or live Twitch verification. The owner panel labels the encounter as M2-A and says chat attacks are not enabled.
 - **Validation:** Node v24.21.0 / pnpm 11.25.0; frozen install, build, typecheck, lint, repository format check, 182 tests (33 shared / 118 server / 31 web), four-category synthetic simulation, and diff check passed. Socket-binding tests required the authorized local environment after sandbox `EPERM`. Hosted CI is not represented as passing. Automated mock/fake-clock evidence is not live Twitch or OBS evidence.
-- **Delivery:** Push the branch and create one Draft PR against main; record implementation commit and exact review HEAD separately after delivery. Request independent exact-head review before any merge decision. M2-B remains a separate authorization gate.
+- **Delivery:** Implementation commit `0e2cf394910629cc39467d1023647ec9032a77ee` is pushed to `feat/m2a-authoritative-battle-engine` and Draft PR [#11](https://github.com/mrdzyn/bossforge/pull/11) is open against the verified main baseline. The final pushed review HEAD and independent audit request are recorded in HANDOFFS. M2-B remains a separate authorization gate.
 
 ### M1-A merged status
 

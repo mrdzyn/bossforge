@@ -1081,7 +1081,12 @@ Socket-binding tests initially failed in the restricted sandbox with `EPERM`;
 the full suite passed in the authorized local environment. Simulation ran on a
 disposable loopback-only server with a clean environment and Twitch disabled.
 Build emitted the existing optional Phaser large-chunk advisory; build passed.
-Hosted CI is not represented as passing here and must be checked separately
-after PR creation. No real Twitch API, OAuth, credentials, live votes or OBS
+No GitHub checks or statuses were returned for the opened PR head; hosted CI is
+not claimed as passing. No real Twitch API, OAuth, credentials, live votes or OBS
 application test was used. Automated fake-clock/mock results are not live
 acceptance evidence.
+
+**Delivery:** Implementation commit `0e2cf394910629cc39467d1023647ec9032a77ee`
+is published in Draft [PR #11](https://github.com/mrdzyn/bossforge/pull/11)
+against the exact main base above. The final pushed review head is recorded in
+HANDOFFS. The PR remains Draft and unmerged.

@@ -743,8 +743,11 @@ subsequently squash-merged into `main` at
 - **Boundary:** No `!hit` intake, Twitch chat attack routing, battle effects or
   full OBS battle UI. No real Twitch requests, credentials, OAuth or live votes
   were used. M2-B remains separate and requires owner authorization.
-- **Review:** Create exactly one Draft PR against main after publishing the
-  implementation branch. Request independent GPT-6 exact-head review of state
+- **Delivery:** Implementation commit
+  `0e2cf394910629cc39467d1023647ec9032a77ee` was pushed and opened as Draft
+  [PR #11](https://github.com/mrdzyn/bossforge/pull/11) against main.
+- **Review:** Request independent GPT-6 exact-head review of the final pushed
+  branch tip for state
   invariants, reveal and cancellation lifecycle, request idempotency, local
   authorization, recipient privacy, reconciliation, and regression coverage.
   Keep the PR Draft and unmerged.
@@ -754,6 +757,8 @@ subsequently squash-merged into `main` at
   passed in the authorized local environment after sandbox `EPERM`; hosted CI
   has not been represented as passing. Build retains the existing optional
   Phaser large-chunk advisory.
+- **Hosted checks:** GitHub diagnostics returned no checks, statuses, or jobs
+  for the PR head; hosted CI is not claimed as passing.
 - **Evidence boundary:** Synthetic mock and fake-clock results do not establish
   genuine Twitch battle damage or native OBS rendering. No OAuth, Twitch API,
   credentials or live votes were used. M2-A does not establish M2-B chat damage
