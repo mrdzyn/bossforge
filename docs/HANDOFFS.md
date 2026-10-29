@@ -975,8 +975,9 @@ subsequently squash-merged into `main` at
 
 ## Boss Motion V1 — CSS character motion
 
-- **Base:** `main@2893ba8b8d26de0fe032689c5ab69497f03a1486`; independent from
-  unmerged documentation-only M2-D live evidence PR #17.
+- **Original base:** `main@2893ba8b8d26de0fe032689c5ab69497f03a1486`.
+  Reconciled with `main@fc95b1366deea38ceb67ee4c11db2883a053a272`, which
+  includes merged M2-D live evidence PR #17 and Issue #16 remediation PR #19.
 - **Implementation branch:** `feat/boss-motion-v1`. The patch strengthens
   per-character idle motion and authoritative hit/weakness recoil, increases
   original SVG visibility within its existing presentation stage, and keeps
@@ -1001,3 +1002,83 @@ subsequently squash-merged into `main` at
   `d0d12c5fc84e097a240cbf589d0627f766a5a2d7`. Keep it unmerged; do not change
   battle authority, initiate live Twitch activity, deploy, publish, or begin
   M2-D implementation.
+
+## M2-D — owner-supplied live acceptance checkpoint (2026-10-29)
+
+- Owner authorization for local OAuth/EventSub and bounded real Twitch QA is
+  recorded in [PR #15](https://github.com/mrdzyn/bossforge/pull/15#issuecomment-6499359393).
+  The owner controlled OAuth consent and chat messages.
+- Sanitized dashboard diagnostics showed a verified welcome, one enabled
+  `channel.chat.message` subscription, six accepted/normalized EventSub
+  notifications and six chat callbacks; four ballots were accepted, with no
+  rejected notifications or ballots. The authenticated broadcaster was
+  privately checked and is not copied into the record.
+- Four genuine vote stages produced Rime Veil (Wraith / Ice / Ember Burst /
+  Water). Owner-supplied results report `!hit water` changed HP 550 → 536 with
+  accepted attack count 1. The matching-weakness hit is consistent with 14
+  damage. Twitch rejected a duplicate identical command within 30 seconds;
+  that does not prove BossForge cooldown handling. The encounter expired and
+  reported BOSS SURVIVED. A second owner-supplied display showed Cinder Granite
+  (Golem / Fire / Thunder Dash / Water) survived.
+- Owner screenshots show BossForge in an OBS stream beside Elevator, Please!
+  This confirms owner-reported OBS presence only. Native Browser Source
+  dimensions/fit, active HP synchronization, base 8 damage, BossForge-side
+  cooldown rejection, Community Victory, and continuous animation remain
+  unverified. Screenshots were not attached to the evidence update and were
+  not independently reproduced.
+- **Stop condition encountered:** after the encounter expired, the local
+  dashboard still displayed the old terminal result while a fresh
+  `GET /battle/state` returned `idle` with zero hit aggregates. This
+  dashboard/API authority mismatch was not investigated or changed during live
+  QA. No further live actions were taken at that checkpoint. A later owner-reported
+  disconnect/no-resume retest is recorded below; the stale display itself remains
+  unresolved and needs investigation before end-to-end acceptance.
+- Preserve the distinction between owner-supplied genuine results, sanitized
+  local observations, synthetic automated tests, and native OBS evidence.
+  Gate C is partial; Gate D is partial. No code, credential, OAuth, or runtime
+  changes were made for this evidence checkpoint.
+
+## Issue #16 — EventSub keepalive tolerance
+
+Independent branch from main `2893ba8b8d26de0fe032689c5ab69497f03a1486`:
+`fix/eventsub-jitter-allowance`. Owner-reported live voting cancellations at
+30,250–30,251 ms match the former 250 ms watchdog boundary; the source of late
+processing remains unknown. A fixed 2,500 ms allowance is tested against late
+validated frames and genuine silence without weakening notification checks,
+transport fencing, resubscription or fail-closed cancellation. No auto-resume.
+
+Manual Node 24.21.0 / pnpm 11.25.0 validation: frozen install, build,
+typecheck, lint, formatting, asset reproducibility, 84 focused tests and
+isolated four-category mock simulation passed. All 270 tests passed separately
+(41 shared / 155 server / 74 web). Root parallel test execution retained the
+known SVG checksum timeout; a separate 15-second-timeout web rerun passed.
+Hosted CI was not claimed at the remediation checkpoint. The owner's checkout,
+private configuration, runtime ports and OBS were untouched by this work.
+See [the incident evidence and owner retest procedure](M2-D-LIVE-TWITCH-OBS-ACCEPTANCE.md#issue-16--bounded-keepalive-jitter-remediation-2026-10-30).
+The remediation was subsequently independently reviewed and squash-merged via PR #19 into main at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed. The owner-reported retest is recorded below.
+
+## Issue #16 — owner-reported live reliability retest (2026-10-30)
+
+[Issue #16's acceptance comment](https://github.com/mrdzyn/bossforge/issues/16#issuecomment-6504011541) records six owner-attested PASS checks: (1) Twitch connected with an enabled/verified EventSub subscription; (2) connection stability over 10 minutes with OBS and game load; (3) a four-stage forge with no reported watchdog cancellation; (4) accepted Twitch chat votes; (5) a deliberate disconnect cancelled a separate active encounter; and (6) reconnect did not automatically resume it. These are owner-reported observations, not independently reproduced results.
+
+PR #19 was squash-merged into `main` at `953c52f720bed59dc3ab2514054e6a954b4777ff`; Issue #16 is closed as completed for the scoped watchdog remediation. The running-process SHA during the owner retest and exact before/after diagnostic counter deltas were not independently verified. No numeric snapshot or timestamped event log was supplied. The original cause of silence remains unknown; ten minutes of stability does not guarantee future availability.
+
+M2-D end-to-end acceptance remains open: base-hit damage, BossForge two-second cooldown rejection, Community Victory, native OBS active-HP synchronization, native source sizing/fit and long-duration motion performance remain unverified. The previously observed dashboard/API terminal-state mismatch also remains unresolved. Owner-supplied OBS screenshots were not independently reproduced. The earlier deterministic tests and root parallel-test limitation remain historical evidence; hosted CI is unverified.
+
+## Boss Motion V1 — reconciliation validation (2026-10-30)
+
+PR #18 was reconciled with main `fc95b1366deea38ceb67ee4c11db2883a053a272`,
+including merged PR #17 and Issue #16 history. The previously audited motion CSS,
+web tests and visual QA files are unchanged from PR #18 head
+`1b6bebe8da5853f6a23e0403489620d3cb8712e6`.
+
+Manual CI in an isolated checkout used Node 24.21.0 and pnpm 11.25.0: offline
+frozen install, build, typecheck, lint, format check, asset reproducibility,
+19 focused motion/lifecycle tests and four-category mock simulation passed.
+The root parallel test command passed 41 shared and 155 server tests but its web
+SVG checksum test exceeded the default five-second timeout (75/76 passed). A
+separate web rerun with `--testTimeout=15000` passed 76/76: all **272 tests**
+passed across those runs. The root command is not claimed as a pass. Hosted CI
+and new native OBS or live Twitch verification remain unverified. The mock
+simulation used a disposable loopback-only server on port 33317 with Twitch
+disabled; the owner's runtime and credentials were not touched.
