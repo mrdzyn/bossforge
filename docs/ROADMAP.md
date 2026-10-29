@@ -72,16 +72,17 @@ gameplay expansion.
 PDCP-001 is approved for planning and merged through PR #7 at
 `5b30d7b3139c9f1ab74f3be46d0f4fb5d9665865`; its prior exact-head audit passed
 at [`adfaa6f`](https://github.com/mrdzyn/bossforge/pull/7#issuecomment-6461839234).
-The current raw-chat EventHub broadcast is not privacy-safe. A server-side
-privacy migration with strict dashboard/OBS projections and sentinel regression
-tests is required in M1 and blocks M2. `!hit` combat, authoritative battle HP,
+M1-A privacy-safe outbound events were squash-merged through PR #9 at
+`bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`; raw normalized chat remains
+server-internal, with strict recipient-specific dashboard/OBS projections and
+sentinel regression tests. M1-B is separately authorized as presentation-only. `!hit` combat, authoritative battle HP,
 and Generic/Arena profile loading remain unimplemented. The bounded
 [M0 contract lock](M0-ANY-GAME-CONTRACT-LOCK.md) specifies proposed state,
 privacy, duration-by-band balance, authorization, and delivery contracts. M1-B
 is a presentation-only revealed-boss / “BATTLE COMING SOON” preview from fresh
 ForgeState; it has no battle state or Start Battle. M2-A introduces authoritative
 `CommunityBattleStateV1`, BATTLE READY and owner Start Battle; M2-B adds chat hit
-routing. The contract does not authorize M1/M2 implementation. The PDCP-001 schedule and November 3, 2026 06:00
+routing. The contract defines later M1/M2 boundaries; current M1-B authorization does not authorize M2. The PDCP-001 schedule and November 3, 2026 06:00
 Asia/Manila deadline remain; prioritize Generic OBS and a genuine server-
 authoritative Twitch attack over optional challenges, Arena profile polish,
 extra themes, and effects. Every implementation scope needs separate owner
