@@ -264,6 +264,12 @@ describe("actual dashboard and overlay live state composition", () => {
       expect(html).not.toContain("250 HP");
       expect(html).not.toContain("24 DMG");
     }
+    const inlineStatus = dashboard.indexOf(
+      '<span class="reveal-inline-status" role="status">REVEALED — BATTLE COMING SOON</span>',
+    );
+    const bossArtwork = dashboard.indexOf('class="boss-art');
+    expect(inlineStatus).toBeGreaterThanOrEqual(0);
+    expect(inlineStatus).toBeLessThan(bossArtwork);
     expect(overlay).toContain("COMMUNITY VOTE");
     expect(overlay).toContain("DEFAULT · No valid votes");
     expect(overlay).toContain("OBS BROWSER SOURCE");

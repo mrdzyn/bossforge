@@ -565,6 +565,11 @@ export function Dashboard() {
                           ? "Ready to forge"
                           : "Boss in progress"}
                   </h2>
+                  {isRevealed && (
+                    <span className="reveal-inline-status" role="status">
+                      REVEALED — BATTLE COMING SOON
+                    </span>
+                  )}
                 </div>
                 <span className={`draft-badge ${isRevealed ? "revealed" : ""}`}>
                   {isRevealed
@@ -612,7 +617,7 @@ export function Dashboard() {
                 <i style={{ width: `${((forge?.progress ?? 0) / 4) * 100}%` }} />
               </div>
               {isRevealed && (
-                <div className="reveal-message" role="status">
+                <div className="reveal-message">
                   <strong>REVEALED — BATTLE COMING SOON</strong>
                   <span>
                     The reveal is presentation only. Cooperative chat combat is planned for M2.
