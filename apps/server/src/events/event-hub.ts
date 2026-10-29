@@ -196,6 +196,7 @@ export function toPublicBattleState(state: CommunityBattleStateV1): CommunityBat
     serverStartedAt: state.serverStartedAt,
     revision: state.revision,
     status: state.status,
+    forgeIdentity: state.forgeIdentity ? { ...state.forgeIdentity } : null,
     encounterId: state.encounterId,
     forgeCycleId: state.forgeCycleId,
     bossSnapshot: state.bossSnapshot
@@ -229,6 +230,7 @@ export function toOverlayBattleState(state: CommunityBattleStateV1) {
     serverStartedAt: state.serverStartedAt,
     revision: state.revision,
     status: state.status,
+    forgeIdentity: state.forgeIdentity ? { ...state.forgeIdentity } : null,
     encounterId: state.encounterId,
     forgeCycleId: state.forgeCycleId,
     bossSnapshot: state.bossSnapshot

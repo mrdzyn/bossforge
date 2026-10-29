@@ -1,40 +1,54 @@
 import { describe, expect, it } from "vitest";
-import type { ForgeState } from "@bossforge/shared";
+import { FORGE_VOTE_CHOICES, type ForgeState } from "@bossforge/shared";
 import { BossBattleSession } from "../src/battle/boss-battle-session.js";
 
-const revealed: ForgeState = {
-  serverInstanceId: "server",
-  serverStartedAt: "2026-10-29T00:00:00.000Z",
-  revision: 8,
-  cycleId: "forge-1",
-  status: "revealed",
-  mode: "mock",
-  simulated: true,
-  connectedToTwitch: false,
-  durationSeconds: 15,
-  startedAt: "2026-10-29T00:00:00.000Z",
-  activeCategory: null,
-  progress: 4,
-  categories: (["body", "element", "special", "weakness"] as const).map((category) => ({
-    category,
-    status: "closed",
-    options: [
-      { choice: "a", count: 0, percentage: 0 },
-      { choice: "b", count: 0, percentage: 0 },
-    ],
-    totalVotes: 0,
-    openedAt: "2026-10-29T00:00:00.000Z",
-    closesAt: "2026-10-29T00:00:15.000Z",
-    winner: "a",
-    noVoteFallback: true,
-  })),
-  boss: {
-    id: "boss-1",
-    name: "Test Boss",
-    attributes: { body: "golem", element: "fire", special: "ember-burst", weakness: "water" },
-    stats: { health: 100, damage: 10, attackIntervalMs: 1000 },
-  },
+const makeReveal = (
+  mode: "mock" | "twitch" = "mock",
+  serverInstanceId = "forge-server",
+  serverStartedAt = "2026-10-29T00:00:00.000Z",
+): ForgeState => {
+  const winners = {
+    body: "golem",
+    element: "fire",
+    special: "ember-burst",
+    weakness: "water",
+  } as const;
+  return {
+    serverInstanceId,
+    serverStartedAt,
+    revision: 8,
+    cycleId: "forge-1",
+    status: "revealed",
+    mode,
+    simulated: mode === "mock",
+    connectedToTwitch: mode === "twitch",
+    durationSeconds: 15,
+    startedAt: "2026-10-29T00:00:00.000Z",
+    activeCategory: null,
+    progress: 4,
+    categories: (["body", "element", "special", "weakness"] as const).map((category) => ({
+      category,
+      status: "closed",
+      options: FORGE_VOTE_CHOICES[category].map((choice) => ({
+        choice,
+        count: 0,
+        percentage: 0,
+      })),
+      totalVotes: 0,
+      openedAt: "2026-10-29T00:00:00.000Z",
+      closesAt: "2026-10-29T00:00:15.000Z",
+      winner: winners[category],
+      noVoteFallback: true,
+    })),
+    boss: {
+      id: "boss-1",
+      name: "Test Boss",
+      attributes: { ...winners },
+      stats: { health: 100, damage: 10, attackIntervalMs: 1000 },
+    },
+  };
 };
+const revealed = makeReveal();
 const make = () => {
   let mono = 0;
   let wall = new Date("2026-10-29T00:00:00.000Z");
@@ -69,9 +83,24 @@ const make = () => {
 const start = (revision: number, requestId = "00000000-0000-4000-8000-000000000001") => ({
   requestId,
   expectedRevision: revision,
+  forgeIdentity: {
+    serverInstanceId: revealed.serverInstanceId,
+    serverStartedAt: revealed.serverStartedAt,
+    cycleId: revealed.cycleId!,
+    mode: revealed.mode,
+  },
   forgeCycleId: "forge-1",
   durationSeconds: 60 as const,
   audienceBand: "low" as const,
+});
+const startFor = (forge: ForgeState, revision: number, requestId: string) => ({
+  ...start(revision, requestId),
+  forgeIdentity: {
+    serverInstanceId: forge.serverInstanceId,
+    serverStartedAt: forge.serverStartedAt,
+    cycleId: forge.cycleId!,
+    mode: forge.mode,
+  },
 });
 
 describe("BossBattleSession", () => {
@@ -94,6 +123,13 @@ describe("BossBattleSession", () => {
     expect(session.onForgeState(incomplete).status).toBe("idle");
     const wrongOrder = { ...revealed, categories: [...revealed.categories].reverse() };
     expect(session.onForgeState(wrongOrder).status).toBe("idle");
+    const invalidWinner = structuredClone(revealed);
+    invalidWinner.categories[0]!.winner = "not-a-body-option";
+    expect(make().session.onForgeState(invalidWinner).status).toBe("idle");
+    const mismatchedBoss = structuredClone(revealed);
+    if (!mismatchedBoss.boss) throw new Error("test reveal needs a boss");
+    mismatchedBoss.boss.attributes.element = "ice";
+    expect(make().session.onForgeState(mismatchedBoss).status).toBe("idle");
     session.onForgeState(revealed);
     session.start(start(1), true);
     session.onOwnerForgeReset();
@@ -181,6 +217,43 @@ describe("BossBattleSession", () => {
     session.setProviderReady(true);
     expect(session.getState().status).toBe("cancelled");
   });
+  it.each([
+    ["mock", "twitch", "mock-epoch", "twitch-epoch"],
+    ["twitch", "mock", "twitch-epoch", "mock-epoch"],
+  ] as const)(
+    "accepts a fresh forge-1 after %s to %s provider transition",
+    (oldMode, newMode, oldEpoch, newEpoch) => {
+      const { session } = make();
+      const previous = makeReveal(oldMode, oldEpoch, "2026-10-29T00:00:00.000Z");
+      const firstReady = session.onForgeState(previous);
+      expect(firstReady).toMatchObject({ status: "ready", forgeCycleId: "forge-1" });
+      session.start(
+        startFor(previous, firstReady.revision, `00000000-0000-4000-8000-000000000021`),
+        true,
+      );
+      const cancelled = session.cancel("provider_changed");
+      expect(cancelled).toMatchObject({ status: "cancelled", cancelReason: "provider_changed" });
+
+      const nextForge = makeReveal(newMode, newEpoch, "2026-10-29T00:01:00.000Z");
+      const nextReady = session.onForgeState(nextForge);
+      expect(nextReady).toMatchObject({ status: "ready", forgeCycleId: "forge-1" });
+      expect(nextReady.encounterId).not.toBe(firstReady.encounterId);
+      expect(nextReady.forgeIdentity).toMatchObject({
+        serverInstanceId: newEpoch,
+        mode: newMode,
+      });
+      expect(
+        session.start(
+          startFor(nextForge, nextReady.revision, "00000000-0000-4000-8000-000000000022"),
+          true,
+        ),
+      ).toMatchObject({
+        ok: true,
+        state: { status: "active" },
+      });
+      expect(session.onForgeState(previous).encounterId).toBe(nextReady.encounterId);
+    },
+  );
   it("retires a terminal encounter only through explicit owner reset", () => {
     const { session } = make();
     session.onForgeState(revealed);

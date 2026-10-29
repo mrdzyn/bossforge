@@ -17,6 +17,7 @@ describe("battle public projection", () => {
       serverStartedAt: "2026-10-29T00:00:00.000Z",
       revision: 0,
       status: "idle",
+      forgeIdentity: null,
       encounterId: null,
       forgeCycleId: null,
       bossSnapshot: null,

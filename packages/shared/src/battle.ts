@@ -19,6 +19,15 @@ export const BattleCancelReasonSchema = z.enum([
   "server_shutdown",
 ]);
 const isoDate = z.string().datetime();
+export const ForgeAuthorityIdentitySchema = z
+  .object({
+    serverInstanceId: z.string().min(1).max(100),
+    serverStartedAt: isoDate,
+    cycleId: z.string().min(1).max(100),
+    mode: z.enum(["mock", "twitch"]),
+  })
+  .strict();
+export type ForgeAuthorityIdentity = z.infer<typeof ForgeAuthorityIdentitySchema>;
 const bossSnapshotSchema = z
   .object({
     id: z.string().min(1).max(100),
@@ -119,6 +128,7 @@ const battleBase = z
     serverStartedAt: isoDate,
     revision: z.number().int().nonnegative(),
     status: BattleStatusSchema,
+    forgeIdentity: ForgeAuthorityIdentitySchema.nullable(),
     encounterId: z.string().min(1).max(100).nullable(),
     forgeCycleId: z.string().min(1).max(100).nullable(),
     bossSnapshot: bossSnapshotSchema.nullable(),
@@ -141,15 +151,18 @@ const battleBase = z
 
 export const CommunityBattleStateV1Schema = battleBase.superRefine((s, ctx) => {
   const activeIdentity =
+    s.forgeIdentity !== null &&
     s.encounterId !== null &&
     s.forgeCycleId !== null &&
     s.bossSnapshot !== null &&
     s.profileSnapshot !== null &&
     s.profileId === "generic" &&
-    s.profileVersion === 1;
+    s.profileVersion === 1 &&
+    s.forgeIdentity.cycleId === s.forgeCycleId;
   if (s.status === "idle") {
     if (
       s.encounterId !== null ||
+      s.forgeIdentity !== null ||
       s.forgeCycleId !== null ||
       s.bossSnapshot !== null ||
       s.profileSnapshot !== null ||
@@ -273,6 +286,7 @@ export const BattleStartRequestSchema = z
   .object({
     requestId: z.string().uuid(),
     expectedRevision: z.number().int().nonnegative(),
+    forgeIdentity: ForgeAuthorityIdentitySchema,
     forgeCycleId: z.string().min(1).max(100),
     durationSeconds: z.union([z.literal(60), z.literal(90), z.literal(120)]),
     audienceBand: AudienceBandSchema,

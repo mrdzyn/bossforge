@@ -1,5 +1,15 @@
 import type { CommunityBattleStateV1 } from "./battle.js";
 
+export interface BattleMutationContext {
+  kind: "start" | "cancel";
+  generation: number;
+  serverInstanceId: string;
+  serverStartedAt: string;
+  encounterId: string;
+  forgeIdentity: CommunityBattleStateV1["forgeIdentity"];
+  revision: number;
+}
+
 /** Battle snapshots have their own epoch/encounter rules, separate from ForgeState. */
 export class BattleStateReconciler {
   private generation = 0;
@@ -22,6 +32,44 @@ export class BattleStateReconciler {
   }
   get hasFreshState(): boolean {
     return this.available && this.current !== null;
+  }
+  captureMutationContext(kind: "start" | "cancel"): BattleMutationContext | null {
+    const state = this.state;
+    if (!state?.encounterId || !state.forgeIdentity) return null;
+    if (kind === "start" ? state.status !== "ready" : !["ready", "active"].includes(state.status))
+      return null;
+    return {
+      kind,
+      generation: this.generation,
+      serverInstanceId: state.serverInstanceId,
+      serverStartedAt: state.serverStartedAt,
+      encounterId: state.encounterId,
+      forgeIdentity: structuredClone(state.forgeIdentity),
+      revision: state.revision,
+    };
+  }
+  isMutationContextCurrent(context: BattleMutationContext): boolean {
+    const state = this.state;
+    return Boolean(
+      state &&
+      context.generation === this.generation &&
+      state.serverInstanceId === context.serverInstanceId &&
+      state.serverStartedAt === context.serverStartedAt &&
+      state.encounterId === context.encounterId &&
+      JSON.stringify(state.forgeIdentity) === JSON.stringify(context.forgeIdentity),
+    );
+  }
+  isMutationResponseForContext(
+    context: BattleMutationContext,
+    response: CommunityBattleStateV1,
+  ): boolean {
+    return (
+      this.isMutationContextCurrent(context) &&
+      response.serverInstanceId === context.serverInstanceId &&
+      response.serverStartedAt === context.serverStartedAt &&
+      response.encounterId === context.encounterId &&
+      JSON.stringify(response.forgeIdentity) === JSON.stringify(context.forgeIdentity)
+    );
   }
   invalidate(): void {
     this.available = false;

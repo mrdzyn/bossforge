@@ -5,6 +5,7 @@ import {
   CommunityBattleStateV1Schema,
   type CommunityBattleStateV1,
 } from "@bossforge/shared";
+import { sendBattleMutation } from "./battle-mutation.js";
 
 export function useBattleState() {
   const reconciler = useRef(new BattleStateReconciler());
@@ -93,56 +94,44 @@ export function useBattleState() {
   const mutate = useCallback(
     async (kind: "start" | "cancel", payload: Record<string, unknown>) => {
       setError("");
-      const signature = JSON.stringify({ kind, ...payload, requestId: undefined });
-      const requestId = pendingRequests.current.get(signature) ?? String(payload.requestId ?? "");
-      pendingRequests.current.set(signature, requestId);
-      try {
-        const response = await fetch(`/api/dev/battle/${kind}`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ...payload, requestId }),
-        });
-        const body: unknown = await response.json().catch(() => null);
-        if (!response.ok) {
-          const candidate =
-            body && typeof body === "object" && "error" in body && typeof body.error === "string"
-              ? body.error
-              : "state_unavailable";
-          const safeErrors = new Set([
-            "invalid_request",
-            "owner_auth_required",
-            "origin_rejected",
-            "local_access_denied",
-            "mode_disabled",
-            "battle_not_ready",
-            "revision_conflict",
-            "encounter_active",
-            "provider_unverified",
-            "idempotency_conflict",
-            "rate_limited",
-            "state_unavailable",
-          ]);
-          const code = safeErrors.has(candidate) ? candidate : "state_unavailable";
-          setError(code);
-          if (response.status >= 400 && response.status < 500)
-            pendingRequests.current.delete(signature);
-          void refresh(reconciler.current.connectionGeneration);
-          return false;
-        }
-        pendingRequests.current.delete(signature);
-        const next = CommunityBattleStateV1Schema.parse(body);
-        const generation = reconciler.current.connectionGeneration;
-        if (reconciler.current.apply(next, generation, "mutation")) {
-          setState(reconciler.current.state);
-          setFresh(true);
-          return true;
-        }
-        setError("revision_conflict");
-        return false;
-      } catch {
+      const context = reconciler.current.captureMutationContext(kind);
+      if (!context) {
         setError("state_unavailable");
         return false;
       }
+      const signature = JSON.stringify({ kind, ...payload, requestId: undefined });
+      const requestId = pendingRequests.current.get(signature) ?? String(payload.requestId ?? "");
+      pendingRequests.current.set(signature, requestId);
+      const result = await sendBattleMutation(
+        fetch,
+        reconciler.current,
+        context,
+        `/api/dev/battle/${kind}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...payload, requestId }),
+        },
+      );
+      if (result.kind === "accepted") {
+        pendingRequests.current.delete(signature);
+        setState(reconciler.current.state);
+        setFresh(true);
+        return true;
+      }
+      if (result.kind === "stale") {
+        void refresh(reconciler.current.connectionGeneration);
+        return false;
+      }
+      if (result.kind === "http-error") {
+        setError(result.code);
+        if (result.status >= 400 && result.status < 500) pendingRequests.current.delete(signature);
+        void refresh(context.generation);
+        return false;
+      }
+      setError(result.kind === "conflict" ? "revision_conflict" : "state_unavailable");
+      void refresh(reconciler.current.connectionGeneration);
+      return false;
     },
     [refresh],
   );

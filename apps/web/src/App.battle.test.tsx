@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { FORGE_VOTE_CHOICES } from "@bossforge/shared";
 import { describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ live: null as unknown, battle: null as unknown }));
 vi.mock("./hooks/useLiveEvents.js", () => ({ useLiveEvents: () => mocks.live }));
@@ -18,19 +19,23 @@ const forge = {
   startedAt: "2026-10-29T00:00:00.000Z",
   activeCategory: null,
   progress: 4,
-  categories: ["body", "element", "special", "weakness"].map((category) => ({
-    category,
-    status: "closed",
-    options: [
-      { choice: "a", count: 1, percentage: 100 },
-      { choice: "b", count: 0, percentage: 0 },
-    ],
-    totalVotes: 1,
-    openedAt: null,
-    closesAt: null,
-    winner: "a",
-    noVoteFallback: false,
-  })),
+  categories: (["body", "element", "special", "weakness"] as const).map((category) => {
+    const winners = { body: "golem", element: "fire", special: "ember-burst", weakness: "water" };
+    return {
+      category,
+      status: "closed",
+      options: FORGE_VOTE_CHOICES[category].map((choice) => ({
+        choice,
+        count: choice === winners[category] ? 1 : 0,
+        percentage: choice === winners[category] ? 100 : 0,
+      })),
+      totalVotes: 1,
+      openedAt: null,
+      closesAt: null,
+      winner: winners[category],
+      noVoteFallback: false,
+    };
+  }),
   boss: {
     id: "b",
     name: "Test Boss",
@@ -44,6 +49,12 @@ const readyBattle = {
   serverStartedAt: "2026-10-29T00:00:00.000Z",
   revision: 1,
   status: "ready",
+  forgeIdentity: {
+    serverInstanceId: "s",
+    serverStartedAt: "2026-10-29T00:00:00.000Z",
+    cycleId: "forge-1",
+    mode: "mock",
+  },
   encounterId: "enc-1",
   forgeCycleId: "forge-1",
   bossSnapshot: {

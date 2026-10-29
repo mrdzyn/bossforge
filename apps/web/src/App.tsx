@@ -313,7 +313,12 @@ export function Dashboard() {
   const isRevealed = forge?.status === "revealed";
   const battle = battleLive.state;
   const battleMatchesForge = Boolean(
-    battle && forge?.status === "revealed" && battle.forgeCycleId === forge.cycleId,
+    battle &&
+    forge?.status === "revealed" &&
+    battle.forgeCycleId === forge.cycleId &&
+    battle.forgeIdentity?.serverInstanceId === forge.serverInstanceId &&
+    battle.forgeIdentity.serverStartedAt === forge.serverStartedAt &&
+    battle.forgeIdentity.mode === forge.mode,
   );
   const battleProviderReady =
     forge?.mode === "mock"
@@ -325,10 +330,11 @@ export function Dashboard() {
     ? Math.max(0, Math.ceil((Date.parse(battle.deadlineAt) - Date.now()) / 1000))
     : null;
   const startBattle = () => {
-    if (!battle) return;
+    if (!battle?.forgeIdentity) return;
     void battleLive.mutate("start", {
       requestId: crypto.randomUUID(),
       expectedRevision: battle.revision,
+      forgeIdentity: battle.forgeIdentity,
       forgeCycleId: battle.forgeCycleId,
       durationSeconds: battleDuration,
       audienceBand,

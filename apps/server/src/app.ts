@@ -592,14 +592,21 @@ export async function createBossForgeApp(options: AppOptions = {}): Promise<Boss
         reply.header("cache-control", "no-store");
         const parsed = BattleStartRequestSchema.safeParse(request.body);
         if (!parsed.success) return reply.code(400).send({ error: "invalid_request" });
+        const currentForge = forge.getState();
         const forgeIsBoundReveal =
-          forge.getState().status === "revealed" &&
-          forge.getState().cycleId === parsed.data.forgeCycleId;
+          currentForge.status === "revealed" &&
+          currentForge.cycleId === parsed.data.forgeCycleId &&
+          currentForge.serverInstanceId === parsed.data.forgeIdentity.serverInstanceId &&
+          currentForge.serverStartedAt === parsed.data.forgeIdentity.serverStartedAt &&
+          currentForge.mode === parsed.data.forgeIdentity.mode &&
+          battle.getState().forgeIdentity !== null &&
+          JSON.stringify(battle.getState().forgeIdentity) ===
+            JSON.stringify(parsed.data.forgeIdentity);
         const providerReady =
           forgeIsBoundReveal &&
           (provider === "mock"
-            ? simulationEnabled && forge.getState().mode === "mock"
-            : liveEventSub?.connected === true && forge.getState().connectedToTwitch);
+            ? simulationEnabled && currentForge.mode === "mock"
+            : liveEventSub?.connected === true && currentForge.connectedToTwitch);
         const result = battle.start(parsed.data, providerReady);
         if (result.ok) return result.state;
         const statuses: Record<string, number> = {

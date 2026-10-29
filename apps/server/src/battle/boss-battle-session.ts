@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   CommunityBattleStateV1Schema,
   GENERIC_PROFILE_V1,
-  RevealedForgeStateSchema,
+  authoritativeCompletedReveal,
   type BattleCancelRequest,
   type BattleStartRequest,
   type CommunityBattleStateV1,
@@ -35,7 +35,7 @@ type CacheEntry = { fingerprint: string; result: Result };
 export class BossBattleSession {
   private revision = 0;
   private state: CommunityBattleStateV1;
-  private forgeSnapshot: ForgeState | null = null;
+  private readonly seenForgeIdentities = new Set<string>();
   private cancelTimer: (() => void) | undefined;
   private monotonicDeadline: number | null = null;
   private readonly idempotency = new Map<string, CacheEntry>();
@@ -62,25 +62,26 @@ export class BossBattleSession {
 
   onForgeState(forge: ForgeState): CommunityBattleStateV1 {
     this.resolveDeadline();
-    const reveal = RevealedForgeStateSchema.safeParse(forge);
-    if (
-      reveal.success &&
-      reveal.data.categories.every(
-        (category, index) =>
-          category.category === ["body", "element", "special", "weakness"][index] &&
-          category.status === "closed" &&
-          category.winner !== null,
-      )
-    ) {
-      const completedForge = reveal.data;
-      if (this.state.forgeCycleId === completedForge.cycleId) return this.state;
+    const completedForge = authoritativeCompletedReveal(forge);
+    if (completedForge) {
+      const forgeIdentity = {
+        serverInstanceId: completedForge.serverInstanceId,
+        serverStartedAt: completedForge.serverStartedAt,
+        cycleId: completedForge.cycleId,
+        mode: completedForge.mode,
+      };
+      const identityKey = JSON.stringify(forgeIdentity);
+      if (this.seenForgeIdentities.has(identityKey)) return this.state;
       if (this.state.status === "active" || this.state.status === "ready")
         this.cancel("forge_reset");
       if (["victory", "expired", "cancelled"].includes(this.state.status)) this.toIdle();
-      this.forgeSnapshot = structuredClone(completedForge);
+      this.seenForgeIdentities.add(identityKey);
+      if (this.seenForgeIdentities.size > 256)
+        this.seenForgeIdentities.delete(this.seenForgeIdentities.values().next().value!);
       return this.commit({
         ...this.buildIdle(),
         status: "ready",
+        forgeIdentity,
         encounterId: this.makeId(),
         forgeCycleId: completedForge.cycleId,
         bossSnapshot: {
@@ -93,9 +94,13 @@ export class BossBattleSession {
         profileSnapshot: structuredClone(GENERIC_PROFILE_V1),
       });
     }
+    const currentForgeIdentity = this.state.forgeIdentity;
     if (
-      this.forgeSnapshot &&
-      forge.cycleId !== this.state.forgeCycleId &&
+      currentForgeIdentity &&
+      (forge.serverInstanceId !== currentForgeIdentity.serverInstanceId ||
+        forge.serverStartedAt !== currentForgeIdentity.serverStartedAt ||
+        forge.cycleId !== currentForgeIdentity.cycleId ||
+        forge.mode !== currentForgeIdentity.mode) &&
       (this.state.status === "ready" || this.state.status === "active")
     )
       return this.cancel("forge_reset");
@@ -130,7 +135,8 @@ export class BossBattleSession {
       };
     else if (
       request.expectedRevision !== this.state.revision ||
-      request.forgeCycleId !== this.state.forgeCycleId
+      request.forgeCycleId !== this.state.forgeCycleId ||
+      JSON.stringify(request.forgeIdentity) !== JSON.stringify(this.state.forgeIdentity)
     )
       result = { ok: false, error: "revision_conflict" };
     else {
@@ -260,7 +266,6 @@ export class BossBattleSession {
     this.cancelTimer?.();
     this.cancelTimer = undefined;
     this.monotonicDeadline = null;
-    this.forgeSnapshot = null;
     this.commit(this.buildIdle());
   }
   private buildIdle(): CommunityBattleStateV1 {
@@ -270,6 +275,7 @@ export class BossBattleSession {
       serverStartedAt: this.serverStartedAt,
       revision: this.revision,
       status: "idle",
+      forgeIdentity: null,
       encounterId: null,
       forgeCycleId: null,
       bossSnapshot: null,
