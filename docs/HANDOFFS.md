@@ -763,3 +763,27 @@ subsequently squash-merged into `main` at
   genuine Twitch battle damage or native OBS rendering. No OAuth, Twitch API,
   credentials or live votes were used. M2-A does not establish M2-B chat damage
   or live battle acceptance.
+- **Audit remediation:** On audited HEAD
+  `e6370a950b260987f8afafd3968248969bb6e69b`, fixed MAJOR-1, MAJOR-2 and
+  MINOR-1 only. Battle snapshots and Start requests bind the full authoritative
+  forge epoch/mode/cycle; provider-switch integration tests cover reused
+  `forge-1` identifiers in both directions, cancellation, fresh encounter IDs,
+  and authenticated starts. Start/Cancel fetches capture generation and
+  epoch/encounter/forge context at dispatch; deferred fetch plus fake-WebSocket
+  tests reject retired G1 responses after same-process and new-process G2
+  snapshots. The shared completed-reveal predicate checks category order,
+  configured options, valid winners, boss attribute agreement, and valid
+  no-vote defaults.
+- **Remediation evidence:** Node v24.21.0 / pnpm 11.25.0. Frozen install,
+  build, typecheck, lint, Prettier, 196 passing tests (39 shared / 121 server /
+  36 web), four-category synthetic simulation, and `git diff --check` passed.
+  The original 182 passing tests remain passing. Sandbox loopback/tsx IPC
+  attempts failed with `EPERM`; the full suite and isolated mock simulation
+  passed in the authorized local environment. GitHub diagnostics returned no
+  checks/statuses for the final head; hosted CI is not claimed as passing.
+- **Remediation delivery:** Implementation commit
+  `e787b8167ae98c613f66d3b96e656ae94b10d4df` follows M2-A implementation
+  commit `0e2cf394910629cc39467d1023647ec9032a77ee`. Documentation records this
+  evidence in the follow-up commit; the final exact pushed HEAD is included in
+  the PR re-audit request. Request independent GPT-6 exact-head delta re-audit
+  on existing Draft PR #11. Keep the PR Draft and unmerged; do not start M2-B.

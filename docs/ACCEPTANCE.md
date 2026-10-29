@@ -1090,3 +1090,47 @@ acceptance evidence.
 is published in Draft [PR #11](https://github.com/mrdzyn/bossforge/pull/11)
 against the exact main base above. The final pushed review head is recorded in
 HANDOFFS. The PR remains Draft and unmerged.
+
+### M2-A exact-head audit remediation
+
+At audited HEAD `e6370a950b260987f8afafd3968248969bb6e69b`, the supplied GPT-6
+review found two major and one minor issue. The bounded correction binds each
+battle to the full forge identity (forge server instance, forge start epoch,
+provider mode, and cycle ID); Start requests and dashboard matching carry that
+identity. Provider transitions cancel the prior encounter, while a new
+completed forge with a reused `forge-1` ID receives a distinct ready encounter.
+Deterministic app integration covers mock→Twitch and Twitch→mock and authorized
+starts using synthetic OAuth/EventSub transports only.
+
+Mutation dispatch now captures the WebSocket connection generation, battle
+server epoch, encounter and forge identity before fetch. Delayed Start/Cancel
+responses are discarded after reconnect, process restart, or encounter change;
+the client requests a fresh state through the current generation and retains
+the idempotency key for safe retry. Deferred-fetch and fake-WebSocket tests
+cover same-process and new-process G2 snapshots.
+
+The shared `authoritativeCompletedReveal` predicate now requires the four
+ordered closed categories, exact configured option sets, an option-backed
+winner, valid winner/fallback vote counts, and boss attributes matching all
+four winners. Server battle creation and M1-B presentation use the same
+predicate. Tests reject invalid winners and mismatched attributes and accept
+valid no-vote defaults.
+
+**Remediation validation:** Node `v24.21.0`, pnpm `11.25.0`; frozen install,
+build, typecheck, lint, format check, full test suite (196 passing: 39 shared,
+121 server, 36 web), isolated four-category mock simulation, and
+`git diff --check` passed. This preserves the 182-test pre-remediation baseline.
+The restricted sandbox produced `EPERM` for loopback/tsx IPC tests and the
+first simulation attempt; full tests passed with authorized local access, and
+simulation passed on an isolated clean-environment loopback server with no
+Twitch configuration. Build retains the pre-existing optional Phaser large
+chunk advisory. GitHub returned no hosted checks/statuses for the final head;
+hosted Actions are not claimed as passing. No real Twitch/OAuth, credentials,
+live votes, deployment or OBS testing was used.
+
+The audit-remediation implementation commit is
+`e787b8167ae98c613f66d3b96e656ae94b10d4df`; M2-A's original implementation
+commit remains `0e2cf394910629cc39467d1023647ec9032a77ee`. The final pushed
+review HEAD is the documentation follow-up after these commits and is named in
+the exact-head PR review request. PR #11 remains Draft and unmerged pending
+independent exact-head re-audit. M2-B remains out of scope.
