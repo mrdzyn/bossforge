@@ -691,11 +691,16 @@ closed.
   blocker. M1-A's strict recipient schemas, internal-only normalized chat,
   bounded dashboard activity, and feed/state freshness form the M1-B base.
 - **M1-B branch:** `feat/m1b-generic-obs-states`, based on the exact merged
-  main SHA above. Implementation commit `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`
-  is pushed. Draft PR creation remains pending because `gh pr create --draft`
-  returned GitHub API `Forbidden` and `gh auth status` reports the configured
-  `GH_TOKEN` invalid. The connected GitHub integration can create the Draft PR
-  from this branch; do not request or expose credentials.
+  main SHA above. Original M1-B implementation commit is
+  `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`; MINOR-2 implementation commit is
+  `c4e20c5a571ec188232fa2379d580d067dedb87d`. Connected GitHub access created existing
+  Draft [PR #10](https://github.com/mrdzyn/bossforge/pull/10). The earlier CLI
+  `Forbidden` response and invalid `GH_TOKEN` report are retained as historical
+  environment evidence; PR creation is no longer pending. The first
+  independent review covered pre-remediation HEAD
+  `4e2ee256ccb09347e143f76242dc9a106c5b8c1d`. The final review request applies
+  to the exact pushed branch tip reported with that request, separately from
+  implementation commit `c4e20c5`.
 - **Scope:** Generic dashboard and read-only OBS presentation only. State
   labels and reveal details use fresh authoritative public ForgeState. Reveal
   requires the complete server-authored four-category boss. The terminal text
@@ -706,9 +711,16 @@ closed.
   `docs/visual-qa/m1b/`. `qa-results.json` records real process restart recovery
   from a revealed boss to a fresh revision-0 idle state and a new reveal, with
   no old boss restored. Native OBS and Twitch owner QA were not performed.
-- **Review handoff:** After the connected integration opens the Draft PR,
-  independently review the exact pushed head for the state matrix, authoritative
-  reveal validation, restart and stale-state suppression, privacy/schema
-  invariants, responsive Chromium evidence, and unchanged Arena behavior. Keep
-  the PR Draft and unmerged; do not start M2, deploy, publish, or connect to
-  live Twitch.
+- **MINOR-2 remediation:** The exact `REVEALED — BATTLE COMING SOON` outcome is
+  now rendered directly beside the visible boss heading while retaining the
+  full completion panel. First-viewport 1440×900 Chromium evidence is
+  `docs/visual-qa/m1b/dashboard-1440x900-revealed-postfix.png`; the measured
+  status rectangle is x=305, y=643.5, width=201.296875, height=27 CSS pixels,
+  entirely inside the viewport. The review HEAD is the final pushed PR #10
+  branch tip reported in the review request; the implementation commit remains
+  separately identified above. The audit request covers the exact pushed SHA.
+- **Review handoff:** Existing Draft PR #10 is open. Independently review the
+  exact pushed head for MINOR-1/2, the state matrix, authoritative reveal
+  validation, restart and stale-state suppression, privacy/schema invariants,
+  responsive Chromium evidence, and unchanged Arena behavior. Keep the PR Draft
+  and unmerged; do not start M2, deploy, publish, or connect to live Twitch.

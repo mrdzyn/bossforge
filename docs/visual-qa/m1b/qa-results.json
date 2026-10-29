@@ -75,5 +75,38 @@
   "devServerProxyLogsDuringIntentionalBackendStop": [
     "WebSocket proxy EPIPE",
     "WebSocket proxy ECONNRESET (expected while the test backend is stopped)"
-  ]
+  ],
+  "postRemediationFirstViewport": {
+    "browser": "Chromium 154.0.8037.57",
+    "viewportCss": {
+      "width": 1440,
+      "height": 900
+    },
+    "screenshot": "dashboard-1440x900-revealed-postfix.png",
+    "screenshotPixels": {
+      "width": 2880,
+      "height": 1800,
+      "devicePixelRatio": 2
+    },
+    "state": {
+      "mode": "mock",
+      "simulated": true,
+      "status": "revealed",
+      "freshAuthoritativeState": true
+    },
+    "message": "REVEALED — BATTLE COMING SOON",
+    "boundingRectCss": {
+      "x": 305,
+      "y": 643.5,
+      "width": 201.296875,
+      "height": 27,
+      "top": 643.5,
+      "right": 506.296875,
+      "bottom": 670.5,
+      "left": 305
+    },
+    "visible": true,
+    "visibilityCheck": "top >= 0 && left >= 0 && bottom <= 900 && right <= 1440",
+    "note": "Synthetic mock QA only; not live Twitch or native OBS evidence."
+  }
 }

@@ -956,14 +956,19 @@ as a separate local Phaser demo. No battle, HP, damage, timer, Start Battle,
 `!hit`, profile loader or game integration was added. M1-A recipient schemas,
 privacy projections, feed generations, and state reconciliation remain intact.
 
-| Gate                                   | Actual result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Environment                            | Linux Debian 13 cloud workspace; Node `v24.19.0`; pnpm `11.25.0`; Chromium `154.0.8037.57`; Playwright `1.62.1`. `AGENTS.md` and `config/project-profile.json` were absent.                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Frozen install                         | `CI=true PNPM_HOME=/tmp/pnpm-home npm_config_store_dir=/tmp/bossforge-pnpm-store pnpm --store-dir /tmp/bossforge-pnpm-store install --frozen-lockfile` — passed, lockfile unchanged.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Focused presentation tests             | `pnpm --filter @bossforge/web test -- App.live-state.test.tsx` — 29 tests passed across the web suite, including 14 `App.live-state` tests. These cover fresh valid reveal, invalid/missing boss and incomplete categories, exact copy, no battle affordances, provider labels, disconnect and process-epoch recovery.                                                                                                                                                                                                                                                                                                      |
-| Full build/typecheck/lint/format/tests | Results are recorded below after full validation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Simulation                             | `pnpm simulate` against the loopback dev server — result recorded below after the final run.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Browser                                | Real headless Chromium exercised idle and synthetic voting states and completed four-category forge/reveal. Dashboard captures: 1440×900, 390×844, and 360×800. Overlay captures: 1920×1080 and 1280×720. Both overlay document sizes match their viewport exactly and have zero controls; dashboard horizontal `scrollWidth` matches viewport at both mobile widths. A live dashboard/overlay process-restart smoke hid the old reveal on feed loss, accepted a fresh revision-0 idle state from a new server instance, and displayed the next new reveal. Connected runs recorded zero console errors or failed requests. |
+| Gate                       | Actual result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Environment                | Local macOS QA; Node `v26.7.0` (outside the supported `>=22.13 <25` range); pnpm `11.25.0`; Chromium `154.0.8037.57`; prior browser automation `1.62.1`. The environment emitted an unsupported-engine warning. `AGENTS.md` and `config/project-profile.json` were absent.                                                                                                                                                                                                                                                                                                                                                  |
+| Frozen install             | `pnpm install --frozen-lockfile` — passed, lockfile unchanged. Node 26 engine warning was emitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Focused presentation tests | `pnpm --filter @bossforge/web test -- App.live-state.test.tsx` — 29 tests passed across the web suite, including 14 `App.live-state` tests. These cover fresh valid reveal, invalid/missing boss and incomplete categories, exact copy, no battle affordances, provider labels, disconnect and process-epoch recovery. The added regression asserts the inline reveal status appears before boss artwork in the revealed dashboard composition.                                                                                                                                                                             |
+| Build                      | `pnpm build` — passed. Vite emitted the existing large optional Arena chunk warning.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Typecheck                  | `pnpm typecheck` — passed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Lint                       | `pnpm lint` — passed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Format                     | `pnpm format:check` — passed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Full tests                 | `pnpm test` — 161 passed (26 shared / 29 web / 106 server). The sandbox attempt produced 8 socket-binding `EPERM` failures; the same full command passed when rerun with authorized local socket access. All runs used Node 26 and therefore carry the unsupported-engine caveat.                                                                                                                                                                                                                                                                                                                                           |
+| Simulation                 | Existing synthetic four-category mock simulation against isolated loopback server `127.0.0.1:3310` — passed; revealed Cinder Tempest. Empty process environment, Twitch integration disabled, no Twitch network or credentials.                                                                                                                                                                                                                                                                                                                                                                                             |
+| Diff check                 | `git diff --check` — passed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Browser                    | Real headless Chromium exercised idle and synthetic voting states and completed four-category forge/reveal. Dashboard captures: 1440×900, 390×844, and 360×800. Overlay captures: 1920×1080 and 1280×720. Both overlay document sizes match their viewport exactly and have zero controls; dashboard horizontal `scrollWidth` matches viewport at both mobile widths. A live dashboard/overlay process-restart smoke hid the old reveal on feed loss, accepted a fresh revision-0 idle state from a new server instance, and displayed the next new reveal. Connected runs recorded zero console errors or failed requests. |
 
 **Screenshots and measurements:** Actual Chromium PNGs and QA metrics are in
 [`visual-qa/m1b/`](visual-qa/m1b/): dashboard idle/voting/revealed at desktop
@@ -973,12 +978,40 @@ and mobile sizes, overlay idle/voting/revealed at both broadcast sizes, and
 and `overlay-1280x720-reconnected-reveal.png` for real backend restart recovery.
 `qa-results.json` records Chromium/Playwright versions, viewport and document
 bounds, exact new instance/revision-0 idle recovery, absence of old boss/reveal,
-and console/network results. Browser captures recorded no console errors or
+and console/network results. The original dashboard reveal captures showed the
+completion banner only after scrolling; this was the MINOR-2 baseline finding.
+The new post-fix first-viewport capture and measured status bounds are recorded
+below. The earlier browser capture session reported no console errors or
 failed requests. The Vite server log did report expected WebSocket proxy
 `EPIPE`/`ECONNRESET` while the test intentionally stopped the backend; the
 proxy reconnected after restart and state recovered. Dashboard reveal screenshots include the banner
 visible after scrolling the long dashboard to the boss panel. Chromium captures
 are not native OBS Studio QA.
+
+### Post-remediation first-viewport QA
+
+- Screenshot: [`dashboard-1440x900-revealed-postfix.png`](visual-qa/m1b/dashboard-1440x900-revealed-postfix.png)
+- Browser viewport: Chromium responsive emulation, 1440×900 CSS pixels; saved
+  PNG is 2880×1800 device pixels at device-pixel ratio 2.
+- Mode and state: isolated mock-only runtime, `SIMULATED`, fresh authoritative
+  revealed snapshot, four categories complete. No Twitch request or credentials
+  were used.
+- Exact status text: `REVEALED — BATTLE COMING SOON`.
+- `getBoundingClientRect()`: x=305, y=643.5, width=201.296875,
+  height=27, top=643.5, right=506.296875, bottom=670.5 CSS pixels.
+- Visibility: **PASS** — the complete status rectangle is inside the initial
+  1440×900 viewport (top ≥ 0 and bottom ≤ 900), beside the boss heading.
+- The full completion panel remains below for context. This browser capture is
+  Chromium visual evidence, not native OBS or live Twitch acceptance.
+- During setup, one WebSocket attempt logged “closed before the connection was
+  established”; the loopback server health and HTTP state snapshot returned
+  successfully, and the saved view rendered the completed mock reveal. This is
+  recorded as a transient QA transport warning, not a product pass for
+  persistent WebSocket stability.
+- Validation was executed locally on macOS. No hosted GitHub Actions run was
+  launched or verified for this remediation; hosted CI status must be checked
+  separately on the final pushed PR head. The repository's supported Node 24
+  runtime was unavailable on this machine.
 
 **Provider and owner-QA limitations:** All browser forge input was synthetic
 mock data. The connected Twitch path was not activated; Twitch label/state
@@ -993,13 +1026,18 @@ withheld whenever the live feed/current authoritative snapshot is unavailable;
 invalid reveal-shaped state is not rendered as current.
 
 **Delivery/review:** Branch `feat/m1b-generic-obs-states`, based on merged main
-SHA `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`, is pushed. Implementation
-commit: `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`. Draft PR creation is pending:
-`gh pr create --draft --base main` returned
-`Post "https://api.github.com/graphql": Forbidden`; `gh auth status` reports
-the configured `GH_TOKEN` is invalid. No credential was requested. The connected
-GitHub integration can create the Draft PR from this pushed branch. Request
-independent GPT-6 exact-head review there for presentation scope,
-freshness/restart behavior, M1-A privacy/schema invariants, compatibility, and
-screenshots. Codex validation is not independent approval. M2, deployment and
-publication remain out of scope.
+SHA `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`, is pushed to existing Draft
+[PR #10](https://github.com/mrdzyn/bossforge/pull/10). Original M1-B
+implementation commit: `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`. MINOR-2
+reveal-visibility implementation commit: `c4e20c5a571ec188232fa2379d580d067dedb87d`.
+The initial independent review covered pre-remediation HEAD
+`4e2ee256ccb09347e143f76242dc9a106c5b8c1d`.
+The earlier `gh pr create --draft --base main` failure (`Forbidden`, with an
+invalid configured `GH_TOKEN`) is preserved as historical environment evidence;
+connected GitHub access subsequently created PR #10, so PR creation is not
+pending. This remediation will be pushed to that same Draft PR. The exact new
+review HEAD is the pushed branch tip and is reported in the final handoff and
+review request. Request independent GPT-6 exact-head review there for MINOR-1/
+MINOR-2, presentation scope, freshness/restart behavior, M1-A privacy/schema
+invariants, compatibility, and screenshots. Codex validation is not independent
+approval. M2, deployment and publication remain out of scope.

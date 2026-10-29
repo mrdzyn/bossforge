@@ -1,13 +1,13 @@
 # Project status
 
-## Current snapshot — 2026-10-28
+## Current snapshot — 2026-10-29
 
 - **Current `main`:** `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`; M1-A was squash-merged through PR #9. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
 - **M1-A merged:** PR #9 was squash-merged into `main` at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. Its historical remediation and review evidence remain in [ACCEPTANCE](ACCEPTANCE.md).
 - **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access later created Draft PR #9, which is now merged; the former blocker is historical only.
 - **Historical M1-A audited-head validation:** 151 tests (26 shared / 19 web / 106 server), frozen install, build, typecheck, lint, format, simulation, and browser screenshots are recorded in [ACCEPTANCE](ACCEPTANCE.md). These are historical implementation-agent reports, distinct from the later M1-A remediation and hosted GitHub Actions.
 - **Historical live/OBS evidence:** Genuine Twitch activity and native OBS evidence remain owner-supplied at their original checkpoints. Chromium captures are separate browser evidence and do not establish live Twitch or native OBS acceptance. See the historical P3-B and P4A sections and [acceptance](ACCEPTANCE.md).
-- **M1-B:** Generic dashboard/OBS presentation implementation is complete and pushed on `feat/m1b-generic-obs-states` at `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`, based on the merged M1-A commit above. `gh pr create --draft` was blocked by GitHub API `Forbidden`; `gh auth status` reports the configured `GH_TOKEN` invalid. Draft PR creation is pending connected GitHub integration. This is presentation-only and does not start M2.
+- **M1-B:** Original Generic dashboard/OBS implementation commit is `1cec6be2bf1bdfe75baaa5d7734ca351fa11e452`; the MINOR-2 reveal-visibility remediation commit is `c4e20c5a571ec188232fa2379d580d067dedb87d`. Connected GitHub access created the existing Draft PR [#10](https://github.com/mrdzyn/bossforge/pull/10). Its pre-remediation reviewed HEAD was `4e2ee256ccb09347e143f76242dc9a106c5b8c1d`; the final exact review HEAD is the pushed branch tip identified in the final review request. The earlier invalid GitHub CLI token incident is historical evidence only. This work is presentation-only and does not start M2.
 
 ### M1-A merged status
 
@@ -26,6 +26,9 @@
 - No battle state, HP, damage, timers, Start Battle, `!hit`, profile loading, or
   game integration is included. M1-B validation, screenshots and exact review
   target are recorded in the M1-B sections of ACCEPTANCE and HANDOFFS.
+- MINOR-2 places the exact `REVEALED — BATTLE COMING SOON` status beside the
+  visible boss heading. The recorded 1440×900 first-viewport Chromium QA shows
+  the message fully visible; see [M1-B acceptance](ACCEPTANCE.md#post-remediation-first-viewport-qa).
 
 ## P3-B-C2 remediation checkpoint
 
