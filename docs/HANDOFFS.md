@@ -861,5 +861,10 @@ subsequently squash-merged into `main` at
   matching forge/battle authority. Server loss hides HP, timer and attack
   commands; recovery requires a current-generation socket plus a fresh HTTP
   snapshot. Native OBS, genuine Twitch activity and hosted CI remain unverified.
-- **Review request:** Independently review the exact pushed HEAD of Draft PR
-  against the M2-B main baseline. Do not merge, deploy, publish, or start M2-D.
+- **Delivery:** Draft [PR #13](https://github.com/mrdzyn/bossforge/pull/13) was
+  created against `main` at `6fb37e827b7466559970f714ef5f05c04af27157`.
+  Implementation commit: `b646f140354b9c3e7aad1f378d59139d057968dc`; a
+  documentation follow-up records delivery and audit status.
+- **Review request:** Independently review the final pushed HEAD of Draft PR
+  #13 against the M2-B main baseline. The PR remains Draft and unmerged. Do not
+  deploy, publish, or start M2-D.

@@ -94,6 +94,10 @@
   hit `EPERM` on loopback socket tests; the authorized local rerun passed.
   These are manual/local CI-equivalent results; hosted GitHub Actions are not
   claimed as passing. The existing optional Phaser chunk-size advisory remains.
+- **Delivery:** implementation commit `b646f140354b9c3e7aad1f378d59139d057968dc`
+  is on Draft [PR #13](https://github.com/mrdzyn/bossforge/pull/13), targeting
+  the verified M2-B main baseline. Independent exact-head review is requested
+  after the final documentation follow-up is pushed. PR remains unmerged.
 
 ### M1-A merged status
 
