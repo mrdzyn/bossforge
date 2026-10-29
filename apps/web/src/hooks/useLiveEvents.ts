@@ -14,6 +14,23 @@ import { DashboardActivityReconciler } from "../dashboard-activity-reconciler.js
 
 const MAX_OVERLAY_SNAPSHOT_REQUESTS = 2;
 
+type SnapshotRequestCounts = { current: Map<number, Set<symbol>> };
+type SnapshotRequestControllers = { current: Map<number, Map<symbol, AbortController>> };
+
+function retireOverlaySnapshotGeneration(
+  generation: number,
+  requests: SnapshotRequestCounts,
+  controllers: SnapshotRequestControllers,
+): void {
+  for (const controller of controllers.current.get(generation)?.values() ?? []) {
+    controller.abort();
+  }
+  // Release logical slots immediately. Late finally handlers only remove their own token
+  // from this generation and cannot decrement or otherwise affect a replacement.
+  controllers.current.delete(generation);
+  requests.current.delete(generation);
+}
+
 function advanceOverlaySnapshotFence(
   sequence: { current: number },
   owner: { current: symbol },
@@ -39,7 +56,8 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
   const [overlayBattleFresh, setOverlayBattleFresh] = useState(false);
   const overlaySnapshotSequence = useRef(0);
   const overlaySnapshotOwner = useRef(Symbol("overlay-snapshot"));
-  const overlaySnapshotRequests = useRef(0);
+  const overlaySnapshotRequests = useRef(new Map<number, Set<symbol>>());
+  const overlaySnapshotControllers = useRef(new Map<number, Map<symbol, AbortController>>());
   const appliedVersion = useRef(0);
   const [connection, setConnection] = useState("connecting");
   const transportReadyGeneration = useRef<number | null>(null);
@@ -99,14 +117,30 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
   const refreshOverlayBattle = useCallback(
     async (generation: number) => {
       if (recipient !== "overlay" || transportReadyGeneration.current !== generation) return;
-      if (overlaySnapshotRequests.current >= MAX_OVERLAY_SNAPSHOT_REQUESTS) return;
-      overlaySnapshotRequests.current += 1;
+      let generationRequests = overlaySnapshotRequests.current.get(generation);
+      if (!generationRequests) {
+        generationRequests = new Set();
+        overlaySnapshotRequests.current.set(generation, generationRequests);
+      }
+      if (generationRequests.size >= MAX_OVERLAY_SNAPSHOT_REQUESTS) return;
+      const requestId = Symbol("overlay-snapshot-request");
+      generationRequests.add(requestId);
+      const controller = new AbortController();
+      let generationControllers = overlaySnapshotControllers.current.get(generation);
+      if (!generationControllers) {
+        generationControllers = new Map();
+        overlaySnapshotControllers.current.set(generation, generationControllers);
+      }
+      generationControllers.set(requestId, controller);
       const requestFence = advanceOverlaySnapshotFence(
         overlaySnapshotSequence,
         overlaySnapshotOwner,
       );
       try {
-        const response = await fetch("/api/battle/overlay-state", { cache: "no-store" });
+        const response = await fetch("/api/battle/overlay-state", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
         if (!response.ok) throw new Error("unavailable");
         const parsed = OverlayBattleStateV1Schema.safeParse(await response.json());
         if (!parsed.success) throw new Error("invalid");
@@ -135,7 +169,12 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
           setOverlayBattleFresh(false);
         }
       } finally {
-        overlaySnapshotRequests.current -= 1;
+        const activeRequests = overlaySnapshotRequests.current.get(generation);
+        if (activeRequests?.delete(requestId) && activeRequests.size === 0)
+          overlaySnapshotRequests.current.delete(generation);
+        const activeControllers = overlaySnapshotControllers.current.get(generation);
+        activeControllers?.delete(requestId);
+        if (activeControllers?.size === 0) overlaySnapshotControllers.current.delete(generation);
       }
     },
     [recipient],
@@ -153,6 +192,12 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
     let socket: WebSocket | undefined;
     const connect = () => {
       if (!active) return;
+      const previousGeneration = reconciler.current!.connectionGeneration;
+      retireOverlaySnapshotGeneration(
+        previousGeneration,
+        overlaySnapshotRequests,
+        overlaySnapshotControllers,
+      );
       const generation = reconciler.current!.beginConnection();
       advanceOverlaySnapshotFence(overlaySnapshotSequence, overlaySnapshotOwner);
       const battleGeneration = overlayBattleReconciler.current!.beginConnection();
@@ -179,6 +224,11 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
       });
       socket.addEventListener("close", () => {
         if (active && reconciler.current?.connectionGeneration === generation) {
+          retireOverlaySnapshotGeneration(
+            generation,
+            overlaySnapshotRequests,
+            overlaySnapshotControllers,
+          );
           advanceOverlaySnapshotFence(overlaySnapshotSequence, overlaySnapshotOwner);
           transportReadyGeneration.current = null;
           overlayBattleReconciler.current?.invalidate();
@@ -193,6 +243,11 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
       });
       socket.addEventListener("error", () => {
         if (active && reconciler.current?.connectionGeneration === generation) {
+          retireOverlaySnapshotGeneration(
+            generation,
+            overlaySnapshotRequests,
+            overlaySnapshotControllers,
+          );
           advanceOverlaySnapshotFence(overlaySnapshotSequence, overlaySnapshotOwner);
           transportReadyGeneration.current = null;
           overlayBattleReconciler.current?.invalidate();
@@ -243,6 +298,11 @@ export function useLiveEvents(recipient: "dashboard" | "overlay" = "dashboard") 
     connect();
     return () => {
       active = false;
+      retireOverlaySnapshotGeneration(
+        reconciler.current!.connectionGeneration,
+        overlaySnapshotRequests,
+        overlaySnapshotControllers,
+      );
       advanceOverlaySnapshotFence(overlaySnapshotSequence, overlaySnapshotOwner);
       transportReadyGeneration.current = null;
       if (retry) clearTimeout(retry);

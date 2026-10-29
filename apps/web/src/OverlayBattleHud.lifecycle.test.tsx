@@ -123,6 +123,42 @@ describe("OverlayBattleHud mounted animation lifecycle", () => {
     expect(hudClass()).not.toContain("is-weakness");
   });
 
+  it("clears weakness feedback immediately when an ordinary accepted hit follows", () => {
+    const first = activeBattle("enc-1", 1, 0);
+    act(() => mount(first, "active"));
+    update(activeBattle("enc-1", 2, 1), "active");
+    expect(hudClass()).toContain("is-weakness");
+
+    update(activeBattle("enc-1", 3, 1), "active");
+    expect(hudClass()).toContain("is-impact");
+    expect(hudClass()).not.toContain("is-weakness");
+
+    act(() => vi.advanceTimersByTime(520));
+    expect(hudClass()).not.toContain("is-impact");
+    expect(hudClass()).not.toContain("is-weakness");
+  });
+
+  it("restarts the weakness timer on repeated weakness hits and clears both timers on replacement", () => {
+    const first = activeBattle("enc-1", 1, 0);
+    act(() => mount(first, "active"));
+    update(activeBattle("enc-1", 2, 1), "active");
+    act(() => vi.advanceTimersByTime(300));
+    update(activeBattle("enc-1", 3, 2), "active");
+    act(() => vi.advanceTimersByTime(420));
+    expect(hudClass()).not.toContain("is-impact");
+    expect(hudClass()).toContain("is-weakness");
+    act(() => vi.advanceTimersByTime(100));
+    expect(hudClass()).not.toContain("is-weakness");
+
+    update(activeBattle("enc-1", 4, 3), "active");
+    expect(hudClass()).toContain("is-weakness");
+    update(activeBattle("enc-2", 0, 0), "active");
+    expect(hudClass()).not.toContain("is-impact");
+    expect(hudClass()).not.toContain("is-weakness");
+    act(() => vi.advanceTimersByTime(600));
+    expect(hudClass()).not.toContain("is-weakness");
+  });
+
   it("does not replay historical hit effects after server loss and reconnect", () => {
     const historical = activeBattle("enc-1", 4, 2);
     act(() => mount(historical, "active"));

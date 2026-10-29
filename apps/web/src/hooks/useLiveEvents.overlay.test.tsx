@@ -148,6 +148,7 @@ describe("useLiveEvents overlay HTTP freshness fencing", () => {
   let renderer: ReactTestRenderer | undefined;
   let forgeResponses: PublicForgeState[];
   let battleResponses: DeferredResponse[];
+  let battleSignals: AbortSignal[];
   let observed = "";
 
   function Probe() {
@@ -172,16 +173,18 @@ describe("useLiveEvents overlay HTTP freshness fencing", () => {
     FakeWebSocket.instances = [];
     forgeResponses = [forgeSnapshot()];
     battleResponses = [];
+    battleSignals = [];
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal("location", { protocol: "http:", host: "localhost:5173" });
     vi.stubGlobal(
       "fetch",
-      vi.fn((input: RequestInfo | URL) => {
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
         if (url === "/api/forge/state")
           return Promise.resolve(response(forgeResponses.shift() ?? forgeSnapshot()));
         const request = deferred<Response>();
         battleResponses.push(request);
+        battleSignals.push(init?.signal as AbortSignal);
         return request.promise;
       }),
     );
@@ -306,5 +309,55 @@ describe("useLiveEvents overlay HTTP freshness fencing", () => {
       battleSnapshot("server-g1", startTime, "forge-1", "enc-g1", 9, 1),
     );
     expect(observed).toContain("active|88|true");
+  });
+
+  it("adopts G2 while both G1 snapshots hang and fences their later completions", async () => {
+    await mountWithDeferredFetch();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+      await settle();
+    });
+    expect(battleResponses).toHaveLength(2);
+
+    const newStartedAt = "2026-10-30T00:00:00.000Z";
+    forgeResponses = [forgeSnapshot("server-g2", newStartedAt)];
+    await act(async () => {
+      FakeWebSocket.instances[0]!.close();
+      await vi.advanceTimersByTimeAsync(1200);
+      await settle();
+      FakeWebSocket.instances[1]!.open();
+      await settle();
+    });
+
+    // G2 receives a request immediately although neither aborted G1 fetch has settled.
+    expect(battleResponses).toHaveLength(3);
+    expect(battleSignals[0]?.aborted).toBe(true);
+    expect(battleSignals[1]?.aborted).toBe(true);
+    await resolveBattleRequest(
+      2,
+      battleSnapshot("server-g2", newStartedAt, "forge-1", "enc-g2", 1, 88),
+    );
+    expect(observed).toContain("active|88|true");
+
+    await act(async () => {
+      battleResponses[0]!.resolve(
+        response(battleSnapshot("server-g1", startTime, "forge-1", "enc-g1", 99, 1)),
+      );
+      battleResponses[1]!.reject(new Error("retired G1 failed after reconnect"));
+      await settle();
+    });
+    expect(observed).toContain("active|88|true");
+
+    // Old finally handlers cannot corrupt G2 accounting; fresh polling still proceeds.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+      await settle();
+    });
+    expect(battleResponses).toHaveLength(4);
+    await resolveBattleRequest(
+      3,
+      battleSnapshot("server-g2", newStartedAt, "forge-1", "enc-g2", 2, 80),
+    );
+    expect(observed).toContain("active|80|true");
   });
 });

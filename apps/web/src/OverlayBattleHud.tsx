@@ -74,16 +74,22 @@ export function OverlayBattleHud({
     clearTimers();
     const effectIdentity = identity;
     setImpact(true);
-    impactTimeout.current = setTimeout(() => {
+    const nextImpactTimeout = setTimeout(() => {
       if (animationIdentity.current === effectIdentity) setImpact(false);
-      impactTimeout.current = null;
+      if (impactTimeout.current === nextImpactTimeout) impactTimeout.current = null;
     }, 420);
+    impactTimeout.current = nextImpactTimeout;
     if (battle.weaknessHitCount > old.weaknessHitCount) {
       setWeaknessImpact(true);
-      weaknessTimeout.current = setTimeout(() => {
+      const nextWeaknessTimeout = setTimeout(() => {
         if (animationIdentity.current === effectIdentity) setWeaknessImpact(false);
-        weaknessTimeout.current = null;
+        if (weaknessTimeout.current === nextWeaknessTimeout) weaknessTimeout.current = null;
       }, 520);
+      weaknessTimeout.current = nextWeaknessTimeout;
+    } else {
+      // An ordinary accepted hit supersedes the weakness accent immediately.
+      // clearTimers() above cancels its pending expiry so it cannot affect the next hit.
+      setWeaknessImpact(false);
     }
   }, [battle, battleIdentity, view]);
   useEffect(
