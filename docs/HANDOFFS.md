@@ -996,7 +996,8 @@ subsequently squash-merged into `main` at
   The owner's ports 3001/5173 were not intentionally stopped or restarted but
   were later found not listening. No attempt was made to restore them. Details
   are recorded in the visual QA README.
-- **Review:** Independent GPT-6 exact-head review is requested on Draft PR #18
-  at `d0d12c5fc84e097a240cbf589d0627f766a5a2d7`. Keep it unmerged; do not
-  change battle authority, initiate live Twitch activity, deploy, publish, or
-  begin M2-D implementation.
+- **Review:** Independent GPT-6 exact-head review is requested on the current
+  pushed tip of Draft PR #18. Implementation commit:
+  `d0d12c5fc84e097a240cbf589d0627f766a5a2d7`. Keep it unmerged; do not change
+  battle authority, initiate live Twitch activity, deploy, publish, or begin
+  M2-D implementation.

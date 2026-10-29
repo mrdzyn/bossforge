@@ -76,9 +76,9 @@
   existing stage. CSS transforms/opacity only; no animation framework, server
   combat change, or change to Twitch/EventSub authority. Synthetic Chromium
   screenshots and observations are in `docs/visual-qa/boss-motion-v1/`.
-- **Review target:** branch `feat/boss-motion-v1`, exact HEAD
-  `d0d12c5fc84e097a240cbf589d0627f766a5a2d7`; Draft PR
+- **Review target:** branch `feat/boss-motion-v1`; Draft PR
   [#18](https://github.com/mrdzyn/bossforge/pull/18), open and unmerged.
+  Implementation commit: `d0d12c5fc84e097a240cbf589d0627f766a5a2d7`.
 - **Validation status:** package tests, build, typecheck, lint, assets and
   isolated mock simulation passed on the implementation branch. The root
   parallel test runner had sandbox socket `EPERM` and a pre-existing web asset
