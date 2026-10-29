@@ -1,0 +1,5 @@
+{
+  "prefersReducedMotion": true,
+  "bossClass": "animated-boss phase-active body-golem element-fire",
+  "animations": ["none", "boss-aura-pulse", "boss-hover"]
+}

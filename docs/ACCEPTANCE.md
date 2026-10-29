@@ -5,9 +5,9 @@ Status vocabulary: **PASS** ran successfully; **FAIL** ran and failed;
 actual outcomes; do not infer a pass from a configured script.
 
 The older Phase 3-B remediation sections below retain historical results and
-review gates as recorded at those checkpoints. P4A PR #6, M2-A PR #11, and
-M2-B PR #12 are merged into `main`; the M2-C base is
-`6fb37e827b7466559970f714ef5f05c04af27157`. P4A acceptance and owner OBS
+review gates as recorded at those checkpoints. P4A PR #6, M2-A PR #11, M2-B
+PR #12 and M2-C PR #13 are merged into `main`; the M2-C SVG-polish base is
+`9c850eda69492a65f9cdf5ac3c9907c628055a98`. P4A acceptance and owner OBS
 evidence are recorded in the final closure below.
 
 ## Required checks
@@ -1294,7 +1294,9 @@ warning remains. Hosted GitHub Actions, real Twitch operations, and native OBS
 remain unverified.
 
 Implementation/remediation commit: `c175f104189b378e16bebe21e89fc43ab2cadade`.
-The final documentation follow-up is also on existing Draft PR #13.
+At that review checkpoint the final documentation follow-up was on existing
+Draft PR #13. PR #13 was later squash-merged at
+`9c850eda69492a65f9cdf5ac3c9907c628055a98`.
 
 ### M2-C follow-up re-audit remediation — generation retirement and hit feedback
 
@@ -1328,3 +1330,66 @@ captured for this bounded follow-up; the earlier synthetic component captures
 remain the visual evidence, and are not genuine Twitch or native OBS results.
 Hosted GitHub Actions, real Twitch and native OBS remain unverified.
 Implementation commit: `7b27bc0e7d479ee98df69bec5e89f4332663ecb3`.
+
+## M2-C VecSynIQ SVG assets and UI polish — current implementation branch
+
+**Base:** `main` at `9c850eda69492a65f9cdf5ac3c9907c628055a98`, containing
+M2-C PR #13. The new branch is `feat/m2c-svg-boss-polish`. This section records
+synthetic/local implementation evidence and distinguishes the browser QA gate
+that could not be run.
+
+The attached source ZIP was accessible and extracted for review. Its five
+manifest file sizes and SHA-256 values were verified; SVG XML parsed
+successfully and no DTD/entities, scripts, `foreignObject`, handler
+attributes, external image/reference/URL, or unsafe CSS constructs were found.
+The source characters contain thousands of flat paths and no articulated SVG
+groups. The originals are preserved byte-for-byte in the source archive
+outside the production public directory. A deterministic pinned SVGO 4.0.0
+pipeline produces external optimized SVG assets and a generated integrity
+manifest. See [SVG asset preparation and evidence](visual-qa/m2c-svg/README.md).
+The five primary production files total 4,192,880 raw bytes; individual gzip
+sizes are listed in that evidence. The smaller logo crest is derived from the
+supplied logo; the optimized full logo is only used in the idle dashboard
+placeholder. The app requests character art as external SVG images, never as
+large React JSX trees.
+
+A single shared `AnimatedBoss` component maps the four authoritative body
+values to the original characters and composes bounded CSS aura, reveal,
+accepted-hit/weakness-hit and terminal motion. It does not infer a finished
+boss before the server reveal, does not treat the SVG as articulated anatomy,
+and observes reduced-motion settings. Hit effects require an accepted-hit
+aggregate update for the same authority identity. No server, battle/forge
+contract, damage/deadline behavior, recipient projection or Phaser gameplay
+changed. The supplied logo crest now appears in compact branding; the full
+optimized logo appears when the dashboard is awaiting a forge.
+
+**Automated evidence:** 13 added web tests cover four-body asset mapping,
+neutral pre-reveal rendering, all supported trait vocabularies, accepted-hit
+and weakness animation triggers, identity/epoch cleanup, reduced motion,
+active/external SVG rejection, deterministic optimization and source manifest
+integrity. The full suite passed **262 tests** (41 shared, 147 server, 74 web).
+An exact-base Vite comparison measured main JS at 339.03→341.63 kB raw
+(gzip 97.77→98.92 kB), CSS at 50.92→50.08 kB raw (gzip 11.91→11.39 kB),
+and the lazy Arena chunk unchanged at 1,222.13 kB raw. Optimized original SVG
+gzip payloads fell 65–69%; detailed per-file values are in the visual-QA
+record.
+Node `v24.21.0` / pnpm `11.25.0` frozen install, build, typecheck, lint,
+format check, asset reproducibility check, `pnpm simulate`, and
+`git diff --check` passed. The initial sandbox suite run had 8 existing socket
+binding/CLI listener checks fail with `EPERM`; the authorized local rerun passed
+all tests. Hosted GitHub Actions were not run and are not claimed.
+
+**Isolated mock smoke test:** a Twitch-disabled Fastify instance bound only to
+`127.0.0.1:33305` and Vite on `127.0.0.1:5205` both returned HTTP 200 (health
+and dashboard). `pnpm simulate` completed four synthetic vote categories and
+revealed Drake / Storm / Thunder Dash / Light. Authenticated runtime ports
+3001/5173 were untouched. This is mock evidence, not genuine Twitch activity.
+
+**Browser visual QA: NOT TESTED.** CUA reported that local browser use is
+disabled in Work settings. No actual Chromium component screenshots or DOM
+bounding-box/overflow measurements were captured, so acceptance at
+1920×1080, 1600×900, 1280×720 and narrow sizes remains open. The static source
+art review image is explicitly not a browser screenshot. The follow-up must
+capture all requested boss and battle lifecycle states, including reduced
+motion, and test transparent compositing over light and dark backgrounds.
+Native OBS and genuine Twitch behavior remain unverified.

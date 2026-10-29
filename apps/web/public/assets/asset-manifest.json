@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "sourceArchive": "assets/source/bossforge-vecsyniq-source-assets.zip",
+  "optimizer": "svgo@4.0.0",
+  "assets": [
+    {
+      "name": "Golem.svg",
+      "destination": "assets/bosses/golem.svg",
+      "originalBytes": 2116094,
+      "originalSha256": "8ea685e50138a1ff1bee8e41b9fcfc5886110f51fa091cb56f5fc7b6db71aa3e",
+      "optimizedBytes": 697858,
+      "optimizedSha256": "d311b0a4c5372b2ee9e08e76b1621d78afb8e148652df7e69f5bfacb330159ab"
+    },
+    {
+      "name": "Wraith.svg",
+      "destination": "assets/bosses/wraith.svg",
+      "originalBytes": 1104245,
+      "originalSha256": "74377544ffc534762592059c02a394b675725a90d7d7456efd3a3d4b7634ffc4",
+      "optimizedBytes": 376974,
+      "optimizedSha256": "ba707e03e103a61f1234547499abf37221aad214923ca26399d560ea33a8a3c6"
+    },
+    {
+      "name": "Drake.svg",
+      "destination": "assets/bosses/drake.svg",
+      "originalBytes": 2089702,
+      "originalSha256": "79960fc94557611a2c85aad2fda48d3fa3447c9ab4b211bf01a0d164f4ef81ee",
+      "optimizedBytes": 645477,
+      "optimizedSha256": "df2350b42fe34da78079552d57ec4bd328e55b9e9b6da4d7635be63884ea987a"
+    },
+    {
+      "name": "Mimic.svg",
+      "destination": "assets/bosses/mimic.svg",
+      "originalBytes": 2818212,
+      "originalSha256": "f8c7ba701040d4d1e1ef7e143049e19074cd737f92fccc6eb7a0ba100c68ffae",
+      "optimizedBytes": 823248,
+      "optimizedSha256": "41ce24c1e6ec77efc3c42e361ebd3dca8c8b38d7099ca53b13d261b9bdc9af12"
+    },
+    {
+      "name": "Bossforge-logo.svg",
+      "destination": "assets/branding/bossforge-logo.svg",
+      "originalBytes": 5629487,
+      "originalSha256": "11c3a424953fd41caac90fccd4f9c36a1504915f1a00233b3c1c80c01f4d9709",
+      "optimizedBytes": 1649323,
+      "optimizedSha256": "d00d4864e077607eb9e10f99a2225a026f3378a2a84b8246660791a9c3ee6f84"
+    },
+    {
+      "name": "Bossforge-logo-mark.svg",
+      "destination": "assets/branding/bossforge-mark.svg",
+      "originalBytes": 5629487,
+      "originalSha256": "11c3a424953fd41caac90fccd4f9c36a1504915f1a00233b3c1c80c01f4d9709",
+      "optimizedBytes": 578599,
+      "optimizedSha256": "d0fc03fba38f6948050a7ae9e30bee23188fce3b51c690c164a3e9aa2eaec7ef",
+      "derivedFrom": "Bossforge-logo.svg",
+      "viewBox": "280 0 1448 1450"
+    }
+  ]
+}

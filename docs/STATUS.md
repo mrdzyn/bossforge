@@ -2,7 +2,7 @@
 
 ## Current snapshot — 2026-10-29
 
-- **Current `main` baseline for M2-C:** `6fb37e827b7466559970f714ef5f05c04af27157`; M2-B PR #12 was squash-merged after M2-A PR #11. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
+- **Current `main` baseline:** `9c850eda69492a65f9cdf5ac3c9907c628055a98`; M2-C PR #13 was squash-merged after M2-B PR #12. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
 - **M1-B merged:** PR #10 includes the Generic dashboard/read-only OBS presentation, freshness protection and reveal visibility remediation. PR #10 is no longer Draft or pending review.
 - **M1-A merged:** PR #9 was squash-merged into `main` at `bacaf6b338a75b9fcb8a9ee22a62aee4364bca96`. Its historical remediation and review evidence remain in [ACCEPTANCE](ACCEPTANCE.md).
 - **Historical delivery note:** Initial PR creation in the first cloud workspace was blocked by an invalid GitHub CLI token. Connected GitHub access later created Draft PR #9, which is now merged; the former blocker is historical only.
@@ -69,7 +69,7 @@
   remain unverified or deferred. Hosted GitHub Actions is not claimed as
   passing.
 
-### M2-C — OBS battle HUD and full integration (implementation)
+### M2-C — OBS battle HUD and full integration (historical implementation, merged)
 
 - **Base:** `main` at `6fb37e827b7466559970f714ef5f05c04af27157`, including the
   M2-B PR #12 squash merge. The working branch is `feat/m2c-obs-battle-hud`.
@@ -94,10 +94,11 @@
   hit `EPERM` on loopback socket tests; the authorized local rerun passed.
   These are manual/local CI-equivalent results; hosted GitHub Actions are not
   claimed as passing. The existing optional Phaser chunk-size advisory remains.
-- **Delivery:** implementation commit `b646f140354b9c3e7aad1f378d59139d057968dc`
+- **Delivery at original review checkpoint:** implementation commit `b646f140354b9c3e7aad1f378d59139d057968dc`
   is on Draft [PR #13](https://github.com/mrdzyn/bossforge/pull/13), targeting
   the verified M2-B main baseline. Independent exact-head review is requested
-  after the final documentation follow-up is pushed. PR remains unmerged.
+  after the final documentation follow-up was pushed; PR #13 was subsequently
+  squash-merged at `9c850eda69492a65f9cdf5ac3c9907c628055a98`.
 - **M2-C audit remediation:** On the existing PR #13 branch, the exact-head
   review findings for stale overlapping overlay snapshots, Twitch-disconnect
   cancellation presentation, and impact-effect lifecycle were addressed.
@@ -117,8 +118,9 @@
   suite passed in the authorized local environment. Hosted Actions, real
   Twitch, and native OBS remain unverified. Original M2-C implementation is
   `b646f140354b9c3e7aad1f378d59139d057968dc`; audit-remediation commit is
-  `c175f104189b378e16bebe21e89fc43ab2cadade`. PR #13 remains Draft and
-  unmerged; an independent exact-head re-audit is requested after push.
+  `c175f104189b378e16bebe21e89fc43ab2cadade`. PR #13 was Draft and unmerged
+  at that checkpoint; it was later squash-merged at
+  `9c850eda69492a65f9cdf5ac3c9907c628055a98`.
 - **Follow-up exact-head re-audit fixes:** Overlay HTTP snapshot slots and
   abort controllers are now scoped to the WebSocket generation. Disconnect,
   reconnect and unmount abort old requests and immediately release only that
@@ -141,6 +143,40 @@
   assets and the BossForge logo are the next approved development priority;
   M2-D was not started. Implementation commit:
   `7b27bc0e7d479ee98df69bec5e89f4332663ecb3`.
+
+### M2-C — VecSynIQ SVG assets and UI polish (current branch)
+
+- **Base:** `main` at `9c850eda69492a65f9cdf5ac3c9907c628055a98`, containing the
+  M2-C PR #13 squash merge. Branch: `feat/m2c-svg-boss-polish`.
+- The supplied Golem, Wraith, Drake, Mimic and BossForge logo originals passed
+  ZIP manifest byte/SHA-256 checks, XML parsing and active/external-content
+  checks. Deterministic production copies use pinned SVGO 4.0.0. The original
+  source ZIP is retained outside the production public directory.
+- A shared `AnimatedBoss` maps strict existing attributes to external SVG
+  images. Neutral forging presentation remains in place until an authoritative
+  reveal. CSS-only aura, reveal, bounded hit/weakness and terminal effects use
+  validated battle presentation state; reduced motion is respected. The M2-A/
+  M2-B server, combat rules, strict recipient projections and optional Phaser
+  Arena were not changed.
+- Asset size, source checksums and reproducible asset commands are recorded in
+  [`docs/visual-qa/m2c-svg/README.md`](visual-qa/m2c-svg/README.md). A static
+  source-art preview is saved there. It is not Chromium evidence.
+- **Browser visual QA is NOT TESTED:** the available browser bridge is disabled
+  in Work settings, so no actual viewport screenshots or browser bounds were
+  captured. The isolated mock-only server/Vite smoke checks returned HTTP 200
+  at `127.0.0.1:33305` and `127.0.0.1:5205`; the four-category synthetic
+  simulation completed. Native OBS and live Twitch remain unverified.
+- Validation on Node `v24.21.0` / pnpm `11.25.0`: frozen install, build,
+  typecheck, lint and format check passed. Full suite: **262 tests** (41
+  shared / 147 server / 74 web), including 13 new SVG/animation tests. The
+  four-category synthetic mock simulation passed. The sandbox full-suite
+  attempt hit 8 existing socket-binding `EPERM` errors; the authorized local
+  rerun passed all tests. Isolated mock Fastify/Vite HTTP smoke checks passed.
+  Exact-base production comparison: JS +2.60 kB raw / +1.15 kB gzip, CSS
+  −0.84 kB raw / −0.52 kB gzip; Arena bundle unchanged. Optimized original
+  character/logo SVGs reduced 65–69% gzip.
+  Actual Chromium viewport QA remains **NOT TESTED** because local browser use
+  is disabled in Work settings. Hosted CI is not claimed.
 
 ### M1-A merged status
 

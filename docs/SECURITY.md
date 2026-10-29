@@ -281,3 +281,16 @@ The HUD contains no damage/admin control. No names, IDs, chat text, message IDs,
 cookies, tokens, pseudonyms, private limits, or dashboard-only metrics are
 available to its projection. Real Twitch and native OBS validation remain
 separate from synthetic tests and Chromium screenshots.
+
+## M2-C original SVG presentation assets
+
+The supplied original SVGs are retained as a source ZIP outside the public web
+root. A deterministic build-time script checks the manifest sizes and SHA-256
+values and rejects DTD/entities, script/foreign or externally sourced content,
+event handlers, executable CSS constructs, and non-fragment references before
+and after optimization. Runtime rendering uses only generated local SVG files
+through ordinary image URLs; no raw SVG is injected into the DOM, no remote
+asset origin is contacted, and no viewer/chat values enter SVG attributes or
+animation state. The derived logo crest and full optimized logo are generated
+from the verified original. These presentation changes do not change server
+battle authority, recipient projections, network routes, or Phaser behavior.

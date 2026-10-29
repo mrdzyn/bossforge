@@ -285,3 +285,22 @@ same-epoch, same-encounter revision increase that includes an accepted-hit
 increase; snapshots/reconnects cannot replay it. Reduced motion disables the
 transitions. The OBS document background is transparent with translucent
 panels; there are no controls or Phaser/game-data dependencies.
+
+## VecSynIQ asset preparation and presentation
+
+The original supplied SVG bundle and integrity manifest live under
+`assets/source/`, outside the web public root. `tools/prepare-vector-assets.mjs`
+validates the ZIP manifest, byte counts and SHA-256 digests, rejects active
+markup and nonlocal references, then uses pinned `svgo@4.0.0` to emit
+deterministic external SVG copies under `apps/web/public/assets/`. The full
+logo remains available for the idle dashboard; a smaller crest-only viewBox
+derivative serves compact branding. The originals remain unchanged.
+
+`AnimatedBoss` is the shared dashboard/overlay character presentation. It uses
+an external `<img>` selected from strict body enums rather than embedding the
+thousands of original paths in JSX. A neutral forging mark is shown before a
+validated reveal. Decorative elemental aura, reveal, impact and terminal
+classes are CSS-only and bounded; hit feedback is triggered only by accepted
+server aggregate changes under the same fresh encounter identity. Reduced
+motion suppresses state-triggered effects. This presentation adds no gameplay
+state, server mutation, Phaser dependency or animation package.

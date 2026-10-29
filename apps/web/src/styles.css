@@ -67,23 +67,6 @@ a:focus-visible {
   gap: 11px;
   padding: 0 9px 38px;
 }
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(145deg, #bb83ff, #7e4ce7);
-  color: #171020;
-  font-family: "Arial Narrow", Impact, sans-serif;
-  font-weight: 900;
-  font-size: 18px;
-  letter-spacing: -2px;
-  box-shadow: 0 5px 24px #9d65ff30;
-}
-.brand-mark span {
-  color: #fff;
-}
 .brand-name {
   font-family: "Arial Narrow", Impact, sans-serif;
   font-weight: 800;
@@ -488,15 +471,22 @@ p {
   background: currentColor;
 }
 .boss-art {
+  --boss-accent: #9e69ff;
   position: relative;
+  display: grid;
+  place-items: center;
   height: 258px;
   margin: 18px -5px 14px;
   border: 1px solid #ffffff08;
   border-radius: 8px;
   overflow: hidden;
   background:
-    radial-gradient(ellipse at 50% 61%, #b74b4b45 0, #b74b4b15 24%, transparent 55%),
-    radial-gradient(ellipse at 50% 120%, #8e55e722 0, transparent 57%),
+    radial-gradient(
+      ellipse at 50% 73%,
+      color-mix(in srgb, var(--boss-accent) 22%, transparent),
+      transparent 57%
+    ),
+    radial-gradient(ellipse at 50% 110%, #8e55e722, transparent 57%),
     linear-gradient(145deg, #171724, #11111a 74%);
 }
 .boss-art::before {
@@ -509,168 +499,6 @@ p {
     linear-gradient(90deg, #ffffff0b 1px, transparent 1px);
   background-size: 38px 38px;
   mask-image: linear-gradient(to bottom, transparent, #000 28%, #000);
-}
-.art-orbit {
-  position: absolute;
-  left: 50%;
-  top: 52%;
-  border: 1px solid #ff9c5520;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-.orbit-one {
-  width: 215px;
-  height: 74px;
-  transform: translate(-50%, -50%) rotate(-17deg);
-}
-.orbit-two {
-  width: 250px;
-  height: 88px;
-  transform: translate(-50%, -50%) rotate(22deg);
-  border-color: #a971ff22;
-}
-.boss-shadow {
-  position: absolute;
-  bottom: 32px;
-  left: 50%;
-  width: 145px;
-  height: 20px;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: #ff774d42;
-  filter: blur(12px);
-}
-.boss-shape {
-  position: absolute;
-  top: 22px;
-  left: 50%;
-  width: 160px;
-  height: 210px;
-  transform: translateX(-50%);
-  filter: drop-shadow(0 0 18px #ff854c37);
-}
-.boss-head {
-  position: absolute;
-  z-index: 2;
-  top: 35px;
-  left: 47px;
-  width: 66px;
-  height: 57px;
-  border: 2px solid #90604f;
-  border-radius: 32px 32px 23px 23px;
-  background: linear-gradient(145deg, #563c42, #2d2732);
-  box-shadow: inset 0 7px #ffffff0b;
-}
-.boss-head i {
-  position: absolute;
-  top: 23px;
-  width: 9px;
-  height: 5px;
-  background: #ffba63;
-  border-radius: 5px;
-  box-shadow: 0 0 10px #ff9c55;
-}
-.boss-head i:first-child {
-  left: 13px;
-}
-.boss-head i:nth-child(2) {
-  right: 13px;
-}
-.boss-head b {
-  position: absolute;
-  left: 28px;
-  bottom: 7px;
-  width: 9px;
-  height: 4px;
-  background: #c48367;
-  border-radius: 50%;
-}
-.horn {
-  position: absolute;
-  top: 19px;
-  width: 29px;
-  height: 38px;
-  border: 2px solid #a86b53;
-  background: linear-gradient(130deg, #794e47, #2f2630);
-  clip-path: polygon(48% 0, 100% 100%, 0 78%);
-}
-.horn-left {
-  left: 39px;
-  transform: rotate(-22deg);
-}
-.horn-right {
-  right: 37px;
-  transform: scaleX(-1) rotate(-22deg);
-}
-.boss-body {
-  position: absolute;
-  z-index: 1;
-  left: 38px;
-  top: 89px;
-  width: 84px;
-  height: 78px;
-  border: 2px solid #70504c;
-  border-radius: 30px 30px 17px 17px;
-  background: linear-gradient(115deg, #59434a, #332b36 62%, #60443e);
-  clip-path: polygon(18% 0, 82% 0, 100% 78%, 87% 100%, 13% 100%, 0 78%);
-}
-.boss-body span {
-  position: absolute;
-  top: 27px;
-  width: 13px;
-  height: 13px;
-  border: 3px solid #f19b55;
-  border-radius: 50%;
-  box-shadow: 0 0 13px #ff8657;
-}
-.boss-body span:first-child {
-  left: 23px;
-}
-.boss-body span:nth-child(2) {
-  right: 23px;
-}
-.boss-body b {
-  position: absolute;
-  top: 47px;
-  left: 31px;
-  width: 20px;
-  height: 11px;
-  border-bottom: 3px solid #d18a63;
-  border-radius: 50%;
-}
-.boss-arm {
-  position: absolute;
-  top: 100px;
-  width: 33px;
-  height: 63px;
-  border: 2px solid #71504b;
-  border-radius: 16px;
-  background: linear-gradient(90deg, #61464a, #392f39);
-}
-.arm-left {
-  left: 18px;
-  transform: rotate(21deg);
-}
-.arm-right {
-  right: 17px;
-  transform: rotate(-22deg);
-}
-.boss-leg {
-  position: absolute;
-  top: 153px;
-  width: 31px;
-  height: 50px;
-  border: 2px solid #5e4649;
-  border-radius: 7px 7px 12px 12px;
-  background: linear-gradient(100deg, #4f3b43, #302a35);
-}
-.leg-left {
-  left: 49px;
-  transform: rotate(4deg);
-}
-.leg-right {
-  right: 47px;
-  transform: rotate(-4deg);
 }
 .art-tag {
   position: absolute;
@@ -1090,52 +918,6 @@ p {
   border-radius: 11px;
   background: radial-gradient(circle, #ff835135, transparent 65%), #11111b;
 }
-.mini-golem {
-  position: relative;
-  width: 81px;
-  height: 111px;
-  border: 2px solid #74524c;
-  border-radius: 38px 38px 20px 20px;
-  background: linear-gradient(145deg, #745258, #302a37 76%);
-  box-shadow: 0 0 35px #f7834c36;
-  clip-path: polygon(15% 0, 27% 9%, 73% 9%, 85% 0, 100% 78%, 84% 100%, 16% 100%, 0 78%);
-}
-.mini-golem::before {
-  content: "";
-  position: absolute;
-  left: 12px;
-  top: 39px;
-  width: 55px;
-  height: 50px;
-  border: 2px solid #6d4b48;
-  border-radius: 18px 18px 14px 14px;
-  background: linear-gradient(120deg, #57434a, #282832);
-}
-.mini-golem i {
-  position: absolute;
-  z-index: 1;
-  top: 55px;
-  width: 9px;
-  height: 5px;
-  border-radius: 5px;
-  background: #ffc169;
-  box-shadow: 0 0 11px #ff8e4d;
-}
-.mini-golem i:nth-child(1) {
-  left: 24px;
-}
-.mini-golem i:nth-child(2) {
-  right: 24px;
-}
-.mini-golem b {
-  position: absolute;
-  top: 75px;
-  left: 35px;
-  z-index: 2;
-  width: 12px;
-  height: 4px;
-  background: #f29a67;
-}
 .overlay-boss-info {
   flex: 1;
 }
@@ -1517,10 +1299,6 @@ p {
   .brand-name {
     font-size: 14px;
   }
-  .brand-mark {
-    width: 30px;
-    height: 30px;
-  }
   .sidebar {
     padding: 10px;
   }
@@ -1612,9 +1390,6 @@ p {
   .overlay-boss-art {
     width: 100%;
     height: 130px;
-  }
-  .mini-golem {
-    transform: scale(0.8);
   }
   .overlay-boss-info h1 {
     font-size: 32px;
@@ -1776,241 +1551,375 @@ p {
 .draft-badge.revealed {
   color: #98dda8;
 }
-.boss-art {
-  --element: #f2a04f;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 230px;
-  overflow: hidden;
-  border-radius: 12px;
-  background:
-    radial-gradient(
-      ellipse at 50% 52%,
-      color-mix(in srgb, var(--element) 22%, transparent),
-      transparent 55%
-    ),
-    linear-gradient(150deg, #172534, #111722 70%);
+.element-fire {
+  --boss-accent: #ff8656;
 }
 .element-ice {
-  --element: #71cbeb;
+  --boss-accent: #70d8f5;
 }
 .element-storm {
-  --element: #e6cf70;
+  --boss-accent: #b28aff;
 }
 .element-void {
-  --element: #bd8be9;
+  --boss-accent: #bd8be9;
 }
-.art-aura {
-  position: absolute;
-  width: 190px;
-  height: 190px;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--element) 55%, transparent);
-  box-shadow:
-    0 0 45px color-mix(in srgb, var(--element) 22%, transparent),
-    inset 0 0 38px color-mix(in srgb, var(--element) 14%, transparent);
+.element-neutral {
+  --boss-accent: #9e69ff;
 }
-.boss-figure {
+.animated-boss {
+  --boss-accent: #9e69ff;
   position: relative;
-  width: 145px;
-  height: 190px;
-  filter: drop-shadow(0 8px 15px #080c11);
-}
-.boss-head {
-  position: absolute;
-  top: 25px;
-  left: 48px;
-  width: 50px;
-  height: 46px;
-  background: linear-gradient(145deg, #637781, #263644);
-  clip-path: polygon(17% 0, 83% 0, 100% 72%, 68% 100%, 30% 92%, 0 70%);
-  z-index: 3;
-}
-.boss-head i {
-  position: absolute;
-  top: 20px;
-  width: 8px;
-  height: 4px;
-  background: var(--element);
-  box-shadow: 0 0 8px var(--element);
-}
-.boss-head i:first-child {
-  left: 10px;
-}
-.boss-head i:nth-child(2) {
-  right: 10px;
-}
-.boss-head b {
-  position: absolute;
-  bottom: 7px;
-  left: 21px;
-  width: 9px;
-  height: 3px;
-  background: #18212a;
-}
-.boss-torso {
-  position: absolute;
-  top: 66px;
-  left: 30px;
-  width: 86px;
-  height: 85px;
-  background: linear-gradient(135deg, #536873, #273440 65%, #18222d);
-  clip-path: polygon(23% 0, 77% 0, 100% 29%, 86% 100%, 14% 100%, 0 29%);
-  z-index: 2;
-}
-.boss-torso i {
-  position: absolute;
-  top: 25px;
-  width: 14px;
-  height: 20px;
-  background: color-mix(in srgb, var(--element) 65%, #263440);
-  clip-path: polygon(50% 0, 100% 45%, 50% 100%, 0 45%);
-}
-.boss-torso i:first-child {
-  left: 20px;
-}
-.boss-torso i:nth-child(2) {
-  right: 20px;
-}
-.boss-torso b {
-  position: absolute;
-  left: 34px;
-  top: 17px;
-  width: 18px;
-  height: 29px;
-  background: var(--element);
-  opacity: 0.85;
-  clip-path: polygon(50% 0, 100% 75%, 50% 100%, 0 75%);
-}
-.boss-limbs i,
-.boss-limbs b {
-  position: absolute;
   z-index: 1;
-  background: linear-gradient(90deg, #344650, #71848a);
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
 }
-.boss-limbs i {
-  top: 78px;
-  width: 24px;
-  height: 75px;
-  clip-path: polygon(15% 0, 100% 12%, 80% 100%, 0 80%);
+.animated-boss.element-fire {
+  --boss-accent: #ff8656;
 }
-.boss-limbs i:first-child {
-  left: 10px;
-  transform: rotate(12deg);
+.animated-boss.element-ice {
+  --boss-accent: #70d8f5;
 }
-.boss-limbs i:nth-child(2) {
-  right: 9px;
-  transform: scaleX(-1) rotate(12deg);
+.animated-boss.element-storm {
+  --boss-accent: #aa82ff;
 }
-.boss-limbs b {
-  top: 139px;
-  width: 28px;
-  height: 42px;
-  clip-path: polygon(15% 0, 90% 0, 100% 100%, 0 100%);
+.animated-boss.element-void {
+  --boss-accent: #bd8be9;
 }
-.boss-limbs b:nth-child(3) {
-  left: 38px;
-}
-.boss-limbs b:nth-child(4) {
-  right: 34px;
-}
-.boss-horns i {
+.animated-boss-stage {
   position: absolute;
-  z-index: 4;
-  top: 9px;
-  width: 17px;
-  height: 32px;
-  background: #91a0a2;
-  clip-path: polygon(0 100%, 100% 100%, 55% 0);
+  inset: 5% 8%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
 }
-.boss-horns i:first-child {
-  left: 44px;
-  transform: rotate(-20deg);
+.animated-boss-aura,
+.animated-boss-elemental-effect {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  pointer-events: none;
 }
-.boss-horns i:nth-child(2) {
-  right: 43px;
-  transform: scaleX(-1) rotate(-20deg);
+.animated-boss-aura {
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--boss-accent) 19%, transparent),
+    transparent 69%
+  );
+  box-shadow: inset 0 0 30px color-mix(in srgb, var(--boss-accent) 16%, transparent);
+  animation: boss-aura-pulse 4.8s ease-in-out infinite;
 }
-.body-wraith .boss-figure {
-  filter: drop-shadow(0 0 15px color-mix(in srgb, var(--element) 75%, transparent));
-  transform: scaleX(0.73);
+.animated-boss-elemental-effect {
+  inset: 8% 3%;
+  border: 1px solid color-mix(in srgb, var(--boss-accent) 24%, transparent);
+  transform: rotate(-12deg) scaleY(0.48);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--boss-accent) 17%, transparent);
+  animation: boss-ring-turn 18s linear infinite;
 }
-.body-wraith .boss-torso,
-.body-wraith .boss-limbs i,
-.body-wraith .boss-limbs b {
-  background: linear-gradient(90deg, transparent, #788395, #263149);
-  clip-path: polygon(18% 0, 82% 0, 100% 42%, 75% 100%, 50% 80%, 25% 100%, 0 42%);
+.animated-boss-image {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 12px 22px #05040dcc)
+    drop-shadow(0 0 18px color-mix(in srgb, var(--boss-accent) 20%, transparent));
+  transform-origin: 50% 78%;
+  animation: boss-hover 4.2s ease-in-out infinite;
+  will-change: transform;
 }
-.body-wraith .boss-horns {
-  display: none;
+.body-wraith .animated-boss-image {
+  animation-duration: 5.2s;
 }
-.body-drake .boss-horns i {
-  height: 45px;
-  top: 0;
-  clip-path: polygon(0 100%, 100% 100%, 80% 0);
+.body-drake .animated-boss-image {
+  animation-duration: 3.4s;
 }
-.body-drake .boss-figure {
-  transform: scale(1.05);
+.body-mimic .animated-boss-image {
+  animation-duration: 4.7s;
 }
-.body-drake .boss-limbs i {
-  height: 90px;
+.animated-boss-forging-mark {
+  position: relative;
+  z-index: 1;
+  color: #d6c3ff;
+  font-size: clamp(52px, 9vw, 112px);
+  text-shadow:
+    0 0 20px #9e69ffb0,
+    0 0 55px #8e55e766;
+  animation: forging-mark-pulse 2.8s ease-in-out infinite;
 }
-.body-mimic .boss-head {
-  width: 72px;
-  height: 52px;
-  left: 36px;
-  top: 19px;
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% 78%,
-    85% 100%,
-    72% 75%,
-    60% 100%,
-    48% 75%,
-    36% 100%,
-    24% 75%,
-    12% 100%,
-    0 75%
+.animated-boss.phase-cancelled .animated-boss-aura,
+.animated-boss.phase-unavailable .animated-boss-aura,
+.animated-boss.phase-expired .animated-boss-aura,
+.animated-boss.phase-victory .animated-boss-aura,
+.animated-boss.phase-cancelled .animated-boss-elemental-effect,
+.animated-boss.phase-unavailable .animated-boss-elemental-effect,
+.animated-boss.phase-expired .animated-boss-elemental-effect,
+.animated-boss.phase-victory .animated-boss-elemental-effect {
+  animation: none;
+}
+.animated-boss.phase-cancelled .animated-boss-image,
+.animated-boss.phase-unavailable .animated-boss-image {
+  animation: none;
+  opacity: 0.72;
+}
+.animated-boss.phase-expired .animated-boss-image {
+  animation: none;
+  filter: saturate(0.82) brightness(1.04) drop-shadow(0 10px 18px #05040dcc);
+}
+.animated-boss.phase-victory .animated-boss-image {
+  animation: none;
+  opacity: 0.44;
+  filter: grayscale(0.55) drop-shadow(0 0 18px #a88bff66);
+}
+.animated-boss.is-hit .animated-boss-image {
+  animation: boss-impact 420ms ease-out both;
+}
+.animated-boss.is-weakness-impact .animated-boss-elemental-effect {
+  border-width: 2px;
+  box-shadow:
+    0 0 32px var(--boss-accent),
+    inset 0 0 24px color-mix(in srgb, var(--boss-accent) 45%, transparent);
+  animation: weakness-flare 520ms ease-out both;
+}
+.animated-boss.is-revealing .animated-boss-image {
+  animation: boss-reveal 900ms cubic-bezier(0.18, 0.72, 0.22, 1) both;
+}
+.animated-boss.is-revealing .animated-boss-aura {
+  animation: reveal-burst 900ms ease-out both;
+}
+.animated-boss.is-defeating .animated-boss-image {
+  animation: boss-defeat 1100ms ease-in both;
+}
+.animated-boss.is-low-health .animated-boss-aura {
+  background: radial-gradient(circle, #ff53611f, transparent 70%);
+  box-shadow: inset 0 0 34px #ff536140;
+  animation: low-health-pulse 1.4s ease-in-out infinite;
+}
+.animated-boss-hit-flash,
+.animated-boss-weakness-flash {
+  position: absolute;
+  z-index: 2;
+  inset: 14%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.animated-boss-hit-flash {
+  background: radial-gradient(circle, #ffffff66, transparent 70%);
+  animation: hit-flash 420ms ease-out both;
+}
+.animated-boss-weakness-flash {
+  inset: 8%;
+  border: 1px solid var(--boss-accent);
+  box-shadow: 0 0 26px var(--boss-accent);
+  animation: weakness-flare 520ms ease-out both;
+}
+.animated-boss.element-fire .animated-boss-elemental-effect {
+  background:
+    radial-gradient(circle at 22% 68%, #ffab4a22 0 2px, transparent 3px),
+    radial-gradient(circle at 76% 34%, #ff674b26 0 2px, transparent 3px);
+}
+.animated-boss.element-ice .animated-boss-elemental-effect {
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 20px,
+    #8ceeff12 21px 22px,
+    transparent 23px 44px
   );
 }
-.body-mimic .boss-horns {
-  display: none;
+.animated-boss.element-storm .animated-boss-elemental-effect {
+  background: repeating-linear-gradient(
+    128deg,
+    transparent 0 38px,
+    #b9a0ff20 39px 40px,
+    transparent 41px 72px
+  );
 }
-.body-mimic .boss-torso {
-  top: 65px;
-  left: 23px;
-  width: 100px;
-  height: 90px;
+.animated-boss.element-void .animated-boss-elemental-effect {
+  background: radial-gradient(ellipse at 50% 50%, #28164e42, transparent 70%);
 }
-.special-chain .boss-art,
-.special-chain .boss-torso {
-  outline: 1px dashed color-mix(in srgb, var(--element) 70%, transparent);
-}
-.special-mark,
-.weakness-mark {
+.boss-art .animated-boss {
   position: absolute;
-  color: var(--element);
-  font-size: 21px;
-  text-shadow: 0 0 12px var(--element);
+  inset: 0;
 }
-.special-mark {
-  right: 24%;
-  top: 42%;
+.overlay-boss-art .boss-art {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: inherit;
 }
-.weakness-mark {
-  left: 25%;
-  top: 56%;
-  color: #b4d3dc;
+.forge-placeholder-logo {
+  width: min(132px, 38%);
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  filter: drop-shadow(0 0 24px #9e69ff50);
 }
-.special-thunder .special-mark {
-  font-size: 32px;
+.brand-logo-mark {
+  display: block;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 9px #9e69ff4a);
 }
-.special-shadow .special-mark {
-  filter: blur(1px);
-  opacity: 0.8;
+.overlay-brand .brand-logo-mark {
+  width: 46px;
+  height: 46px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes boss-hover {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-0.25deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(0.25deg);
+  }
+}
+@keyframes boss-aura-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(0.93);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+@keyframes boss-ring-turn {
+  to {
+    transform: rotate(348deg) scaleY(0.48);
+  }
+}
+@keyframes forging-mark-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92) rotate(-8deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05) rotate(8deg);
+  }
+}
+@keyframes boss-impact {
+  0% {
+    transform: translateX(0) scale(1);
+  }
+  24% {
+    transform: translateX(-7px) scale(0.97);
+  }
+  48% {
+    transform: translateX(5px) scale(1.015);
+  }
+  72% {
+    transform: translateX(-2px) scale(1);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
+@keyframes hit-flash {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.72);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.24);
+  }
+}
+@keyframes weakness-flare {
+  0% {
+    opacity: 0.1;
+    transform: scale(0.76) rotate(-12deg);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.02) rotate(0);
+  }
+  100% {
+    opacity: 0.15;
+    transform: scale(1.12) rotate(9deg);
+  }
+}
+@keyframes boss-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.72);
+    filter: brightness(2.1) drop-shadow(0 0 28px var(--boss-accent));
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.035);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 12px 22px #05040dcc);
+  }
+}
+@keyframes reveal-burst {
+  0% {
+    opacity: 0.2;
+    transform: scale(0.52);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.13);
+  }
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+}
+@keyframes boss-defeat {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
+  }
+  35% {
+    opacity: 0.9;
+    transform: translateY(8px) scale(0.98);
+    filter: brightness(1.8) drop-shadow(0 0 30px #b68cff);
+  }
+  100% {
+    opacity: 0.48;
+    transform: translateY(26px) scale(0.92);
+    filter: grayscale(0.6);
+  }
+}
+@keyframes low-health-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 .art-tag {
   position: absolute;
@@ -2848,26 +2757,6 @@ p {
   }
 }
 
-.weakness-water .weakness-mark {
-  color: #6bc9ec;
-  transform: scaleY(1.2);
-}
-.weakness-light .weakness-mark {
-  color: #fff1a5;
-  text-shadow: 0 0 18px #fff1a5;
-}
-.weakness-earth .weakness-mark {
-  color: #c7a678;
-  transform: rotate(45deg);
-}
-.weakness-wind .weakness-mark {
-  color: #b2e7d4;
-  font-size: 26px;
-  transform: rotate(-18deg);
-}
-.special-chain .boss-torso {
-  outline: 1px dashed color-mix(in srgb, var(--element) 70%, transparent);
-}
 .arena-page {
   min-height: 100vh;
   padding: 24px clamp(16px, 4vw, 56px) 36px;

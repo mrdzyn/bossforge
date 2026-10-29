@@ -839,7 +839,7 @@ subsequently squash-merged into `main` at
   `6fb37e827b7466559970f714ef5f05c04af27157`; its earlier Draft/unmerged
   status is historical. M2-C is the next bounded scope.
 
-## M2-C — OBS battle HUD and full integration
+## M2-C — OBS battle HUD and full integration (historical; merged)
 
 - **Base/branch:** M2-B PR #12 is squash-merged at
   `6fb37e827b7466559970f714ef5f05c04af27157`; branch
@@ -876,15 +876,17 @@ subsequently squash-merged into `main` at
   checks required an authorized local rerun after `EPERM`. The remediation PNGs
   and bounds are in `docs/visual-qa/m2c/README.md`. Native OBS, genuine Twitch,
   and hosted CI remain unverified.
-- **Delivery:** Draft [PR #13](https://github.com/mrdzyn/bossforge/pull/13) was
+- **Delivery at original review checkpoint:** Draft [PR #13](https://github.com/mrdzyn/bossforge/pull/13) was
   created against `main` at `6fb37e827b7466559970f714ef5f05c04af27157`.
+  PR #13 was later squash-merged at
+  `9c850eda69492a65f9cdf5ac3c9907c628055a98`.
   Original implementation commit: `b646f140354b9c3e7aad1f378d59139d057968dc`;
   audited-finding remediation commit:
   `c175f104189b378e16bebe21e89fc43ab2cadade`; the pushed docs follow-up records
   the final review HEAD and audit request.
-- **Review request:** Independently review the final pushed HEAD of Draft PR
-  #13 against the M2-B main baseline. The PR remains Draft and unmerged. Do not
-  deploy, publish, or start M2-D.
+- **Review request at that checkpoint:** Independently review the final pushed
+  HEAD of Draft PR #13 against the M2-B main baseline. It was Draft/unmerged at
+  that checkpoint and is now merged. Do not deploy, publish, or start M2-D.
 - **Latest re-audit delta:** Starting at `f470c5424f4beb0967db0570e30eb0795ced4d8c`,
   the overlay snapshot request cap is now generation-scoped. Retiring a
   WebSocket generation aborts its requests and releases only its logical slots;
@@ -900,8 +902,37 @@ subsequently squash-merged into `main` at
   full suite reported eight existing socket `EPERM` failures before the
   authorized rerun. No new Chromium capture was taken; existing synthetic
   captures remain qualified as browser evidence only. Hosted Actions, live
-  Twitch and native OBS remain unverified. Keep PR #13 Draft and unmerged, and
-  request independent exact-head re-audit. The next approved development
+  Twitch and native OBS remain unverified. At that historical checkpoint the
+  instruction was to keep PR #13 Draft and unmerged; the PR was later merged at
+  `9c850eda69492a65f9cdf5ac3c9907c628055a98`. The next approved development
   priority is the already-generated VecSynIQ animated SVG boss assets and
   BossForge logo; do not begin M2-D. Implementation commit:
   `7b27bc0e7d479ee98df69bec5e89f4332663ecb3`.
+
+## M2-C SVG asset and UI polish — `feat/m2c-svg-boss-polish`
+
+- **Base:** verified `main` HEAD `9c850eda69492a65f9cdf5ac3c9907c628055a98`,
+  containing the M2-C PR #13 squash merge.
+- **Assets:** attached original ZIP is retained at
+  `assets/source/bossforge-vecsyniq-source-assets.zip`; manifest hashes and
+  XML/safety validation pass. Run `pnpm assets:prepare` to regenerate or
+  `pnpm assets:check` to check deterministic outputs. Pinned optimizer:
+  `svgo@4.0.0`. No runtime remote asset requests.
+- **Implementation:** shared `AnimatedBoss` uses the four original character
+  images, full original logo and derived crest. Authority-gated non-destructive
+  CSS motion does not imply independent anatomy. No backend, battle authority,
+  Phaser, or security boundary changed.
+- **Validation:** Node `v24.21.0` / pnpm `11.25.0`; frozen install, build,
+  typecheck, lint, format, 262 tests (41 shared / 147 server / 74 web), asset
+  reproducibility, synthetic four-category simulation, and diff check passed.
+  Sandbox had 8 socket-related `EPERM` tests; authorized local rerun passed.
+  Isolated mock server and Vite health/dashboard smoke checks returned HTTP
+  200, and synthetic simulation revealed Drake/Storm/Thunder Dash/Light.
+- **Open acceptance gate:** local browser use is disabled in Work settings.
+  Actual Chromium screenshots/bounds and responsive/transparent-compositing
+  QA remain NOT TESTED. `docs/visual-qa/m2c-svg/README.md` records the exact
+  viewport/state checklist and asset size/hash evidence. Native OBS and live
+  Twitch remain unverified.
+- Keep the new PR Draft and unmerged; request independent GPT-6 review at the
+  exact pushed HEAD. Do not modify backend gameplay or Phaser. The next
+  remaining work before visual acceptance is browser-enabled screenshot QA.
