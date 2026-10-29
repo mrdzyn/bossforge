@@ -9,9 +9,10 @@
   and reject unknown fields at every nested public object. Build outbound DTOs
   explicitly on the server and validate with the recipient schema immediately
   before serialization and send.
-- Dashboard may receive only forge state, public connection state, and bounded
-  aggregate activity with fixed reason codes. OBS receives only forge and
-  connection state. Recipient selection is fixed by `/events/dashboard` or
+- Dashboard may receive forge state, public connection state, bounded
+  aggregate activity with fixed reason codes, and strict M2-A battle state.
+  OBS receives forge, connection, and the privacy-safe battle projection, but
+  no dashboard activity or administration controls. Recipient selection is fixed by `/events/dashboard` or
   `/events/overlay`; query parameters or client-supplied roles never authorize
   routing. The legacy `/events` path is dashboard-only and has the same strict
   boundary.
@@ -202,3 +203,31 @@ are browser evidence only; actual OBS capture remains unverified.
 - The active authenticated runtime was not restarted to activate diagnostics.
   No diagnostics were observed from the real disconnect, so its root cause
   remains unknown. See [C5 evidence](ACCEPTANCE.md#p3-b4-c5--eventsub-disconnect-investigation).
+
+## M2-A battle authority and local routes
+
+- `CommunityBattleStateV1` is a strict versioned contract separate from the
+  Phaser `BattleStateSchema`. It contains only a server epoch/revision,
+  encounter and forge-cycle identities, immutable boss and Generic profile
+  snapshots, selected band/duration, timestamps, HP, aggregate counters and a
+  fixed cancellation reason. It has no viewer, chat, pseudonym, message ID,
+  token, cookie, URL or free-form error fields.
+- `BossBattleSession` binds one encounter to a fully validated four-stage
+  server reveal. Reveal creates `ready` without HP or a timer. Only the owner
+  Start Battle operation creates `active`; deadline, cancellation, victory and
+  expiry are serialized and terminal state cannot resume. M2-A has no damage
+  endpoint or chat-hit routing. The internal damage test seam is not routed or
+  exposed to browsers.
+- Battle routes are development-only and simulation-enabled. Snapshot access
+  requires loopback. Mutations require loopback, an exact allowed local Vite
+  Origin and `Sec-Fetch-Site: same-origin`; Twitch mode additionally requires
+  the existing owner session. Start also requires a verified EventSub-backed
+  Twitch connection. Mock mode is explicit and credential-free; it cannot be
+  selected as a fallback from Twitch. Responses use strict DTOs and
+  `Cache-Control: no-store`; production registers no mutation routes.
+- Battle events pass through the existing recipient-specific EventHub
+  projection and strict dashboard/overlay envelopes. Dashboard receives the
+  full battle contract; OBS receives only renderable battle fields and no
+  Generic tuning/processing profile configuration or owner controls. Sentinel
+  tests inspect serialized event frames; no raw chat is newly exposed or
+  logged.

@@ -3,8 +3,11 @@ import {
   DashboardEventEnvelopeSchema,
   OverlayEventEnvelopeSchema,
   PublicForgeStateSchema,
+  CommunityBattleStateV1Schema,
+  OverlayBattleStateV1Schema,
   type DashboardActivity,
   type ForgeState,
+  type CommunityBattleStateV1,
 } from "@bossforge/shared";
 import type WebSocket from "ws";
 
@@ -15,6 +18,7 @@ type PublicPayload =
       source: "mock" | "twitch";
       status: "connecting" | "connected" | "disconnected" | "error";
     }
+  | { kind: "battle.state"; state: CommunityBattleStateV1 }
   | DashboardActivity;
 
 export class EventHub {
@@ -71,7 +75,7 @@ export class EventHub {
     if (client.readyState !== 1) return;
     let safePayload: Record<string, unknown>;
     try {
-      safePayload = this.project(payload);
+      safePayload = this.project(payload, recipient);
     } catch {
       return;
     }
@@ -80,7 +84,9 @@ export class EventHub {
         ? "connection.status"
         : safePayload.kind === "forge.state"
           ? "forge.state"
-          : "dashboard.activity";
+          : safePayload.kind === "battle.state"
+            ? "battle.state"
+            : "dashboard.activity";
     const candidate = {
       type,
       schemaVersion: 1,
@@ -95,7 +101,10 @@ export class EventHub {
     if (parsed.success) client.send(JSON.stringify(parsed.data));
   }
 
-  private project(payload: PublicPayload): Record<string, unknown> {
+  private project(
+    payload: PublicPayload,
+    recipient: "dashboard" | "overlay",
+  ): Record<string, unknown> {
     if ("kind" in payload && payload.kind === "forge.state") {
       // Construct an explicit DTO before strict validation. This prevents internal
       // additions from silently becoming browser-visible fields.
@@ -107,6 +116,14 @@ export class EventHub {
     }
     if ("kind" in payload && payload.kind === "connection.status")
       return { kind: "connection.status", source: payload.source, status: payload.status };
+    if ("kind" in payload && payload.kind === "battle.state")
+      return {
+        kind: "battle.state",
+        state:
+          recipient === "overlay"
+            ? toOverlayBattleState(payload.state)
+            : toPublicBattleState(payload.state),
+      };
     const activity = payload as DashboardActivity;
     return {
       serverInstanceId: activity.serverInstanceId,
@@ -170,4 +187,67 @@ export function toPublicForgeState(state: ForgeState) {
       : null,
   };
   return PublicForgeStateSchema.parse(projected);
+}
+
+export function toPublicBattleState(state: CommunityBattleStateV1): CommunityBattleStateV1 {
+  return CommunityBattleStateV1Schema.parse({
+    schemaVersion: state.schemaVersion,
+    serverInstanceId: state.serverInstanceId,
+    serverStartedAt: state.serverStartedAt,
+    revision: state.revision,
+    status: state.status,
+    encounterId: state.encounterId,
+    forgeCycleId: state.forgeCycleId,
+    bossSnapshot: state.bossSnapshot
+      ? {
+          id: state.bossSnapshot.id,
+          name: state.bossSnapshot.name,
+          attributes: { ...state.bossSnapshot.attributes },
+        }
+      : null,
+    profileId: state.profileId,
+    profileVersion: state.profileVersion,
+    profileSnapshot: state.profileSnapshot ? structuredClone(state.profileSnapshot) : null,
+    audienceBand: state.audienceBand,
+    durationSeconds: state.durationSeconds,
+    startedAt: state.startedAt,
+    deadlineAt: state.deadlineAt,
+    currentHp: state.currentHp,
+    maxHp: state.maxHp,
+    acceptedHitCount: state.acceptedHitCount,
+    baseHitCount: state.baseHitCount,
+    weaknessHitCount: state.weaknessHitCount,
+    damageApplied: state.damageApplied,
+    cancelReason: state.cancelReason,
+  });
+}
+
+export function toOverlayBattleState(state: CommunityBattleStateV1) {
+  return OverlayBattleStateV1Schema.parse({
+    schemaVersion: state.schemaVersion,
+    serverInstanceId: state.serverInstanceId,
+    serverStartedAt: state.serverStartedAt,
+    revision: state.revision,
+    status: state.status,
+    encounterId: state.encounterId,
+    forgeCycleId: state.forgeCycleId,
+    bossSnapshot: state.bossSnapshot
+      ? {
+          id: state.bossSnapshot.id,
+          name: state.bossSnapshot.name,
+          attributes: { ...state.bossSnapshot.attributes },
+        }
+      : null,
+    audienceBand: state.audienceBand,
+    durationSeconds: state.durationSeconds,
+    startedAt: state.startedAt,
+    deadlineAt: state.deadlineAt,
+    currentHp: state.currentHp,
+    maxHp: state.maxHp,
+    acceptedHitCount: state.acceptedHitCount,
+    baseHitCount: state.baseHitCount,
+    weaknessHitCount: state.weaknessHitCount,
+    damageApplied: state.damageApplied,
+    cancelReason: state.cancelReason,
+  });
 }

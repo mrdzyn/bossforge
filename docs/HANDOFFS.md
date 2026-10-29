@@ -724,3 +724,37 @@ closed.
   validation, restart and stale-state suppression, privacy/schema invariants,
   responsive Chromium evidence, and unchanged Arena behavior. Keep the PR Draft
   and unmerged; do not start M2, deploy, publish, or connect to live Twitch.
+
+The prior review handoff above records the state at that checkpoint. PR #10 was
+subsequently squash-merged into `main` at
+`21953184fbd8f7034b680134b9b2efccbe40ab4e`; it is no longer Draft or open.
+
+## M2-A — server-authoritative battle engine
+
+- **Base and branch:** `main` at
+  `21953184fbd8f7034b680134b9b2efccbe40ab4e` (including M1-B PR #10);
+  implementation branch `feat/m2a-authoritative-battle-engine`.
+- **Scope:** `CommunityBattleStateV1`, strict data-only Generic profile v1,
+  server-owned `BossBattleSession`, complete forge reveal to ready, explicit
+  owner Start Battle/cancel, server HP and deadline/terminal transitions,
+  idempotent requests, privacy-safe battle EventHub projections, separate
+  `BattleStateReconciler`, and minimal dashboard-only controls. Phaser remains
+  independent.
+- **Boundary:** No `!hit` intake, Twitch chat attack routing, battle effects or
+  full OBS battle UI. No real Twitch requests, credentials, OAuth or live votes
+  were used. M2-B remains separate and requires owner authorization.
+- **Review:** Create exactly one Draft PR against main after publishing the
+  implementation branch. Request independent GPT-6 exact-head review of state
+  invariants, reveal and cancellation lifecycle, request idempotency, local
+  authorization, recipient privacy, reconciliation, and regression coverage.
+  Keep the PR Draft and unmerged.
+- **Validation:** Node v24.21.0 / pnpm 11.25.0. Frozen install, build,
+  typecheck, lint, Prettier, all 182 tests (33 shared / 118 server / 31 web),
+  four-category simulation and `git diff --check` passed. Loopback socket tests
+  passed in the authorized local environment after sandbox `EPERM`; hosted CI
+  has not been represented as passing. Build retains the existing optional
+  Phaser large-chunk advisory.
+- **Evidence boundary:** Synthetic mock and fake-clock results do not establish
+  genuine Twitch battle damage or native OBS rendering. No OAuth, Twitch API,
+  credentials or live votes were used. M2-A does not establish M2-B chat damage
+  or live battle acceptance.

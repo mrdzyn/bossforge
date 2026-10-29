@@ -1,5 +1,8 @@
 import { z } from "zod";
+import { CommunityBattleStateV1Schema, OverlayBattleStateV1Schema } from "./battle.js";
 export { ForgeStateReconciler } from "./forge-state-reconciler.js";
+export { BattleStateReconciler } from "./battle-state-reconciler.js";
+export * from "./battle.js";
 export * from "./combat.js";
 export * from "./voting-presentation.js";
 
@@ -267,14 +270,37 @@ const DashboardActivityEnvelope = z
     payload: DashboardActivitySchema,
   })
   .strict();
+const DashboardBattleEnvelope = z
+  .object({
+    ...PublicEnvelopeBase,
+    type: z.literal("battle.state"),
+    payload: z
+      .object({
+        kind: z.literal("battle.state"),
+        state: z.lazy(() => CommunityBattleStateV1Schema),
+      })
+      .strict(),
+  })
+  .strict();
+const OverlayBattleEnvelope = z
+  .object({
+    ...PublicEnvelopeBase,
+    type: z.literal("battle.state"),
+    payload: z
+      .object({ kind: z.literal("battle.state"), state: z.lazy(() => OverlayBattleStateV1Schema) })
+      .strict(),
+  })
+  .strict();
 export const DashboardEventEnvelopeSchema = z.discriminatedUnion("type", [
   DashboardForgeEnvelope,
   DashboardConnectionEnvelope,
   DashboardActivityEnvelope,
+  DashboardBattleEnvelope,
 ]);
 export type DashboardEventEnvelope = z.infer<typeof DashboardEventEnvelopeSchema>;
 export const OverlayEventEnvelopeSchema = z.discriminatedUnion("type", [
   DashboardForgeEnvelope,
   DashboardConnectionEnvelope,
+  OverlayBattleEnvelope,
 ]);
 export type OverlayEventEnvelope = z.infer<typeof OverlayEventEnvelopeSchema>;

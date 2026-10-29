@@ -21,7 +21,7 @@ export function createRateLimit(options: RateLimitOptions) {
     if (window.count >= options.limit) {
       const retryAfterSeconds = Math.max(1, Math.ceil((window.resetAt - currentTime) / 1000));
       reply.header("retry-after", String(retryAfterSeconds));
-      reply.code(429).send({ error: "Too many local simulation requests" });
+      reply.code(429).send({ error: "rate_limited" });
       return;
     }
 
