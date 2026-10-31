@@ -1,84 +1,143 @@
-# BossForge Live
+<p align="center">
+  <img src="docs/media/bossforge-readme-cover.jpg" alt="BossForge Live: four fantasy bosses, a Twitch chat, and an OBS-ready cooperative encounter" width="100%">
+</p>
 
-**Proposed direction: Chat creates the boss. Chat fights the boss. The streamer keeps playing their game.**
+<h1 align="center">BossForge Live</h1>
 
-BossForge Live currently provides audience boss voting, a read-only OBS
-overlay, verified local Twitch integration, and an optional Phaser arena. The
-approved-for-planning PDCP-001 proposal pivots the primary product toward a
-game-agnostic Twitch engagement overlay: chat creates and fights the boss while
-the streamer keeps playing their game. The proposed server-authoritative chat
-battle and `!hit` system are not implemented; Phaser remains an optional
-self-contained demo.
+<p align="center"><strong>Chat creates the boss. Chat fights the boss. You keep playing.</strong></p>
 
-## Current status
+<p align="center">
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#meet-the-bosses">Meet the bosses</a> ·
+  <a href="#battle-rules">Battle rules</a> ·
+  <a href="#obs-browser-source">OBS setup</a> ·
+  <a href="#run-locally">Run locally</a> ·
+  <a href="#verification-status">Verification</a>
+</p>
 
-**Implemented in Phase 1:** Four sequential timed vote categories, one mutable
-vote per mock viewer/category, deterministic ties and fallbacks, in-memory
-session state, modular boss traits and bounded statistics, streamer controls,
-a read-only live OBS overlay, and repeatable synthetic simulation.
+<p align="center">
+  <img src="docs/media/boss-motion-demo.gif" alt="Synthetic local browser capture of the Drake boss moving in the BossForge battle overlay" width="640">
+</p>
 
-**Phase 1:** Independently source-reviewed and squash-merged to `main` via PR #2.
-**Phase 2:** Independently source-reviewed through C2 and squash-merged to `main` via PR #3. A local Phaser 3 battle is playable. Run `pnpm simulate`,
-open the dashboard, and choose **Enter Arena** after the reveal. Controls:
-WASD/arrows move, click or Space fires toward the pointer, Shift dodges, and
-1–4 selects water/light/earth/wind ammunition. Matching the revealed weakness
-deals 75% bonus damage. Combat is a local browser simulation and battle results
-are not persisted.
+<p align="center"><sub>Synthetic, local browser footage from the Boss Motion V1 QA recording. This is not genuine Twitch or native OBS footage.</sub></p>
 
-**Phase 3-A:** [Offline EventSub integration readiness](docs/P3-TWITCH-INTEGRATION-READINESS.md)
-was independently source-reviewed and squash-merged as PR #4. Its fixture-only
-normalizer and lifecycle harness are reused by the separately authorized P3-B
-branch; P3-A itself remains offline and mock-only.
+BossForge Live turns Twitch chat into a cooperative boss encounter that sits
+beside the streamer's game as a read-only OBS Browser Source. Viewers shape a
+boss, then work together to defeat it—without game hooks, telemetry, or input
+control.
 
-**Phase 3-B:** [Real local Twitch integration](docs/P3B-LIVE-TWITCH-INTEGRATION.md)
-was squash-merged to `main` via PR #5 at `76a5dde`. OAuth/EventSub remain gated by explicit
-local configuration. The owner reports live OAuth/EventSub PASS, one valid
-welcome, one enabled Helix subscription, 11 keepalives for the advertised
-30-second timeout, 6 accepted/normalized notifications and 6 chat callbacks.
-Three genuine ballots were accepted and three rejected (one wrong-category,
-two invalid-choice), with no disconnects, socket closes/errors, or forge
-cancellations. The four-stage forge revealed Cinder Granite (Golem / Fire /
-Ember Burst default / Earth); Special used its no-vote default, so accepted
-genuine ballots in all four categories are not claimed. The owner reports a
-Phaser VICTORY (boss 0/120 HP; streamer 64/100 HP). These P3-B live results are
-owner-supplied and not independently reproduced; that Twitch run did not include
-OBS capture. Separate P4A owner-supplied visual QA in the actual OBS Studio
-application passes at 1920×1080 and 1280×720 in simulated mode. It does not
-establish a new real Twitch vote, live HP synchronization or continuous
-animation performance. Automated validation is separate: 124 tests passed at
-implementation commit `279ff63fc803921310226d9c6903a029af7f0bd5` using fake
-transports. For a local account, the owner must personally approve/configure
-OAuth: set the registered Client ID and private Client Secret in gitignored
-`.env`, then explicitly set `TWITCH_INTEGRATION_ENABLED=true`. The server
-remains loopback-only and mock simulation remains available. **Phase 4-A
-frontend acceptance is PASS** and PR #6 was squash-merged into `main` at
-`5655dea53e3eba5425b6ead8926659a0bb72ae5e`:
-canonical voting instructions, fresh-state protections, tie-aware totals,
-community/default attribution, mobile clipping remediation and responsive
-Chromium QA are documented as complete. The 149-test result (29 shared, 19 web,
-101 server) is historical automated evidence, separate from synthetic
-simulation, Chromium QA, owner-supplied OBS results and historical live Twitch
-evidence. Owner-supplied OBS visual results pass at 1920×1080 and native
-1280×720 with Fit to Screen; they do not establish live HP synchronization or
-continuous animation performance. See [Phase 4-A readiness](docs/P4A-STREAMER-OBS-READINESS.md)
-and [acceptance evidence](docs/ACCEPTANCE.md#p3-b4-c5-r2--eventsub-keepalive-remediation).
+## How it works
 
-**PDCP-001 is planning only** on existing Draft PR #7. The current raw-chat
-browser broadcast path is not privacy-safe; the required M1 server-side privacy
-migration must precede M2. No `!hit` combat, authoritative battle HP or game
-profiles are implemented, and no milestone implementation is authorized.
+**Chat Builds → Boss Revealed → Chat Battles → Community Victory**
 
-See [project status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
-[roadmap](docs/ROADMAP.md).
+1. **Chat builds.** Viewers vote on body, element, special, and weakness in four
+   timed stages. The server assembles the result after the votes close.
+2. **The boss is revealed.** The completed boss and its audience-selected
+   weakness become authoritative server state. The streamer explicitly starts
+   the battle; reveal alone never starts combat.
+3. **Chat battles.** During a 60, 90, or 120-second encounter, viewers send
+   bounded `!hit` commands through Twitch chat. The server validates each
+   attack and owns HP, timing, replay protection, and terminal outcomes.
+4. **The community wins together.** Reduce the boss to zero before the deadline
+   for **COMMUNITY VICTORY! BOSS DEFEATED!** If time expires first, the result is
+   **BOSS SURVIVED! TRY AGAIN!** A verified disconnect cancels the encounter;
+   reconnect never resumes it.
 
-## Requirements
+The optional Phaser Arena remains a separate, local game demo. It is not the
+Twitch battle and does not read or control the streamer's game.
 
-- Node.js 22.13 or newer in the Node 22 LTS line, or Node.js 24 LTS.
-- pnpm 11.25.0 (Corepack can select the version pinned in `package.json`).
+## Meet the bosses
 
-No Twitch credentials, database, Docker, or external API is needed for local forge and arena demos.
+The four original VecSynIQ characters are bundled as optimized local SVGs.
+Their body art is combined with the forged element, special, and weakness.
 
-## Install and run
+|                                                         Boss                                                          |                                                        Boss                                                        |
+| :-------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------: |
+| <img src="apps/web/public/assets/bosses/wraith.svg" alt="Wraith boss artwork" width="150"><br><strong>Wraith</strong> | <img src="apps/web/public/assets/bosses/golem.svg" alt="Golem boss artwork" width="150"><br><strong>Golem</strong> |
+|  <img src="apps/web/public/assets/bosses/drake.svg" alt="Drake boss artwork" width="150"><br><strong>Drake</strong>   | <img src="apps/web/public/assets/bosses/mimic.svg" alt="Mimic boss artwork" width="150"><br><strong>Mimic</strong> |
+
+## Audience votes choose the weakness
+
+Each stage accepts the category's configured choices using `!vote
+<category> <choice>`, for example `!vote body drake` or `!vote weakness water`.
+A viewer can update their ballot while that stage is open. The weakness comes
+from accepted audience ballots; it is never silently set to Water. If a weakness
+stage receives no valid ballots, BossForge opens one additional bounded voting
+window. A second empty window ends safely without revealing a boss or starting
+a battle, and the dashboard explains why.
+
+The allowed weakness commands are `water`, `light`, `earth`, and `wind`. The
+active overlay instructions use the current authoritative boss weakness and
+are hidden whenever its server state is unavailable or stale.
+
+## Battle rules
+
+- `!hit` deals **8 HP**.
+- `!hit <selected weakness>` deals **14 HP**. For example, if the revealed
+  weakness is Water, `!hit water` gets the weakness bonus.
+- A recognized but nonmatching element deals the base **8 HP**; it does not get
+  the bonus. Unsupported commands are rejected.
+- An accepted hit starts the per-viewer **2-second cooldown**. Duplicate,
+  queue, global-rate, and encounter-deadline checks are enforced server-side.
+- The owner chooses duration and expected audience band before battle. Starting
+  HP is fixed for that encounter:
+  - **60 seconds:** low 100 · medium 400 · high 1,000 HP
+  - **90 seconds:** low 150 · medium 550 · high 1,500 HP
+  - **120 seconds:** low 200 · medium 750 · high 2,000 HP
+
+These are bounded profile settings, not live viewer-count scaling. Only the
+server can apply damage or resolve victory, survival, or cancellation.
+
+## OBS Browser Source
+
+Add the local `/overlay` page as an OBS Browser Source beside any game. It
+presents the forged boss, battle status, HP, timer, weakness, accepted-hit
+aggregate, exact attack instructions, and a clear **LIVE TWITCH** or
+**SIMULATED** label. The overlay is read-only: it has no owner controls and no
+browser damage route. It does not inspect gameplay or inject game input.
+
+The web app provides a local browser preview at
+`http://127.0.0.1:5173/overlay`. Native OBS should use the same loopback URL
+while the local app is running. Actual OBS acceptance for the current live
+battle HUD and synchronized HP is still incomplete; see [verification status](#verification-status).
+
+## Security and privacy
+
+- Twitch OAuth and EventSub are owner-authorized local integrations; the app
+  binds to loopback for development. Twitch mode fails closed on disconnect or
+  session invalidation.
+- Chat is validated and processed on the server. Replay IDs, cooldown state,
+  and process-local viewer pseudonyms stay server-side.
+- Browser and OBS recipients receive strict, allowlisted projections. Viewer
+  names, IDs, chat text, message IDs, tokens, and cookies are not sent to OBS.
+- The overlay is a read-only display. No public damage endpoint or arbitrary
+  game integration exists.
+- Mock mode is explicit, local, credential-free, and labeled **SIMULATED**; it
+  is never used as a silent Twitch fallback.
+
+Read the [public security policy](SECURITY.md) for private vulnerability
+reporting, and the [technical security architecture](docs/SECURITY.md) for
+implementation controls. Also see [architecture](docs/ARCHITECTURE.md).
+
+> **Never publish Twitch secrets, tokens, cookies, credentials, private chat
+> data, or exploit details in public issues, pull requests, recordings, or
+> screenshots.**
+
+## Technology and Codex
+
+BossForge uses TypeScript, React, Vite, Fastify, Zod-validated shared
+contracts, WebSockets, and CSS. Original boss vectors are optimized for local
+serving. Phaser is optional and isolated from the cooperative Twitch battle.
+
+The project was developed with Codex as an AI coding partner. Repository
+specifications, acceptance evidence, and independent exact-head reviews keep
+implementation claims separate from synthetic tests and owner-reported live
+observations.
+
+## Run locally
+
+**Requirements:** Node.js 24 LTS (the project supports Node 22.13 through 24)
+and pnpm 11.25.0. Twitch credentials are not needed for the mock simulation.
 
 ```bash
 corepack pnpm install --frozen-lockfile
@@ -86,46 +145,58 @@ cp .env.example .env
 corepack pnpm dev
 ```
 
-The dashboard runs at <http://127.0.0.1:5173>. The local Fastify server listens
-on <http://127.0.0.1:3001> by default. The `/health` endpoint reports the
-server status, version, timestamp, and local connection counts.
-
-To run a complete four-category local cycle while development is running, use
-another terminal. The script uses short vote windows and two synthetic voters
-per category, and can be repeated after a reveal:
+Open the dashboard at <http://127.0.0.1:5173>. The local server listens on
+<http://127.0.0.1:3001>. In a second terminal, run the synthetic four-stage
+cycle:
 
 ```bash
 corepack pnpm simulate
 ```
 
-The dashboard's **Generate event** button also advances the local mock sequence
-one event at a time. The developer simulation routes are only
-registered in explicit development mode. Both local services bind to loopback by
-default.
+Open <http://127.0.0.1:5173/overlay> to preview the read-only overlay. The
+example environment keeps Twitch disabled. Real Twitch authorization requires
+separate owner-controlled local configuration and consent; do not put secrets
+in source files, browser code, screenshots, or chat logs.
 
-## OBS overlay preview
+See [local setup and simulation](docs/STATUS.md) and the [M2-D acceptance
+runbook](docs/M2-D-LIVE-TWITCH-OBS-ACCEPTANCE.md).
 
-Open <http://127.0.0.1:5173/overlay> for the broadcast presentation. It shares
-the local event stream and omits streamer administration controls. The layout is
-designed for 1920×1080 and 1280×720 safe areas. During verified Twitch voting,
-the overlay presents exact chat commands for the active category, current
-counts, leader/tie status and countdown. Simulation and disconnected states are
-labeled separately; defaults are identified explicitly. Voting and boss details show live simulation state; the OBS boss health is a
-forge-derived statistic, not live client-side combat health. Combat results are
-not yet synchronized to the OBS overlay.
+## Demo and hackathon
 
-## Development commands
+- **Synthetic motion preview:** the looping GIF above is derived from the
+  committed local browser QA recording; the original WebM remains unchanged at
+  [`docs/visual-qa/boss-motion-v1/motion-demo.webm`](docs/visual-qa/boss-motion-v1/motion-demo.webm).
+- **Public demo video:** not published yet. The [M2-D runbook](docs/M2-D-LIVE-TWITCH-OBS-ACCEPTANCE.md)
+  contains the owner-operated demo and evidence checklist.
+- **Hackathon submission:** no public submission URL is available yet. See
+  [project handoffs](docs/HANDOFFS.md) for the current delivery record.
 
-| Command             | Purpose                                           |
-| ------------------- | ------------------------------------------------- |
-| `pnpm dev`          | Start the local server and Vite dashboard/overlay |
-| `pnpm build`        | Build all workspace packages and applications     |
-| `pnpm lint`         | Run ESLint across workspace source and tests      |
-| `pnpm typecheck`    | Run strict TypeScript checks                      |
-| `pnpm test`         | Run shared contract and server integration tests  |
-| `pnpm simulate`     | Send the deterministic local mock event sequence  |
-| `pnpm format:check` | Check repository formatting                       |
+## Verification status
 
-Copy `.env.example` to `.env` before starting `pnpm dev`. Twitch variables are
-empty and disabled in the example. Keep real credentials in gitignored local
-configuration and never place them in the browser environment.
+BossForge's voting and server-authoritative chat-combat paths are implemented.
+The remaining work is to close the genuine end-to-end acceptance gates; this
+README does not treat a successful mock run as live proof.
+
+**Owner-reported live evidence (2026-10-29/30):** the owner reported a verified
+Twitch EventSub chat subscription and six reliability checks passing, including
+over ten minutes of stability under OBS/game load and fail-closed disconnect
+with no automatic resume. Four genuine voting stages produced Rime Veil
+(Wraith / Ice / Ember Burst / Water). One genuine matching-weakness `!hit water`
+changed server HP from **550 to 536** with one accepted hit. The encounter
+expired as survived. Twitch rejected a repeated command within 30 seconds; that
+was a Twitch-side rejection, **not** proof of BossForge's cooldown. BossForge
+was also visible in an owner-operated OBS stream alongside a game.
+
+These observations are owner-supplied, not independently reproduced. They do
+not verify the base 8-damage live result, BossForge's 2-second cooldown
+rejection, Community Victory, or live battle-HP synchronization in native OBS.
+A prior terminal-state mismatch was reported; full end-to-end acceptance remains
+open. Earlier owner-supplied simulated OBS visual checks are separate from live
+HP acceptance. See [acceptance evidence](docs/ACCEPTANCE.md) and the [M2-D
+runbook](docs/M2-D-LIVE-TWITCH-OBS-ACCEPTANCE.md) for scope and provenance.
+
+**Automated evidence:** at the audited weakness-vote correction, 293 package
+tests passed in separate package runs. The combined root parallel test command
+still hit a known SVG checksum timeout, and hosted GitHub Actions were not
+verified. Automated and synthetic results are not genuine Twitch or native OBS
+acceptance.

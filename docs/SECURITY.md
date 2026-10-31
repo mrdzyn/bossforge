@@ -1,5 +1,7 @@
 # Security notes
 
+> **Current status (2026-10-31, main `64af9e92ec17133a98d9d5c79879939778a239db`):** P3-B implements owner-authorized local Twitch OAuth/EventSub; M2-B implements server-validated chat attacks and server-authoritative damage; M2-C provides strict privacy-safe OBS battle projections. The local development app is loopback-only; no public production service or supported production release is claimed. M2-D acceptance remains partial and includes owner-supplied evidence, not an independently reproduced full Twitch/OBS acceptance. Historical phase sections below preserve their original evidence and boundaries; where an earlier checkpoint says a feature is future or out of scope, that statement applies to that checkpoint only. See [STATUS](STATUS.md), [ACCEPTANCE](ACCEPTANCE.md), and the [M2-D runbook](M2-D-LIVE-TWITCH-OBS-ACCEPTANCE.md) for provenance.
+
 ## M1-A public event privacy boundary
 
 - `NormalizedChatEvent` is an internal server contract. Do not add it to any
@@ -62,7 +64,12 @@
 - Production event access requires authentication and appropriate event
   authorization. Phase 1 adds no Twitch connection or remote voting access.
 
-## Future Twitch OAuth/EventSub requirements
+## P3-A Twitch OAuth/EventSub design checkpoint (historical)
+
+At the P3-A planning checkpoint, the following controls were requirements for
+later live integration. P3-B implementation details and the current local-only
+boundary are recorded below. This section preserves the original design
+context; it does not mean OAuth/EventSub remain unimplemented.
 
 Use official Twitch APIs. Validate OAuth state and exact redirect URIs, request
 the minimum chat scopes, keep tokens server-side in protected storage, avoid
@@ -101,15 +108,17 @@ or coding agent.
   `simulated: true` / `connectedToTwitch: false`; P3-B requires separate owner
   approval and an independently reviewed provider-mode migration.
 
-## Not in scope
+## Phase 1 scope at its original checkpoint (historical)
 
 No payments, unsolicited chat posting, user tracking, production deployment,
-production account storage, Twitch authentication, or playable combat is
-introduced in Phase 1.
+production account storage, Twitch authentication, or playable combat was
+introduced in Phase 1. Later phases add local Twitch authentication and
+server-authoritative chat combat; this Phase 1 statement is not current product
+status.
 
 ## Phase 3-B — authorized local live integration security gates
 
-- Owner has explicitly authorized **development** of server-side OAuth and actual Twitch chat connection; this does **not** authorize production exposure, merge or deployment. P3-A remains offline until the P3-B implementation is complete and tested.
+- At the P3-B authorization checkpoint, the owner authorized development of server-side OAuth and an actual Twitch chat connection. That authorization did not permit public exposure, merge, or deployment. P3-B is now implemented in the merged development application; operation remains owner-configured and local, and this historical authorization is not ongoing authorization for live activity.
 - Twitch app Client ID must be environment-configurable, not hardcoded; Client Secret, user access/refresh tokens, OAuth code and state must never enter GitHub, browser bundles, logs, screenshots or chat. Local MVP tokens are process-memory only and logout/restart must clear them.
 - Registered/intended redirect `http://localhost:3001/auth/twitch/callback`; exact match and loopback/Host validation are required. Browser callback is a top-level cross-site GET, so bind a high-entropy single-use `state` to the initiating browser, short expiry, cookie `HttpOnly; SameSite=Lax` or equivalent, and reject callback spoofing, replay, denial and mismatches.
 - Twitch `/oauth2/validate` is required at startup and at least hourly; only accept the right Client ID, numeric user identity and `user:read:chat` scope. Refresh/rotate tokens securely and fail closed on 401/revocation. Twitch WS subscriptions require **user** access tokens and verified `session_id`; create `channel.chat.message` v1 using `broadcaster_user_id` and authenticated `user_id`. Outbound WSS only, no public webhook.
@@ -127,8 +136,10 @@ administration, OAuth controls, credentials, chat identities, or diagnostic
 data. Live commands appear only while the authoritative state reports a
 verified Twitch connection and an open category. Simulation and disconnected
 states do not imply live voting. No voting intake, OAuth, EventSub, route,
-listener, or authorization boundary changed in Phase 4-A. Chromium screenshots
-are browser evidence only; actual OBS capture remains unverified.
+listener, or authorization boundary changed in Phase 4-A. Owner-supplied
+native OBS visual acceptance for P4A passed at its documented resolutions.
+That is distinct from the still-unverified M2-D live battle-HP synchronization
+inside native OBS.
 
 ### P3-B implementation status
 
@@ -212,12 +223,12 @@ are browser evidence only; actual OBS capture remains unverified.
   snapshots, selected band/duration, timestamps, HP, aggregate counters and a
   fixed cancellation reason. It has no viewer, chat, pseudonym, message ID,
   token, cookie, URL or free-form error fields.
-- `BossBattleSession` binds one encounter to a fully validated four-stage
-  server reveal. Reveal creates `ready` without HP or a timer. Only the owner
-  Start Battle operation creates `active`; deadline, cancellation, victory and
-  expiry are serialized and terminal state cannot resume. M2-A has no damage
-  endpoint or chat-hit routing. The internal damage test seam is not routed or
-  exposed to browsers.
+- At the M2-A milestone, `BossBattleSession` bound one encounter to a fully
+  validated four-stage server reveal. Reveal created `ready` without HP or a
+  timer; only owner Start Battle created `active`. Deadline, cancellation,
+  victory and expiry are serialized and terminal state cannot resume. M2-A
+  itself had no damage endpoint or chat-hit routing; M2-B later added private
+  server-side attack routing without exposing the damage processor to browsers.
 - Battle routes are development-only and simulation-enabled. Snapshot access
   requires loopback. Mutations require loopback, an exact allowed local Vite
   Origin and `Sec-Fetch-Site: same-origin`; Twitch mode additionally requires
