@@ -1,5 +1,12 @@
 # Project status
 
+## Desktop product expansion — D0 (docs-only Draft review; 2026-10-31)
+
+- **Source baseline:** `main@bc69306125b85aade4e283e69b0742e6f838aee1` (hackathon public README/media and security policy merged through PR #21).
+- **Proposal:** [D0 desktop architecture, security, and packaging decision record](D0-DESKTOP-ARCHITECTURE-SECURITY.md) defines candidate Electron + Forge, mock-first Mac/Windows packaging, a new Twitch Public-client/device-code path, OS-secured tokens, strict owner-control vs OBS separation, and D0–D4 release gates.
+- **Scope/status:** documentation proposal only; independent exact-head review **PENDING**. No desktop runtime, signing, Twitch app registration, credential access, installers, merge, or release is authorized or completed by this PR.
+- **Next action:** independent D0 review and owner decision on D0-01..07; only then separately authorize D1 mock-only implementation. Historical status/evidence below is preserved verbatim.
+
 ## Current snapshot — 2026-10-30
 
 - **Current `main` baseline:** `fc95b1366deea38ceb67ee4c11db2883a053a272`; PR #17 owner evidence and PR #19 keepalive remediation are merged. Earlier M0/P3-B/P4A acceptance records below remain historical evidence.
