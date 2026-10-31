@@ -115,8 +115,13 @@ battle HUD and synchronized HP is still incomplete; see [verification status](#v
 - Mock mode is explicit, local, credential-free, and labeled **SIMULATED**; it
   is never used as a silent Twitch fallback.
 
-See [SECURITY](docs/SECURITY.md) and [architecture](docs/ARCHITECTURE.md) for
-the implementation boundaries.
+Read the [public security policy](SECURITY.md) for private vulnerability
+reporting, and the [technical security architecture](docs/SECURITY.md) for
+implementation controls. Also see [architecture](docs/ARCHITECTURE.md).
+
+> **Never publish Twitch secrets, tokens, cookies, credentials, private chat
+> data, or exploit details in public issues, pull requests, recordings, or
+> screenshots.**
 
 ## Technology and Codex
 
