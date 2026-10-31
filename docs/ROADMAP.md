@@ -1,5 +1,9 @@
 # Roadmap
 
+## Proposed desktop distribution track (D0–D4, docs-only)
+
+A separate desktop-product track is proposed in [D0 Architecture and Security](D0-DESKTOP-ARCHITECTURE-SECURITY.md) from `main@bc69306125b85aade4e283e69b0742e6f838aee1`: D0 documentation/independent security decision; D1 mock-only Electron macOS/Windows packages; D2 Twitch Public-client Device Code Grant and OS credential vault; D3 genuine Twitch/native OBS cross-platform acceptance; D4 signed/notarized public release. No implementation, OAuth activation or release is implied by this roadmap change. The historical hackathon roadmap below remains unchanged until separately authorized.
+
 ## Phase 0 — Repository Foundation and Architecture
 
 Establish the workspace, server/web/shared boundaries, validated contracts,
