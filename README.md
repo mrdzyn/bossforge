@@ -51,10 +51,10 @@ Twitch battle and does not read or control the streamer's game.
 The four original VecSynIQ characters are bundled as optimized local SVGs.
 Their body art is combined with the forged element, special, and weakness.
 
-| Boss | Boss |
-|:--:|:--:|
+|                                                         Boss                                                          |                                                        Boss                                                        |
+| :-------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------: |
 | <img src="apps/web/public/assets/bosses/wraith.svg" alt="Wraith boss artwork" width="150"><br><strong>Wraith</strong> | <img src="apps/web/public/assets/bosses/golem.svg" alt="Golem boss artwork" width="150"><br><strong>Golem</strong> |
-| <img src="apps/web/public/assets/bosses/drake.svg" alt="Drake boss artwork" width="150"><br><strong>Drake</strong> | <img src="apps/web/public/assets/bosses/mimic.svg" alt="Mimic boss artwork" width="150"><br><strong>Mimic</strong> |
+|  <img src="apps/web/public/assets/bosses/drake.svg" alt="Drake boss artwork" width="150"><br><strong>Drake</strong>   | <img src="apps/web/public/assets/bosses/mimic.svg" alt="Mimic boss artwork" width="150"><br><strong>Mimic</strong> |
 
 ## Audience votes choose the weakness
 
